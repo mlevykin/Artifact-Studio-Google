@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare, Plus, Trash2, Database, Clock } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Database, Clock, ChevronLeft } from 'lucide-react';
 import { Session } from '../types';
 import { cn, formatDate } from '../utils';
 
@@ -11,6 +11,8 @@ interface SidebarProps {
   onDeleteSession: (id: string) => void;
   provider: 'gemini' | 'ollama';
   onProviderChange: (provider: 'gemini' | 'ollama') => void;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -20,13 +22,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNewSession,
   onDeleteSession,
   provider,
-  onProviderChange
+  onProviderChange,
+  isOpen,
+  onToggle
 }) => {
   // Estimate storage usage
   const storageUsage = Math.round((JSON.stringify(sessions).length / (5 * 1024 * 1024)) * 100);
 
+  if (!isOpen) return null;
+
   return (
-    <div className="w-64 h-full bg-zinc-900 text-zinc-300 flex flex-col border-r border-zinc-800">
+    <div className="w-64 h-full bg-zinc-900 text-zinc-300 flex flex-col border-r border-zinc-800 relative z-40">
+      <div className="p-4 flex items-center justify-between border-b border-zinc-800/50">
+        <div className="flex items-center gap-2 font-bold text-white tracking-tight">
+          <div className="w-6 h-6 rounded bg-white text-zinc-900 flex items-center justify-center text-xs">A</div>
+          ARTIFACTS
+        </div>
+        <button 
+          onClick={onToggle}
+          className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
+          title="Collapse Sidebar"
+        >
+          <ChevronLeft size={18} />
+        </button>
+      </div>
+
       <div className="p-4 space-y-3">
         <button 
           onClick={onNewSession}

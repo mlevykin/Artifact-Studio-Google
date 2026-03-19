@@ -8,7 +8,10 @@ import {
   ChevronLeft, 
   ChevronRight,
   Copy,
-  Check
+  Check,
+  Edit,
+  Save,
+  X
 } from 'lucide-react';
 import { Artifact } from '../types';
 import { cn } from '../utils';
@@ -22,16 +25,27 @@ interface ArtifactPanelProps {
   history: Artifact[];
   onVersionSelect: (index: number) => void;
   currentIndex: number;
+  onSave: (content: string) => void;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
   artifact, 
   history, 
   onVersionSelect,
-  currentIndex
+  currentIndex,
+  onSave
 }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState('');
   const [copied, setCopied] = useState(false);
+
+  React.useEffect(() => {
+    if (artifact) {
+      setEditContent(artifact.content);
+      setIsEditing(false);
+    }
+  }, [artifact]);
 
   if (!artifact) {
     return (
@@ -46,6 +60,16 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       </div>
     );
   }
+
+  const handleSave = () => {
+    onSave(editContent);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditContent(artifact.content);
+    setIsEditing(false);
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(artifact.content);
@@ -115,6 +139,34 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {view === 'code' && (
+            <>
+              {isEditing ? (
+                <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl mr-2">
+                  <button 
+                    onClick={handleSave}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500 text-white shadow-sm hover:bg-emerald-600 transition-all"
+                  >
+                    <Save size={14} /> Save
+                  </button>
+                  <button 
+                    onClick={handleCancel}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-50 hover:bg-zinc-200 hover:text-zinc-800 transition-all"
+                  >
+                    <X size={14} /> Cancel
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-white shadow-sm hover:bg-zinc-900 transition-all mr-2"
+                >
+                  <Edit size={14} /> Edit
+                </button>
+              )}
+            </>
+          )}
+
           <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
             <button 
               disabled={currentIndex <= 0}
@@ -183,10 +235,19 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             )}
           </div>
         ) : (
-          <div className="w-full h-full bg-zinc-900 overflow-auto">
-            <pre className="p-6 font-mono text-sm text-zinc-300 leading-relaxed">
-              <code>{artifact.content}</code>
-            </pre>
+          <div className="w-full h-full bg-white overflow-auto">
+            {isEditing ? (
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full h-full p-6 font-mono text-sm text-zinc-800 leading-relaxed resize-none outline-none bg-zinc-50/50"
+                spellCheck={false}
+              />
+            ) : (
+              <pre className="p-6 font-mono text-sm text-zinc-800 leading-relaxed">
+                <code>{artifact.content}</code>
+              </pre>
+            )}
           </div>
         )}
       </div>

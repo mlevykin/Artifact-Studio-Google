@@ -40,6 +40,7 @@ export default function App() {
     localStorage.setItem('ollama_config', JSON.stringify(ollamaConfig));
   }, [ollamaConfig]);
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [availableModels, setAvailableModels] = useState<string[]>(['llama3']);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
@@ -94,11 +95,13 @@ export default function App() {
       }
 
       // Process the final response
+      const patches = parsePatches(fullResponse);
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
         content: stripArtifactsAndPatches(fullResponse),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        patches: patches.length > 0 ? patches : undefined
       };
       addMessage(assistantMessage);
 
@@ -159,11 +162,23 @@ export default function App() {
     updateSession({ currentArtifactId: selectedArtifact.id });
   };
 
+  const handleSaveArtifact = (content: string) => {
+    if (!currentArtifact) return;
+    const updatedArtifact: Artifact = {
+      ...currentArtifact,
+      id: generateId(),
+      content,
+      version: currentArtifact.version + 1,
+      timestamp: Date.now()
+    };
+    addArtifact(updatedArtifact);
+  };
+
   const currentArtifact = currentSession?.artifacts.find(a => a.id === currentSession.currentArtifactId) || null;
   const currentIndex = currentSession?.artifacts.findIndex(a => a.id === currentSession.currentArtifactId) ?? -1;
 
   return (
-    <div className="flex h-screen w-full bg-zinc-100 font-sans text-zinc-900 overflow-hidden">
+    <div className="flex h-screen w-full bg-zinc-100 font-sans text-zinc-900 overflow-hidden relative">
       <Sidebar 
         sessions={sessions}
         currentSessionId={currentSession?.id || null}
@@ -172,9 +187,11 @@ export default function App() {
         onDeleteSession={deleteSession}
         provider={provider}
         onProviderChange={setProvider}
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
 
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 flex overflow-hidden relative">
         <ChatPanel 
           messages={currentSession?.messages || []}
           onSendMessage={handleSendMessage}
@@ -183,6 +200,8 @@ export default function App() {
           ollamaConfig={ollamaConfig}
           availableModels={availableModels}
           onOllamaConfigChange={handleOllamaConfigChange}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
         <div className="flex-1 flex flex-col min-w-0 relative">
@@ -191,6 +210,7 @@ export default function App() {
             history={currentSession?.artifacts || []}
             onVersionSelect={handleVersionSelect}
             currentIndex={currentIndex}
+            onSave={handleSaveArtifact}
           />
           
           {/* Overlay for streaming artifact */}

@@ -29,6 +29,7 @@ export interface Message {
   content: string;
   attachments?: Attachment[];
   timestamp: number;
+  patches?: Patch[];
 }
 
 export interface Session {

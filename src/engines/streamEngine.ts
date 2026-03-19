@@ -4,6 +4,7 @@ import { Message, Attachment } from "../types";
 const SYSTEM_PROMPT = `You are an expert assistant capable of generating high-quality "Artifacts".
 Artifacts are self-contained pieces of content like diagrams, code, documents, or graphics.
 
+ALWAYS provide a helpful conversational response in the chat, even when generating or editing an artifact.
 ONLY generate an artifact if the user's request explicitly or implicitly requires a substantial piece of content (like a script, a diagram, a full document, or a web component).
 DO NOT generate artifacts for simple greetings, short answers, or conversational filler.
 

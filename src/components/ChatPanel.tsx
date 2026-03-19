@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, X, Image as ImageIcon, FileText, Loader2 } from 'lucide-react';
+import { Send, Paperclip, X, Image as ImageIcon, FileText, Loader2, Menu, ChevronDown, ChevronUp, Diff } from 'lucide-react';
 import { Message, Attachment } from '../types';
 import { cn, generateId } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,6 +12,8 @@ interface ChatPanelProps {
   ollamaConfig: { baseUrl: string; selectedModel: string };
   availableModels: string[];
   onOllamaConfigChange: (config: { baseUrl?: string; selectedModel?: string }) => void;
+  isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -21,13 +23,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   provider,
   ollamaConfig,
   availableModels,
-  onOllamaConfigChange
+  onOllamaConfigChange,
+  isSidebarOpen,
+  onToggleSidebar
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showOllamaSettings, setShowOllamaSettings] = useState(false);
+  const [expandedPatches, setExpandedPatches] = useState<Record<string, boolean>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const togglePatch = (messageId: string) => {
+    setExpandedPatches(prev => ({ ...prev, [messageId]: !prev[messageId] }));
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -86,7 +95,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     <div className="flex flex-col h-full bg-zinc-50 border-r border-zinc-200 w-[400px] flex-shrink-0">
       <div className="p-4 border-b border-zinc-200 bg-white flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-zinc-800">Chat</h2>
+          <div className="flex items-center gap-2">
+            {!isSidebarOpen && (
+              <button 
+                onClick={onToggleSidebar}
+                className="p-1.5 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-800 transition-colors"
+                title="Expand Sidebar"
+              >
+                <Menu size={18} />
+              </button>
+            )}
+            <h2 className="font-semibold text-zinc-800">Chat</h2>
+          </div>
           <div className="flex items-center gap-2">
             <span className={cn(
               "text-[10px] font-bold px-2 py-0.5 rounded-full border",
@@ -166,6 +186,41 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               )}
             >
               {m.content}
+              
+              {m.patches && m.patches.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-zinc-100">
+                  <button 
+                    onClick={() => togglePatch(m.id)}
+                    className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 hover:text-zinc-800 transition-colors"
+                  >
+                    <Diff size={12} />
+                    APPLIED {m.patches.length} PATCHES
+                    {expandedPatches[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
+                  
+                  <AnimatePresence>
+                    {expandedPatches[m.id] && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="mt-2 space-y-2 overflow-hidden"
+                      >
+                        {m.patches.map((p, i) => (
+                          <div key={i} className="text-[10px] font-mono rounded-lg border border-zinc-100 overflow-hidden">
+                            <div className="bg-red-50 text-red-700 p-2 border-b border-red-100 line-through whitespace-pre-wrap">
+                              {p.old}
+                            </div>
+                            <div className="bg-emerald-50 text-emerald-700 p-2 whitespace-pre-wrap">
+                              {p.new}
+                            </div>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
               
               {m.attachments && m.attachments.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
