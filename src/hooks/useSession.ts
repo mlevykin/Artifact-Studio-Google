@@ -5,24 +5,30 @@ import { generateId } from '../utils';
 const STORAGE_KEY = 'artifact_studio_sessions';
 
 export function useSessions() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-
-  // Load from localStorage
-  useEffect(() => {
+  const [sessions, setSessions] = useState<Session[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        setSessions(parsed);
-        if (parsed.length > 0) {
-          setCurrentSessionId(parsed[0].id);
-        }
+        return JSON.parse(saved);
       } catch (e) {
         console.error('Failed to parse sessions', e);
       }
     }
-  }, []);
+    return [];
+  });
+
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.length > 0 ? parsed[0].id : null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
 
   // Save to localStorage (stripping images to save space)
   useEffect(() => {
@@ -50,7 +56,7 @@ export function useSessions() {
       currentArtifactId: null,
       lastUpdated: Date.now()
     };
-    setSessions([newSession, ...sessions]);
+    setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);
     return newSession;
   };
@@ -65,21 +71,38 @@ export function useSessions() {
   const deleteSession = (id: string) => {
     setSessions(prev => prev.filter(s => s.id !== id));
     if (currentSessionId === id) {
-      setCurrentSessionId(sessions.find(s => s.id !== id)?.id || null);
+      setCurrentSessionId(prev => {
+        const remaining = sessions.filter(s => s.id !== id);
+        return remaining.length > 0 ? remaining[0].id : null;
+      });
     }
   };
 
   const addMessage = (message: Message) => {
-    if (!currentSessionId) {
-      const session = createSession();
-      setSessions(prev => prev.map(s => 
-        s.id === session.id ? { ...s, messages: [message] } : s
-      ));
-    } else {
-      updateSession({
-        messages: [...(currentSession?.messages || []), message]
-      });
-    }
+    setSessions(prev => {
+      let targetId = currentSessionId;
+      let updatedSessions = [...prev];
+
+      if (!targetId) {
+        const newSession: Session = {
+          id: generateId(),
+          title: 'New Chat',
+          messages: [message],
+          artifacts: [],
+          currentArtifactId: null,
+          lastUpdated: Date.now()
+        };
+        updatedSessions = [newSession, ...prev];
+        setCurrentSessionId(newSession.id);
+      } else {
+        updatedSessions = prev.map(s => 
+          s.id === targetId 
+            ? { ...s, messages: [...s.messages, message], lastUpdated: Date.now() } 
+            : s
+        );
+      }
+      return updatedSessions;
+    });
   };
 
   const addArtifact = (artifact: Artifact) => {
