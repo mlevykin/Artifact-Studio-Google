@@ -1,20 +1,88 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Artifact Studio 🎨
 
-# Run and deploy your AI Studio app
+Artifact Studio is a professional, AI-powered environment designed for generating, editing, and versioning artifacts. It provides a seamless experience for creating Mermaid diagrams, HTML/CSS/JS snippets, Markdown documents, and SVGs using Large Language Models (LLMs) with real-time streaming and fuzzy patching.
 
-This contains everything you need to run your app locally.
+## 🚀 Key Features
 
-View your app in AI Studio: https://ai.studio/apps/eedc2d1c-7883-46a0-a4f6-84daf9c14d09
+- **AI-Powered Chat**: Real-time streaming chat interface with support for multiple providers:
+  - **Gemini AI**: High-performance cloud-based models.
+  - **Ollama**: Connect to locally running LLMs (e.g., Llama 3, Mistral) for private, local-first generation.
+- **Artifacts Panel**: A dedicated space to view and interact with generated content:
+  - **Mermaid Diagrams**: Render complex flowcharts, sequence diagrams, and more.
+  - **HTML/CSS/JS Previews**: Live preview of web snippets in a sandboxed environment.
+  - **Markdown Rendering**: Rich text formatting with GFM (GitHub Flavored Markdown) support.
+  - **SVG Previews**: Direct rendering of vector graphics.
+  - **Plain Text**: Clean view for code or text snippets.
+- **Version Control**: Track changes with automatic versioning. Easily switch between previous versions of any artifact.
+- **Direct Code Editing**: Modify the generated code directly in the "Code" view and save changes.
+- **Advanced Export Options**:
+  - **PNG**: High-quality image export (2x scale) with specialized handling for SVG/Mermaid.
+  - **SVG**: Download vector source for diagrams and graphics.
+  - **HTML**: Export standalone web pages.
+  - **Markdown**: Save formatted documents.
+- **Interactive Diagram View**: Zoom and pan capabilities for large diagrams, including a "Fit to Screen" feature.
+- **Productivity Tools**:
+  - **Zen Mode**: Fullscreen preview for focused work.
+  - **Resizable Layout**: Flexible sidebar and chat/preview split.
+  - **Copy to Clipboard**: One-click code copying.
 
-## Run Locally
+## 🛠 Tech Stack
 
-**Prerequisites:**  Node.js
+- **Frontend**: [React 19](https://react.dev/) + [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **AI Integration**: [@google/genai](https://www.npmjs.com/package/@google/genai) (Gemini API)
+- **Diagrams**: [Mermaid.js](https://mermaid.js.org/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Animations**: [Motion](https://motion.dev/) (Framer Motion)
+- **Markdown**: [react-markdown](https://github.com/remarkjs/react-markdown)
+- **Exporting**: [html2canvas](https://html2canvas.hertzen.com/)
 
+## 🏁 Getting Started
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+- A [Gemini API Key](https://aistudio.google.com/app/apikey)
+
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd artifact-studio
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**:
+   Create a `.env` file in the root directory and add your Gemini API key:
+   ```env
+   GEMINI_API_KEY=your_api_key_here
+   ```
+
+4. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+   The application will be available at `http://localhost:3000`.
+
+## 📁 Project Structure
+
+- `/src/components`: Reusable UI components (ChatPanel, ArtifactPanel, Previews, etc.).
+- `/src/engines`: Logic for parsing and processing AI responses.
+- `/src/hooks`: Custom React hooks for state management and AI interaction.
+- `/src/types.ts`: TypeScript interfaces and types.
+- `/src/utils.ts`: Helper functions and styling utilities.
+- `/src/App.tsx`: Main application layout and routing logic.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+*Built with ❤️ in AI Studio.*
