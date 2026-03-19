@@ -23,21 +23,16 @@ export function fuzzyReplace(content: string, patch: Patch): string | null {
   const normalizedOld = normalize(oldText);
 
   if (normalizedContent.includes(normalizedOld)) {
-    // This is trickier because we need to find the actual range in the original string
-    // We'll use a simpler approach: if the normalized version matches, we try to find 
-    // a substring that normalizes to the same thing.
-    // For now, let's implement a basic line-by-line or block-based fuzzy search if needed.
-    // But usually, LLMs are consistent enough with line breaks if prompted well.
-    
-    // Fallback: if normalized matches but exact doesn't, it might be indentation issues.
-    // Let's try to match ignoring leading/trailing whitespace on each line.
     const lines = content.split('\n');
-    const oldLines = oldText.split('\n').map(l => l.trim());
+    const oldLines = oldText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     
+    if (oldLines.length === 0) return content;
+
     for (let i = 0; i <= lines.length - oldLines.length; i++) {
       let match = true;
       for (let j = 0; j < oldLines.length; j++) {
-        if (lines[i + j].trim() !== oldLines[j]) {
+        // Check if the line contains the expected text, ignoring leading/trailing whitespace
+        if (!lines[i + j].trim().includes(oldLines[j])) {
           match = false;
           break;
         }
@@ -45,7 +40,12 @@ export function fuzzyReplace(content: string, patch: Patch): string | null {
       
       if (match) {
         const newLines = [...lines];
-        newLines.splice(i, oldLines.length, newText);
+        // Replace the matched range with the new text
+        // We try to preserve the indentation of the first line
+        const indentation = lines[i].match(/^\s*/)?.[0] || '';
+        const indentedNewText = newText.split('\n').map(l => indentation + l).join('\n');
+        
+        newLines.splice(i, oldLines.length, indentedNewText);
         return newLines.join('\n');
       }
     }
@@ -98,10 +98,19 @@ export function parseArtifact(text: string): { type: string; title: string; cont
   const match = text.match(artifactRegex);
   
   if (match) {
+    const content = match[3].trim();
+    
+    // If the content itself contains a patch, it's likely a hallucination where the LLM 
+    // wrapped a patch in artifact tags. We should return null so the patch engine can 
+    // handle it properly from the raw text.
+    if (content.includes('<patch>') && content.includes('<old>') && content.includes('<new>')) {
+      return null;
+    }
+
     return {
       type: match[1],
       title: match[2],
-      content: match[3].trim()
+      content
     };
   }
   
