@@ -46,3 +46,13 @@
 .prose pre { @apply bg-zinc-900 text-zinc-300 p-4 rounded-xl overflow-auto mb-4 font-mono text-xs; }
 .prose blockquote { @apply border-l-4 border-zinc-200 pl-4 italic text-zinc-500 mb-4; }
 .prose a { @apply text-zinc-900 underline underline-offset-4 decoration-zinc-300 hover:decoration-zinc-900 transition-colors; }
+.prose-invert { @apply text-white; }
+.prose-invert h1, .prose-invert h2, .prose-invert h3, .prose-invert strong { @apply text-white; }
+.prose-invert ul, .prose-invert ol { @apply text-white; }
+.prose-invert li { @apply text-white; }
+.prose-invert code { @apply bg-white/10 text-white; }
+.prose table { @apply w-full border-collapse mb-4; }
+.prose th, .prose td { @apply border border-zinc-200 p-2 text-left; }
+.prose th { @apply bg-zinc-50 font-bold; }
+.prose-invert th, .prose-invert td { @apply border-white/20; }
+.prose-invert th { @apply bg-white/10; }

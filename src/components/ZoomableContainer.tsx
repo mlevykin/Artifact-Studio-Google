@@ -133,11 +133,43 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
 
     const scaleX = availableWidth / unscaledWidth;
     const scaleY = availableHeight / unscaledHeight;
-    const newZoom = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 100%
+    const newZoom = Math.min(scaleX, scaleY); // Allow zooming in beyond 100% to fit screen
 
     setZoom(newZoom);
     setPosition({ x: 0, y: 0 });
   };
+
+  // Automatically fit to screen when content size changes
+  const lastFitSize = useRef({ width: 0, height: 0 });
+  useEffect(() => {
+    if (!contentRef.current) return;
+
+    const observer = new ResizeObserver(() => {
+      if (!contentRef.current) return;
+      const rect = contentRef.current.getBoundingClientRect();
+      const unscaledWidth = Math.round(rect.width / zoom);
+      const unscaledHeight = Math.round(rect.height / zoom);
+
+      // Only fit if the unscaled size has changed significantly
+      if (Math.abs(unscaledWidth - lastFitSize.current.width) > 5 || 
+          Math.abs(unscaledHeight - lastFitSize.current.height) > 5) {
+        lastFitSize.current = { width: unscaledWidth, height: unscaledHeight };
+        fitToScreen();
+      }
+    });
+
+    observer.observe(contentRef.current);
+    if (contentRef.current.firstElementChild) {
+      observer.observe(contentRef.current.firstElementChild);
+    }
+    
+    // Also observe the container to refit when the viewport changes
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [zoom, children]); // Re-run when zoom or children change
 
   const zoomIn = () => setZoom(prev => Math.min(prev * 1.2, 50));
   const zoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.01));

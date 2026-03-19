@@ -4,6 +4,9 @@ import { Message, Attachment } from '../types';
 import { cn, generateId } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
 
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
 interface ChatPanelProps {
   messages: Message[];
   onSendMessage: (content: string, attachments: Attachment[]) => void;
@@ -185,7 +188,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   : "bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm"
               )}
             >
-              {m.content}
+              <div className={cn(
+                "prose prose-sm max-w-none break-words",
+                m.role === 'user' ? "text-white prose-invert" : "text-zinc-800"
+              )}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+              </div>
               
               {m.patches && m.patches.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-zinc-100">
