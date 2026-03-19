@@ -9,7 +9,7 @@ import { ChatPanel } from './components/ChatPanel';
 import { ArtifactPanel } from './components/ArtifactPanel';
 import { useSessions } from './hooks/useSession';
 import { streamResponse, fetchOllamaModels } from './engines/streamEngine';
-import { parseArtifact, parsePatches, applyPatches } from './engines/patchEngine';
+import { parseArtifact, parsePatches, applyPatches, stripArtifactsAndPatches } from './engines/patchEngine';
 import { Message, Attachment, Artifact, OllamaConfig } from './types';
 import { generateId } from './utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -97,7 +97,7 @@ export default function App() {
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
-        content: fullResponse,
+        content: stripArtifactsAndPatches(fullResponse),
         timestamp: Date.now()
       };
       addMessage(assistantMessage);

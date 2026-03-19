@@ -107,3 +107,18 @@ export function parseArtifact(text: string): { type: string; title: string; cont
   
   return null;
 }
+
+/**
+ * Strips <artifact> and <patch> blocks from the text for display in chat
+ */
+export function stripArtifactsAndPatches(text: string): string {
+  let cleaned = text;
+  
+  // Strip artifacts
+  cleaned = cleaned.replace(/<artifact\s+type="(\w+)"\s+title="([^"]+)">([\s\S]*?)<\/artifact>/g, '');
+  
+  // Strip patches
+  cleaned = cleaned.replace(/<patch>[\s\S]*?<\/patch>/g, '');
+  
+  return cleaned.trim();
+}

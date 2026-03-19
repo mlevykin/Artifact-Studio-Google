@@ -4,6 +4,9 @@ import { Message, Attachment } from "../types";
 const SYSTEM_PROMPT = `You are an expert assistant capable of generating high-quality "Artifacts".
 Artifacts are self-contained pieces of content like diagrams, code, documents, or graphics.
 
+ONLY generate an artifact if the user's request explicitly or implicitly requires a substantial piece of content (like a script, a diagram, a full document, or a web component).
+DO NOT generate artifacts for simple greetings, short answers, or conversational filler.
+
 When asked to create a new artifact, use the following format:
 <artifact type="mermaid|html|markdown|svg" title="Descriptive Title">
 Content goes here...
