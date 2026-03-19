@@ -4,7 +4,6 @@ import { Message, Attachment } from "../types";
 const SYSTEM_PROMPT = `You are an expert assistant capable of generating high-quality "Artifacts".
 Artifacts are self-contained pieces of content like diagrams, code, documents, or graphics.
 
-ALWAYS provide a helpful conversational response in the chat, even when generating or editing an artifact.
 ONLY generate an artifact if the user's request explicitly or implicitly requires a substantial piece of content (like a script, a diagram, a full document, or a web component).
 DO NOT generate artifacts for simple greetings, short answers, or conversational filler.
 
@@ -46,26 +45,48 @@ export async function* streamGeminiResponse(
   const controller = new AbortController();
   if (onAbort) onAbort(controller);
 
-  const formattedMessages = messages.map(m => ({
-    role: m.role === 'user' ? 'user' : 'model' as any,
-    parts: [
-      ...(m.attachments || []).map(a => ({
-        inlineData: {
-          mimeType: a.mimeType,
-          data: a.data
+  const formattedMessages = messages.map(m => {
+    const parts: any[] = [];
+    
+    // Add attachments
+    if (m.attachments) {
+      for (const a of m.attachments) {
+        if (a.type === 'image') {
+          parts.push({
+            inlineData: {
+              mimeType: a.mimeType,
+              data: a.data
+            }
+          });
+        } else {
+          // Text attachments are added as text parts
+          parts.push({ text: `\n\nAttachment (${a.name}):\n${a.data}\n` });
         }
-      })),
-      { text: m.content }
-    ]
-  }));
+      }
+    }
+    
+    // Add main content
+    parts.push({ text: m.content || (m.attachments?.length ? "" : " ") });
+    
+    return {
+      role: m.role === 'user' ? 'user' : 'model' as any,
+      parts
+    };
+  });
 
   // Inject current artifact context if editing
+  // Only inject if there are no images in the last message, or if the user explicitly mentions the artifact
   if (currentArtifactContent && formattedMessages.length > 0) {
     const lastUserMsg = [...formattedMessages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
-      lastUserMsg.parts.push({
-        text: `\n\nCONTEXT: The current artifact content is:\n\`\`\`\n${currentArtifactContent}\n\`\`\`\nPlease provide edits using <patch> blocks if possible.`
-      });
+      const hasImages = lastUserMsg.parts.some(p => p.inlineData);
+      const mentionsArtifact = lastUserMsg.parts.some(p => p.text && /artifact|code|diagram|edit|change|fix|update/i.test(p.text));
+      
+      if (!hasImages || mentionsArtifact) {
+        lastUserMsg.parts.push({
+          text: `\n\n[CONTEXT: The current artifact content is provided below. Use it if the user asks to edit or reference it.]\n\`\`\`\n${currentArtifactContent}\n\`\`\``
+        });
+      }
     }
   }
 
@@ -117,15 +138,36 @@ export async function* streamOllamaResponse(
   const controller = new AbortController();
   if (onAbort) onAbort(controller);
 
-  const ollamaMessages = messages.map(m => ({
-    role: m.role,
-    content: m.content
-  }));
+  const ollamaMessages = messages.map(m => {
+    const images: string[] = [];
+    let content = m.content || "";
+    
+    if (m.attachments) {
+      for (const a of m.attachments) {
+        if (a.type === 'image') {
+          images.push(a.data);
+        } else {
+          content += `\n\nAttachment (${a.name}):\n${a.data}\n`;
+        }
+      }
+    }
+    
+    return {
+      role: m.role,
+      content,
+      images: images.length > 0 ? images : undefined
+    };
+  });
 
   if (currentArtifactContent && ollamaMessages.length > 0) {
     const lastUserMsg = [...ollamaMessages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
-      lastUserMsg.content += `\n\nCONTEXT: The current artifact content is:\n\`\`\`\n${currentArtifactContent}\n\`\`\`\nPlease provide edits using <patch> blocks if possible.`;
+      const hasImages = lastUserMsg.images && lastUserMsg.images.length > 0;
+      const mentionsArtifact = /artifact|code|diagram|edit|change|fix|update/i.test(lastUserMsg.content);
+      
+      if (!hasImages || mentionsArtifact) {
+        lastUserMsg.content += `\n\n[CONTEXT: The current artifact content is provided below. Use it if the user asks to edit or reference it.]\n\`\`\`\n${currentArtifactContent}\n\`\`\``;
+      }
     }
   }
 
