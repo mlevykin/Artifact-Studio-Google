@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Move } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ZoomIn, ZoomOut, RotateCcw, Move, Maximize } from 'lucide-react';
 import { cn } from '../utils';
 
 interface ZoomableContainerProps {
@@ -15,22 +15,51 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const delta = -e.deltaY;
-      const factor = Math.pow(1.1, delta / 100);
-      // "Infinite" zoom - very wide range
-      const newZoom = Math.min(Math.max(zoom * factor, 0.01), 50);
+  // Use refs to avoid re-attaching wheel listener too often
+  const stateRef = useRef({ zoom, position });
+  useEffect(() => {
+    stateRef.current = { zoom, position };
+  }, [zoom, position]);
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault();
+    
+    // Standardize delta
+    const delta = -e.deltaY;
+    const factor = Math.pow(1.1, delta / 100);
+    const { zoom: currentZoom, position: currentPos } = stateRef.current;
+    
+    // Expanded zoom range
+    const newZoom = Math.min(Math.max(currentZoom * factor, 0.001), 100);
+    
+    if (newZoom !== currentZoom && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      const relX = (mouseX - centerX - currentPos.x) / currentZoom;
+      const relY = (mouseY - centerY - currentPos.y) / currentZoom;
+
+      const newX = mouseX - centerX - relX * newZoom;
+      const newY = mouseY - centerY - relY * newZoom;
+
       setZoom(newZoom);
+      setPosition({ x: newX, y: newY });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Pan with:
-    // 1. Middle click
-    // 2. Left click with Alt/Shift
-    // 3. Left click if panMode is active
     if (e.button === 1 || (e.button === 0 && (e.altKey || e.shiftKey || panMode))) {
       setIsDragging(true);
       e.preventDefault();
@@ -67,6 +96,33 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
     setPosition({ x: 0, y: 0 });
   };
 
+  const fitToScreen = () => {
+    if (!contentRef.current || !containerRef.current) return;
+    
+    const container = containerRef.current.getBoundingClientRect();
+    const content = contentRef.current.firstElementChild?.getBoundingClientRect();
+    
+    if (!content) {
+      resetZoom();
+      return;
+    }
+
+    // Since content is scaled, we need its unscaled size
+    const unscaledWidth = content.width / zoom;
+    const unscaledHeight = content.height / zoom;
+
+    const padding = 40;
+    const availableWidth = container.width - padding;
+    const availableHeight = container.height - padding;
+
+    const scaleX = availableWidth / unscaledWidth;
+    const scaleY = availableHeight / unscaledHeight;
+    const newZoom = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 100%
+
+    setZoom(newZoom);
+    setPosition({ x: 0, y: 0 });
+  };
+
   const zoomIn = () => setZoom(prev => Math.min(prev * 1.2, 50));
   const zoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.01));
 
@@ -74,18 +130,16 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
     <div 
       ref={containerRef}
       className={cn("relative w-full h-full overflow-hidden bg-zinc-50 select-none", className)}
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       style={{ cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto') }}
     >
       <div 
-        ref={contentRef}
-        className="w-full h-full transition-transform duration-75 ease-out origin-center flex items-center justify-center pointer-events-none"
+        className="w-full h-full origin-center flex items-center justify-center pointer-events-none"
         style={{ 
           transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
         }}
       >
-        <div className="pointer-events-auto">
+        <div ref={contentRef} className="pointer-events-auto">
           {children}
         </div>
       </div>
@@ -122,6 +176,13 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
         </button>
         <div className="w-px h-4 bg-zinc-200 mx-1" />
         <button 
+          onClick={fitToScreen}
+          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-600 transition-colors"
+          title="Fit to Screen"
+        >
+          <Maximize size={16} />
+        </button>
+        <button 
           onClick={resetZoom}
           className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-600 transition-colors"
           title="Reset Zoom"
@@ -131,7 +192,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
       </div>
 
       <div className="absolute bottom-4 left-4 text-[9px] text-zinc-400 font-medium bg-white/50 backdrop-blur px-2 py-1 rounded-md pointer-events-none">
-        {panMode ? 'Left Click to Pan' : 'Middle Click to Pan • Ctrl + Scroll to Zoom'}
+        {panMode ? 'Left Click to Pan' : 'Middle Click to Pan • Scroll to Zoom'}
       </div>
     </div>
   );

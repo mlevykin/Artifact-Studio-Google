@@ -56,7 +56,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
   return (
     <div 
       ref={containerRef} 
-      className={cn("w-full h-full flex items-center justify-center bg-white p-4", className)}
+      className={cn("bg-white p-8 shadow-sm rounded-lg", className)}
     />
   );
 };

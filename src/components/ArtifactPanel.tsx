@@ -270,9 +270,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         {view === 'preview' ? (
           <ZoomableContainer className="w-full h-full">
             {artifact.type === 'mermaid' && <MermaidPreview content={artifact.content} />}
-            {artifact.type === 'html' && <HtmlPreview content={artifact.content} />}
+            {artifact.type === 'html' && (
+              <div className="w-[1200px] h-[800px] shadow-lg rounded-xl overflow-hidden bg-white">
+                <HtmlPreview content={artifact.content} />
+              </div>
+            )}
             {artifact.type === 'markdown' && (
-              <div className="p-8 max-w-3xl mx-auto bg-white min-h-full shadow-sm w-full">
+              <div className="w-[800px] min-h-[1000px] p-12 bg-white shadow-lg rounded-xl">
                 <div className="prose prose-zinc prose-sm max-w-none">
                   <ReactMarkdown>{artifact.content}</ReactMarkdown>
                 </div>
@@ -280,12 +284,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             )}
             {artifact.type === 'svg' && (
               <div 
-                className="w-full h-full flex items-center justify-center p-8 bg-white"
+                className="p-12 bg-white shadow-lg rounded-xl"
                 dangerouslySetInnerHTML={{ __html: artifact.content }}
               />
             )}
             {artifact.type === 'text' && (
-              <pre className="p-8 font-mono text-sm whitespace-pre-wrap bg-white min-h-full w-full">
+              <pre className="w-[800px] p-12 font-mono text-sm whitespace-pre-wrap bg-white shadow-lg rounded-xl">
                 {artifact.content}
               </pre>
             )}
