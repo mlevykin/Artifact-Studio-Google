@@ -34,16 +34,18 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
           const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
           const { svg } = await mermaid.render(id, processedContent);
           if (containerRef.current) {
-            // Remove fixed max-width from SVG to allow it to fill the container
-            const responsiveSvg = svg.replace(/max-width: [^;]+;/, 'max-width: 100%;');
+            // Remove fixed max-width and height from SVG to allow it to be scaled naturally
+            const responsiveSvg = svg
+              .replace(/max-width: [^;]+;/, '')
+              .replace(/style="[^"]*max-width:[^"]*"/, '');
+            
             containerRef.current.innerHTML = responsiveSvg;
             
-            // Ensure SVG itself is responsive
             const svgElement = containerRef.current.querySelector('svg');
             if (svgElement) {
-              svgElement.style.width = '100%';
-              svgElement.style.height = 'auto';
               svgElement.style.display = 'block';
+              // We don't set width 100% here because we want the natural size 
+              // for ZoomableContainer to measure and scale
             }
           }
         } catch (error: any) {
@@ -66,7 +68,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
   return (
     <div 
       ref={containerRef} 
-      className={cn("bg-white p-8 shadow-sm rounded-lg min-w-[400px]", className)}
+      className={cn("bg-white p-8 shadow-sm rounded-lg", className)}
     />
   );
 };

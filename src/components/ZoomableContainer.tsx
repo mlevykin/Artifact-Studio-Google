@@ -116,10 +116,9 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
     if (!contentRef.current || !containerRef.current) return;
     
     const container = containerRef.current.getBoundingClientRect();
-    const content = contentRef.current.firstElementChild?.getBoundingClientRect();
+    const content = contentRef.current.getBoundingClientRect();
     
-    if (!content) {
-      resetZoom();
+    if (content.width === 0 || content.height === 0) {
       return;
     }
 
@@ -127,13 +126,19 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
     const unscaledWidth = content.width / zoom;
     const unscaledHeight = content.height / zoom;
 
-    const padding = 40;
-    const availableWidth = container.width - padding;
-    const availableHeight = container.height - padding;
+    const padding = 64; // Increased padding for better framing
+    const availableWidth = Math.max(container.width - padding, 100);
+    const availableHeight = Math.max(container.height - padding, 100);
 
     const scaleX = availableWidth / unscaledWidth;
     const scaleY = availableHeight / unscaledHeight;
-    const newZoom = Math.min(scaleX, scaleY); // Allow zooming in beyond 100% to fit screen
+    
+    // Calculate new zoom to fit the available space
+    let newZoom = Math.min(scaleX, scaleY);
+    
+    // Limit extreme zoom-in for very small diagrams to keep them readable but not pixelated
+    // but still allow significant zoom
+    newZoom = Math.min(newZoom, 4); 
 
     setZoom(newZoom);
     setPosition({ x: 0, y: 0 });
@@ -151,25 +156,21 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
       const unscaledHeight = Math.round(rect.height / zoom);
 
       // Only fit if the unscaled size has changed significantly
-      if (Math.abs(unscaledWidth - lastFitSize.current.width) > 5 || 
-          Math.abs(unscaledHeight - lastFitSize.current.height) > 5) {
+      if (Math.abs(unscaledWidth - lastFitSize.current.width) > 2 || 
+          Math.abs(unscaledHeight - lastFitSize.current.height) > 2) {
         lastFitSize.current = { width: unscaledWidth, height: unscaledHeight };
         fitToScreen();
       }
     });
 
     observer.observe(contentRef.current);
-    if (contentRef.current.firstElementChild) {
-      observer.observe(contentRef.current.firstElementChild);
-    }
     
-    // Also observe the container to refit when the viewport changes
     if (containerRef.current) {
       observer.observe(containerRef.current);
     }
 
     return () => observer.disconnect();
-  }, [zoom, children]); // Re-run when zoom or children change
+  }, [zoom, children]);
 
   const zoomIn = () => setZoom(prev => Math.min(prev * 1.2, 50));
   const zoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.01));
