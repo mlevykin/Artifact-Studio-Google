@@ -127,33 +127,45 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
     if (format === 'png') {
       try {
-        // For HTML artifacts, we can't easily capture the iframe with html2canvas
-        // But we can try to capture the container. 
-        // Note: html2canvas has limitations with cross-origin content and iframes.
+        // Special handling for SVG/Mermaid which html2canvas often fails on
+        const svgElement = element.querySelector('svg');
+        if (svgElement && (artifact.type === 'mermaid' || artifact.type === 'svg')) {
+          const svgData = new XMLSerializer().serializeToString(svgElement);
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          
+          // Get natural dimensions
+          const rect = svgElement.getBoundingClientRect();
+          const scale = 2; // High quality
+          canvas.width = rect.width * scale;
+          canvas.height = rect.height * scale;
+          
+          img.onload = () => {
+            if (ctx) {
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              const link = document.createElement('a');
+              link.download = `${artifact.title}.png`;
+              link.href = canvas.toDataURL('image/png');
+              link.click();
+            }
+          };
+          img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+          return;
+        }
+
+        if (artifact.type === 'html') {
+          alert('PNG export is limited for HTML artifacts due to iframe security restrictions. Try Export HTML instead.');
+          return;
+        }
+
         const canvas = await html2canvas(element, { 
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
-          onclone: (clonedDoc) => {
-            // html2canvas doesn't support oklch colors.
-            // We need to find elements using them and replace with fallback colors.
-            const elements = clonedDoc.getElementsByTagName('*');
-            for (let i = 0; i < elements.length; i++) {
-              const el = elements[i] as HTMLElement;
-              const style = window.getComputedStyle(el);
-              
-              // Check common color properties
-              const properties = ['backgroundColor', 'color', 'borderColor', 'outlineColor'];
-              properties.forEach(prop => {
-                const value = (el.style as any)[prop] || style.getPropertyValue(prop);
-                if (value && value.includes('oklch')) {
-                  // Fallback to a safe color if oklch is detected
-                  (el.style as any)[prop] = prop === 'backgroundColor' ? '#ffffff' : '#000000';
-                }
-              });
-            }
-          }
         });
         const link = document.createElement('a');
         link.download = `${artifact.title}.png`;

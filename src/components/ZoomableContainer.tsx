@@ -234,13 +234,6 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
         >
           <Maximize size={16} />
         </button>
-        <button 
-          onClick={resetZoom}
-          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-600 transition-colors"
-          title="Reset Zoom"
-        >
-          <RotateCcw size={16} />
-        </button>
       </div>
 
       <div className="absolute bottom-4 left-4 text-[9px] text-zinc-400 font-medium bg-white/50 backdrop-blur px-2 py-1 rounded-md pointer-events-none">
