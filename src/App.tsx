@@ -13,7 +13,7 @@ import { parseArtifact, parsePatches, applyPatches, stripArtifactsAndPatches } f
 import { Message, Attachment, Artifact, OllamaConfig } from './types';
 import { generateId } from './utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { Layers } from 'lucide-react';
+import { Layers, Diff } from 'lucide-react';
 
 export default function App() {
   const {
@@ -60,10 +60,14 @@ export default function App() {
 
   const handleSendMessage = useCallback(async (content: string, attachments: Attachment[]) => {
     let sessionId = currentSession?.id;
+    let initialMessages = currentSession?.messages || [];
+    let initialArtifact = currentSession?.artifacts.find(a => a.id === currentSession.currentArtifactId) || null;
     
     if (!sessionId) {
       const newSession = createSession();
       sessionId = newSession.id;
+      initialMessages = [];
+      initialArtifact = null;
     }
 
     const userMessage: Message = {
@@ -79,12 +83,7 @@ export default function App() {
     setStreamingText('');
     setStreamingArtifact(null);
 
-    // We need to get the latest state for messages and artifact
-    // Since state updates are async, we use the currentSession if it exists, 
-    // or the newly created session's initial state.
-    const activeSession = sessions.find(s => s.id === sessionId);
-    const currentArtifact = activeSession?.artifacts.find(a => a.id === activeSession.currentArtifactId) || null;
-    const messages = [...(activeSession?.messages || []), userMessage];
+    const messages = [...initialMessages, userMessage];
 
     try {
       let fullResponse = '';
@@ -92,7 +91,7 @@ export default function App() {
         provider,
         messages,
         { baseUrl: ollamaConfig.baseUrl, model: ollamaConfig.selectedModel },
-        currentArtifact?.content,
+        initialArtifact?.content,
         (controller) => { abortControllerRef.current = controller; }
       );
 
@@ -252,6 +251,23 @@ export default function App() {
                 <div>
                   <div className="text-sm font-semibold text-zinc-800">Generating Artifact...</div>
                   <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Streaming content</div>
+                </div>
+              </motion.div>
+            )}
+
+            {isStreaming && streamingText.includes('<patch') && !streamingText.includes('</patch>') && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur shadow-2xl border border-zinc-200 rounded-2xl px-6 py-4 flex items-center gap-4 z-50"
+              >
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white animate-pulse">
+                  <Diff size={20} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-zinc-800">Applying Patches...</div>
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Updating code</div>
                 </div>
               </motion.div>
             )}

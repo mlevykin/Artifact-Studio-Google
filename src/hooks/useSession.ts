@@ -80,17 +80,20 @@ export function useSessions() {
 
   const addMessage = (message: Message) => {
     if (!currentSessionId) return;
-    updateSession({
-      messages: [...(currentSession?.messages || []), message]
-    });
+    setSessions(prev => prev.map(s => 
+      s.id === currentSessionId 
+        ? { ...s, messages: [...s.messages, message], lastUpdated: Date.now() } 
+        : s
+    ));
   };
 
   const addArtifact = (artifact: Artifact) => {
     if (!currentSessionId) return;
-    updateSession({
-      artifacts: [...(currentSession?.artifacts || []), artifact],
-      currentArtifactId: artifact.id
-    });
+    setSessions(prev => prev.map(s => 
+      s.id === currentSessionId 
+        ? { ...s, artifacts: [...s.artifacts, artifact], currentArtifactId: artifact.id, lastUpdated: Date.now() } 
+        : s
+    ));
   };
 
   return {
