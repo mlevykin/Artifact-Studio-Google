@@ -79,29 +79,9 @@ export function useSessions() {
   };
 
   const addMessage = (message: Message) => {
-    setSessions(prev => {
-      let targetId = currentSessionId;
-      let updatedSessions = [...prev];
-
-      if (!targetId) {
-        const newSession: Session = {
-          id: generateId(),
-          title: 'New Chat',
-          messages: [message],
-          artifacts: [],
-          currentArtifactId: null,
-          lastUpdated: Date.now()
-        };
-        updatedSessions = [newSession, ...prev];
-        setCurrentSessionId(newSession.id);
-      } else {
-        updatedSessions = prev.map(s => 
-          s.id === targetId 
-            ? { ...s, messages: [...s.messages, message], lastUpdated: Date.now() } 
-            : s
-        );
-      }
-      return updatedSessions;
+    if (!currentSessionId) return;
+    updateSession({
+      messages: [...(currentSession?.messages || []), message]
     });
   };
 

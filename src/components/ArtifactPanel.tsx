@@ -26,6 +26,7 @@ interface ArtifactPanelProps {
   onVersionSelect: (index: number) => void;
   currentIndex: number;
   onSave: (content: string) => void;
+  isStreaming?: boolean;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -33,12 +34,23 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   history, 
   onVersionSelect,
   currentIndex,
-  onSave
+  onSave,
+  isStreaming = false
 }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Switch to code view when streaming starts
+  React.useEffect(() => {
+    if (isStreaming) {
+      setView('code');
+    } else if (artifact && artifact.id !== 'streaming') {
+      // Switch back to preview when streaming ends and we have a real artifact
+      setView('preview');
+    }
+  }, [isStreaming]);
 
   React.useEffect(() => {
     if (artifact) {
@@ -82,11 +94,24 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     if (!element) return;
 
     if (format === 'png') {
-      const canvas = await html2canvas(element, { scale: 2 });
-      const link = document.createElement('a');
-      link.download = `${artifact.title}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      try {
+        // For HTML artifacts, we can't easily capture the iframe with html2canvas
+        // But we can try to capture the container. 
+        // Note: html2canvas has limitations with cross-origin content and iframes.
+        const canvas = await html2canvas(element, { 
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+        const link = document.createElement('a');
+        link.download = `${artifact.title}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (err) {
+        console.error('PNG Export failed:', err);
+        alert('Failed to export PNG. This can happen with complex HTML or iframes.');
+      }
     } else {
       const blob = new Blob([artifact.content], { type: 'text/plain' });
       const link = document.createElement('a');
@@ -199,11 +224,22 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             <button className="p-2 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors">
               <Download size={18} />
             </button>
-            <div className="absolute right-0 top-full mt-1 hidden group-hover:block bg-white border border-zinc-200 rounded-xl shadow-xl p-2 z-50 min-w-[120px]">
-              <button onClick={() => handleExport('png')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg">Export PNG</button>
-              <button onClick={() => handleExport('svg')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg">Export SVG</button>
-              <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg">Export HTML</button>
-              <button onClick={() => handleExport('md')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg">Export Markdown</button>
+            {/* Added a transparent bridge to prevent menu from disappearing */}
+            <div className="absolute right-0 top-full pt-2 hidden group-hover:block z-50">
+              <div className="bg-white border border-zinc-200 rounded-xl shadow-xl p-2 min-w-[140px]">
+                <button onClick={() => handleExport('png')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg flex items-center gap-2">
+                  <Download size={12} /> Export PNG
+                </button>
+                <button onClick={() => handleExport('svg')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg flex items-center gap-2">
+                  <Download size={12} /> Export SVG
+                </button>
+                <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg flex items-center gap-2">
+                  <Download size={12} /> Export HTML
+                </button>
+                <button onClick={() => handleExport('md')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg flex items-center gap-2">
+                  <Download size={12} /> Export Markdown
+                </button>
+              </div>
             </div>
           </div>
         </div>

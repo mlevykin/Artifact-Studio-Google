@@ -44,6 +44,7 @@ export default function App() {
   const [availableModels, setAvailableModels] = useState<string[]>(['llama3']);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
+  const [streamingArtifact, setStreamingArtifact] = useState<{ type: string; title: string; content: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Fetch models when provider is ollama or baseUrl changes
@@ -58,8 +59,11 @@ export default function App() {
   };
 
   const handleSendMessage = useCallback(async (content: string, attachments: Attachment[]) => {
-    if (!currentSession) {
-      // Session will be created automatically by addMessage if not exists
+    let sessionId = currentSession?.id;
+    
+    if (!sessionId) {
+      const newSession = createSession();
+      sessionId = newSession.id;
     }
 
     const userMessage: Message = {
@@ -73,9 +77,14 @@ export default function App() {
     addMessage(userMessage);
     setIsStreaming(true);
     setStreamingText('');
+    setStreamingArtifact(null);
 
-    const currentArtifact = currentSession?.artifacts[currentSession.artifacts.length - 1];
-    const messages = [...(currentSession?.messages || []), userMessage];
+    // We need to get the latest state for messages and artifact
+    // Since state updates are async, we use the currentSession if it exists, 
+    // or the newly created session's initial state.
+    const activeSession = sessions.find(s => s.id === sessionId);
+    const currentArtifact = activeSession?.artifacts.find(a => a.id === activeSession.currentArtifactId) || null;
+    const messages = [...(activeSession?.messages || []), userMessage];
 
     try {
       let fullResponse = '';
@@ -91,6 +100,12 @@ export default function App() {
         if (chunk.text) {
           fullResponse = chunk.fullText;
           setStreamingText(fullResponse);
+
+          // Extract partial artifact for live preview
+          const partialArtifact = parseArtifact(fullResponse);
+          if (partialArtifact) {
+            setStreamingArtifact(partialArtifact as any);
+          }
         }
       }
 
@@ -152,6 +167,7 @@ export default function App() {
     } finally {
       setIsStreaming(false);
       setStreamingText('');
+      setStreamingArtifact(null);
       abortControllerRef.current = null;
     }
   }, [currentSession, addMessage, addArtifact, updateSession, provider, ollamaConfig]);
@@ -176,6 +192,13 @@ export default function App() {
 
   const currentArtifact = currentSession?.artifacts.find(a => a.id === currentSession.currentArtifactId) || null;
   const currentIndex = currentSession?.artifacts.findIndex(a => a.id === currentSession.currentArtifactId) ?? -1;
+
+  const displayArtifact = isStreaming && streamingArtifact ? {
+    id: 'streaming',
+    ...streamingArtifact,
+    version: currentArtifact ? currentArtifact.version : 1,
+    timestamp: Date.now()
+  } as Artifact : currentArtifact;
 
   return (
     <div className="flex h-screen w-full bg-zinc-100 font-sans text-zinc-900 overflow-hidden relative">
@@ -206,11 +229,12 @@ export default function App() {
 
         <div className="flex-1 flex flex-col min-w-0 relative">
           <ArtifactPanel 
-            artifact={currentArtifact}
+            artifact={displayArtifact}
             history={currentSession?.artifacts || []}
             onVersionSelect={handleVersionSelect}
             currentIndex={currentIndex}
             onSave={handleSaveArtifact}
+            isStreaming={isStreaming && !!streamingArtifact}
           />
           
           {/* Overlay for streaming artifact */}
