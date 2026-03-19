@@ -25,14 +25,23 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
       if (containerRef.current && content) {
         try {
           containerRef.current.innerHTML = '';
+          
+          // Pre-process content to fix common syntax errors
+          // Wrap unquoted labels containing parentheses in double quotes
+          let processedContent = content;
+          processedContent = processedContent.replace(/\[([^"\]]*\([^"\]]*\)[^"\]]*)\]/g, '["$1"]');
+          
           const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-          const { svg } = await mermaid.render(id, content);
+          const { svg } = await mermaid.render(id, processedContent);
           containerRef.current.innerHTML = svg;
-        } catch (error) {
+        } catch (error: any) {
           console.error('Mermaid render error:', error);
-          containerRef.current.innerHTML = `<div class="text-red-500 p-4 border border-red-200 rounded bg-red-50 text-xs font-mono">
-            Error rendering diagram. Please check syntax.
-          </div>`;
+          containerRef.current.innerHTML = `
+            <div class="text-red-500 p-4 border border-red-200 rounded bg-red-50 text-xs font-mono">
+              <div class="font-bold mb-2">Mermaid Render Error</div>
+              <pre class="whitespace-pre-wrap">${error?.message || 'Unknown error'}</pre>
+            </div>
+          `;
         }
       }
     };

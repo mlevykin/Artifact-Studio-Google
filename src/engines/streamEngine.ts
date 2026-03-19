@@ -33,7 +33,7 @@ Guidelines:
 - Be concise in your conversational response.
 - Focus on the artifact quality.
 - For HTML, include necessary CSS in <style> tags.
-- For Mermaid, use v11 syntax.
+- For Mermaid, use v11 syntax and ALWAYS wrap node labels in double quotes to avoid parse errors (e.g., A["Label (with parens)"]).
 `;
 
 export async function* streamGeminiResponse(
