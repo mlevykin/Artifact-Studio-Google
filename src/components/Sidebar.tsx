@@ -1,0 +1,128 @@
+import React from 'react';
+import { MessageSquare, Plus, Trash2, Database, Clock } from 'lucide-react';
+import { Session } from '../types';
+import { cn, formatDate } from '../utils';
+
+interface SidebarProps {
+  sessions: Session[];
+  currentSessionId: string | null;
+  onSessionSelect: (id: string) => void;
+  onNewSession: () => void;
+  onDeleteSession: (id: string) => void;
+  provider: 'gemini' | 'ollama';
+  onProviderChange: (provider: 'gemini' | 'ollama') => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({
+  sessions,
+  currentSessionId,
+  onSessionSelect,
+  onNewSession,
+  onDeleteSession,
+  provider,
+  onProviderChange
+}) => {
+  // Estimate storage usage
+  const storageUsage = Math.round((JSON.stringify(sessions).length / (5 * 1024 * 1024)) * 100);
+
+  return (
+    <div className="w-64 h-full bg-zinc-900 text-zinc-300 flex flex-col border-r border-zinc-800">
+      <div className="p-4 space-y-3">
+        <button 
+          onClick={onNewSession}
+          className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl py-2.5 transition-all active:scale-95 shadow-lg border border-zinc-700"
+        >
+          <Plus size={18} />
+          <span className="text-sm font-medium">New Chat</span>
+        </button>
+
+        <div className="flex p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+          <button 
+            onClick={() => onProviderChange('gemini')}
+            className={cn(
+              "flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all",
+              provider === 'gemini' ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-400"
+            )}
+          >
+            GEMINI
+          </button>
+          <button 
+            onClick={() => onProviderChange('ollama')}
+            className={cn(
+              "flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all",
+              provider === 'ollama' ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-400"
+            )}
+          >
+            OLLAMA
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-2 space-y-1">
+        <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+          Recent Chats
+        </div>
+        
+        {sessions.length === 0 && (
+          <div className="px-3 py-8 text-center text-zinc-600">
+            <MessageSquare size={24} className="mx-auto mb-2 opacity-20" />
+            <p className="text-xs">No history yet</p>
+          </div>
+        )}
+
+        {sessions.map((s) => (
+          <div 
+            key={s.id}
+            onClick={() => onSessionSelect(s.id)}
+            className={cn(
+              "group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all",
+              currentSessionId === s.id 
+                ? "bg-zinc-800 text-white shadow-md" 
+                : "hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-200"
+            )}
+          >
+            <MessageSquare size={16} className={cn(currentSessionId === s.id ? "text-zinc-200" : "text-zinc-600")} />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate">{s.title}</div>
+              <div className="text-[10px] opacity-50 flex items-center gap-1">
+                <Clock size={10} />
+                {formatDate(s.lastUpdated)}
+              </div>
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteSession(s.id);
+              }}
+              className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-all"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="p-4 border-t border-zinc-800 bg-zinc-950/50">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-500">
+            <Database size={12} />
+            STORAGE USED
+          </div>
+          <span className="text-[10px] font-mono text-zinc-400">{storageUsage}%</span>
+        </div>
+        <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+          <div 
+            className={cn(
+              "h-full transition-all duration-500",
+              storageUsage > 80 ? "bg-red-500" : storageUsage > 50 ? "bg-amber-500" : "bg-emerald-500"
+            )}
+            style={{ width: `${storageUsage}%` }}
+          />
+        </div>
+        <p className="mt-2 text-[9px] text-zinc-600 leading-tight">
+          Images are not stored in history to save space.
+        </p>
+      </div>
+    </div>
+  );
+};
