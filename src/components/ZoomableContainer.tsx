@@ -60,7 +60,23 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
   }, [handleWheel]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && (e.altKey || e.shiftKey || panMode))) {
+    // Pan with middle button (1)
+    if (e.button === 1) {
+      setIsDragging(true);
+      e.preventDefault();
+      return;
+    }
+
+    // Pan with left button (0) if panMode is active or modifier keys are pressed
+    if (e.button === 0 && (e.altKey || e.shiftKey || panMode)) {
+      setIsDragging(true);
+      e.preventDefault();
+      return;
+    }
+
+    // If left click on the BACKGROUND (not on content), we still want to pan
+    // This allows panning by clicking empty space even when not in pan mode
+    if (e.button === 0 && e.target === containerRef.current) {
       setIsDragging(true);
       e.preventDefault();
     }
@@ -129,7 +145,11 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
   return (
     <div 
       ref={containerRef}
-      className={cn("relative w-full h-full overflow-hidden bg-zinc-50 select-none", className)}
+      className={cn(
+        "relative w-full h-full overflow-hidden bg-zinc-50 transition-colors duration-200",
+        isDragging && "select-none",
+        className
+      )}
       onMouseDown={handleMouseDown}
       style={{ cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto') }}
     >
