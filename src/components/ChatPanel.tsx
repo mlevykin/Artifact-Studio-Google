@@ -223,11 +223,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               )}
               
               {m.attachments && m.attachments.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-col gap-2">
                   {m.attachments.map(a => (
-                    <div key={a.id} className="text-[10px] bg-black/10 px-2 py-1 rounded flex items-center gap-1">
-                      {a.type === 'image' ? <ImageIcon size={10} /> : <FileText size={10} />}
-                      {a.name}
+                    <div key={a.id} className="flex flex-col gap-1">
+                      {a.type === 'image' ? (
+                        <div className="relative group max-w-sm">
+                          <img 
+                            src={`data:${a.mimeType};base64,${a.data}`} 
+                            alt={a.name}
+                            className="rounded-lg border border-zinc-200 max-h-64 object-contain bg-zinc-50"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 backdrop-blur text-[10px] text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                            {a.name}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] bg-black/10 px-2 py-1 rounded flex items-center gap-1 self-start">
+                          <FileText size={10} />
+                          {a.name}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

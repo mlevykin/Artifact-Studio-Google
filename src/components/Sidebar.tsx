@@ -26,8 +26,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onToggle
 }) => {
-  // Estimate storage usage
-  const storageUsage = Math.round((JSON.stringify(sessions).length / (5 * 1024 * 1024)) * 100);
+  // Estimate storage usage based on what will actually be persisted
+  const sessionsToPersist = sessions.map(s => ({
+    ...s,
+    messages: s.messages.map(m => ({
+      ...m,
+      attachments: m.attachments?.filter(a => a.type !== 'image')
+    }))
+  }));
+  const storageUsage = Math.round((JSON.stringify(sessionsToPersist).length / (5 * 1024 * 1024)) * 100);
 
   if (!isOpen) return null;
 

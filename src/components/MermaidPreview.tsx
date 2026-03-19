@@ -33,15 +33,19 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
           
           const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
           const { svg } = await mermaid.render(id, processedContent);
-          containerRef.current.innerHTML = svg;
+          if (containerRef.current) {
+            containerRef.current.innerHTML = svg;
+          }
         } catch (error: any) {
           console.error('Mermaid render error:', error);
-          containerRef.current.innerHTML = `
-            <div class="text-red-500 p-4 border border-red-200 rounded bg-red-50 text-xs font-mono">
-              <div class="font-bold mb-2">Mermaid Render Error</div>
-              <pre class="whitespace-pre-wrap">${error?.message || 'Unknown error'}</pre>
-            </div>
-          `;
+          if (containerRef.current) {
+            containerRef.current.innerHTML = `
+              <div class="text-red-500 p-4 border border-red-200 rounded bg-red-50 text-xs font-mono">
+                <div class="font-bold mb-2">Mermaid Render Error</div>
+                <pre class="whitespace-pre-wrap">${error?.message || 'Unknown error'}</pre>
+              </div>
+            `;
+          }
         }
       }
     };
@@ -52,7 +56,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
   return (
     <div 
       ref={containerRef} 
-      className={cn("w-full h-full flex items-center justify-center overflow-auto bg-white p-4", className)}
+      className={cn("w-full h-full flex items-center justify-center bg-white p-4", className)}
     />
   );
 };

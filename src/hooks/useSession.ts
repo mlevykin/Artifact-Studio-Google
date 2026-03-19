@@ -18,6 +18,9 @@ export function useSessions() {
   });
 
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(() => {
+    const savedId = localStorage.getItem('artifact_studio_current_session_id');
+    if (savedId) return savedId;
+
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -30,20 +33,46 @@ export function useSessions() {
     return null;
   });
 
-  // Save to localStorage (stripping images to save space)
+  // Save current session ID to localStorage
+  useEffect(() => {
+    if (currentSessionId) {
+      localStorage.setItem('artifact_studio_current_session_id', currentSessionId);
+    } else {
+      localStorage.removeItem('artifact_studio_current_session_id');
+    }
+  }, [currentSessionId]);
+
+  // Save to localStorage (stripping images to save space and privacy)
   useEffect(() => {
     const sessionsToSave = sessions.map(s => ({
       ...s,
       messages: s.messages.map(m => ({
         ...m,
-        attachments: m.attachments?.map(a => ({
-          ...a,
-          data: a.type === 'image' ? '' : a.data // Strip image data
-        }))
+        attachments: m.attachments?.filter(a => a.type !== 'image')
       }))
     }));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionsToSave));
   }, [sessions]);
+
+  // Sync sessions across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const newSessions = JSON.parse(e.newValue);
+          setSessions(newSessions);
+        } catch (err) {
+          console.error('Failed to sync sessions', err);
+        }
+      }
+      if (e.key === 'artifact_studio_current_session_id') {
+        setCurrentSessionId(e.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const currentSession = sessions.find(s => s.id === currentSessionId) || null;
 

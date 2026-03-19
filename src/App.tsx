@@ -29,10 +29,12 @@ export default function App() {
 
   const [provider, setProvider] = useState<'gemini' | 'ollama'>(() => {
     const saved = localStorage.getItem('ai_provider');
+    console.log('Initial AI Provider from localStorage:', saved);
     return (saved as 'gemini' | 'ollama') || 'gemini';
   });
 
   useEffect(() => {
+    console.log('Saving AI Provider to localStorage:', provider);
     localStorage.setItem('ai_provider', provider);
   }, [provider]);
 
@@ -49,7 +51,39 @@ export default function App() {
   }, [ollamaConfig]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [availableModels, setAvailableModels] = useState<string[]>(['llama3']);
+  const [availableModels, setAvailableModels] = useState<string[]>(() => {
+    const saved = localStorage.getItem('ollama_config');
+    const config = saved ? JSON.parse(saved) : null;
+    const defaultModels = ['llama3'];
+    if (config?.selectedModel && !defaultModels.includes(config.selectedModel)) {
+      return [...defaultModels, config.selectedModel];
+    }
+    return defaultModels;
+  });
+
+  // Sync state across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'ai_provider' && e.newValue) {
+        console.log('AI Provider synced from another tab:', e.newValue);
+        setProvider(e.newValue as any);
+      }
+      if (e.key === 'ollama_config' && e.newValue) {
+        const newConfig = JSON.parse(e.newValue);
+        setOllamaConfig(newConfig);
+        // Ensure the selected model is in the list
+        setAvailableModels(prev => {
+          if (!prev.includes(newConfig.selectedModel)) {
+            return [...prev, newConfig.selectedModel];
+          }
+          return prev;
+        });
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [streamingArtifact, setStreamingArtifact] = useState<{ type: string; title: string; content: string } | null>(null);
@@ -58,9 +92,14 @@ export default function App() {
   // Fetch models when provider is ollama or baseUrl changes
   useEffect(() => {
     if (provider === 'ollama') {
-      fetchOllamaModels(ollamaConfig.baseUrl).then(setAvailableModels);
+      fetchOllamaModels(ollamaConfig.baseUrl).then(models => {
+        setAvailableModels(prev => {
+          const combined = [...new Set([...models, ollamaConfig.selectedModel])];
+          return combined;
+        });
+      });
     }
-  }, [provider, ollamaConfig.baseUrl]);
+  }, [provider, ollamaConfig.baseUrl, ollamaConfig.selectedModel]);
 
   const handleOllamaConfigChange = (updates: Partial<OllamaConfig>) => {
     setOllamaConfig(prev => ({ ...prev, ...updates }));
@@ -241,7 +280,7 @@ export default function App() {
             onVersionSelect={handleVersionSelect}
             currentIndex={currentIndex}
             onSave={handleSaveArtifact}
-            isStreaming={isStreaming && !!streamingArtifact}
+            isStreaming={isStreaming}
           />
           
           {/* Overlay for streaming artifact */}

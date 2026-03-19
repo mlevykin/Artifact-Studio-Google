@@ -17,6 +17,7 @@ import { Artifact } from '../types';
 import { cn } from '../utils';
 import { MermaidPreview } from './MermaidPreview';
 import { HtmlPreview } from './HtmlPreview';
+import { ZoomableContainer } from './ZoomableContainer';
 import ReactMarkdown from 'react-markdown';
 import html2canvas from 'html2canvas';
 
@@ -102,7 +103,26 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           scale: 2,
           useCORS: true,
           logging: false,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          onclone: (clonedDoc) => {
+            // html2canvas doesn't support oklch colors.
+            // We need to find elements using them and replace with fallback colors.
+            const elements = clonedDoc.getElementsByTagName('*');
+            for (let i = 0; i < elements.length; i++) {
+              const el = elements[i] as HTMLElement;
+              const style = window.getComputedStyle(el);
+              
+              // Check common color properties
+              const properties = ['backgroundColor', 'color', 'borderColor', 'outlineColor'];
+              properties.forEach(prop => {
+                const value = (el.style as any)[prop] || style.getPropertyValue(prop);
+                if (value && value.includes('oklch')) {
+                  // Fallback to a safe color if oklch is detected
+                  (el.style as any)[prop] = prop === 'backgroundColor' ? '#ffffff' : '#000000';
+                }
+              });
+            }
+          }
         });
         const link = document.createElement('a');
         link.download = `${artifact.title}.png`;
@@ -248,11 +268,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       {/* Content */}
       <div className="flex-1 overflow-hidden relative bg-zinc-50">
         {view === 'preview' ? (
-          <div id="artifact-preview-container" className="w-full h-full overflow-auto">
+          <ZoomableContainer className="w-full h-full">
             {artifact.type === 'mermaid' && <MermaidPreview content={artifact.content} />}
             {artifact.type === 'html' && <HtmlPreview content={artifact.content} />}
             {artifact.type === 'markdown' && (
-              <div className="p-8 max-w-3xl mx-auto bg-white min-h-full shadow-sm">
+              <div className="p-8 max-w-3xl mx-auto bg-white min-h-full shadow-sm w-full">
                 <div className="prose prose-zinc prose-sm max-w-none">
                   <ReactMarkdown>{artifact.content}</ReactMarkdown>
                 </div>
@@ -265,11 +285,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               />
             )}
             {artifact.type === 'text' && (
-              <pre className="p-8 font-mono text-sm whitespace-pre-wrap bg-white min-h-full">
+              <pre className="p-8 font-mono text-sm whitespace-pre-wrap bg-white min-h-full w-full">
                 {artifact.content}
               </pre>
             )}
-          </div>
+          </ZoomableContainer>
         ) : (
           <div className="w-full h-full bg-white overflow-auto">
             {isEditing ? (
