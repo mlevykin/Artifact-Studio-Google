@@ -27,7 +27,15 @@ export default function App() {
     addArtifact
   } = useSessions();
 
-  const [provider, setProvider] = useState<'gemini' | 'ollama'>('gemini');
+  const [provider, setProvider] = useState<'gemini' | 'ollama'>(() => {
+    const saved = localStorage.getItem('ai_provider');
+    return (saved as 'gemini' | 'ollama') || 'gemini';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ai_provider', provider);
+  }, [provider]);
+
   const [ollamaConfig, setOllamaConfig] = useState<OllamaConfig>(() => {
     const saved = localStorage.getItem('ollama_config');
     return saved ? JSON.parse(saved) : {
