@@ -130,50 +130,65 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         // Special handling for SVG/Mermaid which html2canvas often fails on
         const svgElement = element.querySelector('svg');
         if (svgElement && (artifact.type === 'mermaid' || artifact.type === 'svg')) {
-          const svgData = new XMLSerializer().serializeToString(svgElement);
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const img = new Image();
-          
-          // Get natural dimensions
-          const rect = svgElement.getBoundingClientRect();
-          const scale = 2; // High quality
-          canvas.width = rect.width * scale;
-          canvas.height = rect.height * scale;
-          
-          img.onload = () => {
-            if (ctx) {
-              ctx.fillStyle = 'white';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              const link = document.createElement('a');
-              link.download = `${artifact.title}.png`;
-              link.href = canvas.toDataURL('image/png');
-              link.click();
-            }
-          };
-          img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-          return;
+          try {
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            // Get natural dimensions
+            const rect = svgElement.getBoundingClientRect();
+            const scale = 2; // High quality
+            canvas.width = rect.width * scale;
+            canvas.height = rect.height * scale;
+            
+            img.onload = () => {
+              if (ctx) {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const link = document.createElement('a');
+                link.download = `${artifact.title}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+              }
+            };
+            img.onerror = () => {
+              throw new Error('Image loading failed');
+            };
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+            return;
+          } catch (svgErr) {
+            console.warn('SVG-to-Canvas failed, falling back to html2canvas:', svgErr);
+            // Fall through to html2canvas
+          }
         }
 
+        let targetElement: HTMLElement = element;
+        
+        // For HTML artifacts, try to capture the iframe body
         if (artifact.type === 'html') {
-          alert('PNG export is limited for HTML artifacts due to iframe security restrictions. Try Export HTML instead.');
-          return;
+          const iframe = element.querySelector('iframe');
+          if (iframe && iframe.contentDocument && iframe.contentDocument.body) {
+            targetElement = iframe.contentDocument.body;
+          }
         }
 
-        const canvas = await html2canvas(element, { 
+        const canvas = await html2canvas(targetElement, { 
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
+          allowTaint: true,
         });
+        
         const link = document.createElement('a');
         link.download = `${artifact.title}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       } catch (err) {
         console.error('PNG Export failed:', err);
-        alert('Failed to export PNG. This can happen with complex HTML or iframes.');
+        alert('Failed to export PNG. Try Export HTML or SVG instead.');
       }
     } else {
       const blob = new Blob([artifact.content], { type: 'text/plain' });
