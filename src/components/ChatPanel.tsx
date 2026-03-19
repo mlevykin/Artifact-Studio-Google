@@ -95,7 +95,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-zinc-50 border-r border-zinc-200 w-[400px] flex-shrink-0">
+    <div className="flex flex-col h-full bg-zinc-50 border-r border-zinc-200 w-full flex-shrink-0">
       <div className="p-4 border-b border-zinc-200 bg-white flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -91,27 +91,9 @@ export default function App() {
 
   // Resizable divider state
   const [chatWidth, setChatWidth] = useState(500);
-  const isResizing = useRef(false);
-
-  const startResizing = useCallback((e: React.MouseEvent) => {
-    isResizing.current = true;
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', stopResizing);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  }, []);
-
-  const stopResizing = useCallback(() => {
-    isResizing.current = false;
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', stopResizing);
-    document.body.style.cursor = 'default';
-    document.body.style.userSelect = 'auto';
-  }, []);
+  const [isResizing, setIsResizing] = useState(false);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing.current) return;
-    
     // Calculate new width based on sidebar state
     const sidebarWidth = isSidebarOpen ? 280 : 0;
     const newWidth = e.clientX - sidebarWidth;
@@ -121,6 +103,32 @@ export default function App() {
       setChatWidth(newWidth);
     }
   }, [isSidebarOpen]);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+    document.body.style.cursor = 'default';
+    document.body.style.userSelect = 'auto';
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', stopResizing);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', stopResizing);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [isResizing, handleMouseMove, stopResizing]);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    setIsResizing(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
 
   // Fetch models when provider is ollama or baseUrl changes
   useEffect(() => {
@@ -281,6 +289,14 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-full bg-zinc-100 font-sans text-zinc-900 overflow-hidden relative">
+      {/* Resizing Overlay */}
+      {isResizing && (
+        <div 
+          className="fixed inset-0 z-[9999] cursor-col-resize"
+          onMouseMove={(e) => handleMouseMove(e.nativeEvent)}
+          onMouseUp={stopResizing}
+        />
+      )}
       <Sidebar 
         sessions={sessions}
         currentSessionId={currentSession?.id || null}
