@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Code, 
   Eye, 
@@ -19,6 +19,7 @@ import { MermaidPreview } from './MermaidPreview';
 import { HtmlPreview } from './HtmlPreview';
 import { ZoomableContainer } from './ZoomableContainer';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import html2canvas from 'html2canvas';
 
 interface ArtifactPanelProps {
@@ -28,6 +29,8 @@ interface ArtifactPanelProps {
   currentIndex: number;
   onSave: (content: string) => void;
   isStreaming?: boolean;
+  onToggleSidebar?: () => void;
+  isSidebarOpen?: boolean;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -36,12 +39,40 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   onVersionSelect,
   currentIndex,
   onSave,
-  isStreaming = false
+  isStreaming = false,
+  onToggleSidebar,
+  isSidebarOpen = true
 }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const toggleFullScreen = () => {
+    if (!isFullScreen) {
+      if (panelRef.current?.requestFullscreen) {
+        panelRef.current.requestFullscreen();
+      }
+      if (isSidebarOpen && onToggleSidebar) {
+        onToggleSidebar();
+      }
+    } else {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+    }
+    setIsFullScreen(!isFullScreen);
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // Switch to code view when streaming starts
   React.useEffect(() => {
@@ -142,7 +173,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
+    <div ref={panelRef} className={cn("flex-1 flex flex-col h-full bg-white overflow-hidden", isFullScreen && "fixed inset-0 z-[100]")}>
       {/* Header */}
       <div className="p-4 border-b border-zinc-200 flex items-center justify-between bg-white z-10">
         <div className="flex items-center gap-3">
@@ -233,6 +264,17 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           </div>
 
           <button 
+            onClick={toggleFullScreen}
+            className={cn(
+              "p-2 rounded-lg transition-colors mr-1",
+              isFullScreen ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
+            )}
+            title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+          >
+            <Maximize2 size={18} />
+          </button>
+
+          <button 
             onClick={handleCopy}
             className="p-2 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors relative"
             title="Copy Code"
@@ -268,32 +310,36 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       {/* Content */}
       <div className="flex-1 overflow-hidden relative bg-zinc-50">
         {view === 'preview' ? (
-          <ZoomableContainer className="w-full h-full">
-            {artifact.type === 'mermaid' && <MermaidPreview content={artifact.content} />}
-            {artifact.type === 'html' && (
-              <div className="w-[1200px] h-[800px] shadow-lg rounded-xl overflow-hidden bg-white">
+          <div className="w-full h-full" id="artifact-preview-container">
+            {artifact.type === 'html' ? (
+              <div className="w-full h-full bg-white">
                 <HtmlPreview content={artifact.content} />
               </div>
-            )}
-            {artifact.type === 'markdown' && (
-              <div className="w-[800px] min-h-[1000px] p-12 bg-white shadow-lg rounded-xl">
-                <div className="prose prose-zinc prose-sm max-w-none">
-                  <ReactMarkdown>{artifact.content}</ReactMarkdown>
+            ) : artifact.type === 'markdown' ? (
+              <div className="w-full h-full overflow-auto bg-white p-8 md:p-12 lg:p-16">
+                <div className="max-w-3xl mx-auto">
+                  <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.content}</ReactMarkdown>
+                  </div>
                 </div>
               </div>
+            ) : (
+              <ZoomableContainer className="w-full h-full">
+                {artifact.type === 'mermaid' && <MermaidPreview content={artifact.content} />}
+                {artifact.type === 'svg' && (
+                  <div 
+                    className="p-12 bg-white shadow-lg rounded-xl"
+                    dangerouslySetInnerHTML={{ __html: artifact.content }}
+                  />
+                )}
+                {artifact.type === 'text' && (
+                  <pre className="w-[800px] p-12 font-mono text-sm whitespace-pre-wrap bg-white shadow-lg rounded-xl">
+                    {artifact.content}
+                  </pre>
+                )}
+              </ZoomableContainer>
             )}
-            {artifact.type === 'svg' && (
-              <div 
-                className="p-12 bg-white shadow-lg rounded-xl"
-                dangerouslySetInnerHTML={{ __html: artifact.content }}
-              />
-            )}
-            {artifact.type === 'text' && (
-              <pre className="w-[800px] p-12 font-mono text-sm whitespace-pre-wrap bg-white shadow-lg rounded-xl">
-                {artifact.content}
-              </pre>
-            )}
-          </ZoomableContainer>
+          </div>
         ) : (
           <div className="w-full h-full bg-white overflow-auto">
             {isEditing ? (

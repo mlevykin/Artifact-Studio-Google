@@ -89,6 +89,39 @@ export default function App() {
   const [streamingArtifact, setStreamingArtifact] = useState<{ type: string; title: string; content: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Resizable divider state
+  const [chatWidth, setChatWidth] = useState(500);
+  const isResizing = useRef(false);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    isResizing.current = true;
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', stopResizing);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    isResizing.current = false;
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', stopResizing);
+    document.body.style.cursor = 'default';
+    document.body.style.userSelect = 'auto';
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing.current) return;
+    
+    // Calculate new width based on sidebar state
+    const sidebarWidth = isSidebarOpen ? 280 : 0;
+    const newWidth = e.clientX - sidebarWidth;
+    
+    // Constraints
+    if (newWidth > 300 && newWidth < window.innerWidth - 400) {
+      setChatWidth(newWidth);
+    }
+  }, [isSidebarOpen]);
+
   // Fetch models when provider is ollama or baseUrl changes
   useEffect(() => {
     if (provider === 'ollama') {
@@ -261,17 +294,27 @@ export default function App() {
       />
 
       <main className="flex-1 flex overflow-hidden relative">
-        <ChatPanel 
-          messages={currentSession?.messages || []}
-          onSendMessage={handleSendMessage}
-          isStreaming={isStreaming}
-          provider={provider}
-          ollamaConfig={ollamaConfig}
-          availableModels={availableModels}
-          onOllamaConfigChange={handleOllamaConfigChange}
-          isSidebarOpen={isSidebarOpen}
-          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        />
+        <div style={{ width: chatWidth }} className="flex-shrink-0 flex flex-col">
+          <ChatPanel 
+            messages={currentSession?.messages || []}
+            onSendMessage={handleSendMessage}
+            isStreaming={isStreaming}
+            provider={provider}
+            ollamaConfig={ollamaConfig}
+            availableModels={availableModels}
+            onOllamaConfigChange={handleOllamaConfigChange}
+            isSidebarOpen={isSidebarOpen}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
+        </div>
+
+        {/* Resizable Divider */}
+        <div 
+          onMouseDown={startResizing}
+          className="w-1.5 h-full bg-zinc-200 hover:bg-zinc-400 cursor-col-resize transition-colors z-30 flex-shrink-0 flex items-center justify-center group"
+        >
+          <div className="w-0.5 h-8 bg-zinc-300 group-hover:bg-zinc-500 rounded-full" />
+        </div>
 
         <div className="flex-1 flex flex-col min-w-0 relative">
           <ArtifactPanel 
@@ -281,6 +324,8 @@ export default function App() {
             currentIndex={currentIndex}
             onSave={handleSaveArtifact}
             isStreaming={isStreaming}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            isSidebarOpen={isSidebarOpen}
           />
           
           {/* Overlay for streaming artifact */}

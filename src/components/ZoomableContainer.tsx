@@ -108,8 +108,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
   }, [isDragging]);
 
   const resetZoom = () => {
-    setZoom(1);
-    setPosition({ x: 0, y: 0 });
+    fitToScreen();
   };
 
   const fitToScreen = () => {
