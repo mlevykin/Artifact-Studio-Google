@@ -36,6 +36,7 @@ interface ArtifactPanelProps {
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
   workspaceHandle?: any | null;
+  workspaceTree?: any | null;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -47,7 +48,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   isStreaming = false,
   onToggleSidebar,
   isSidebarOpen = true,
-  workspaceHandle = null
+  workspaceHandle = null,
+  workspaceTree = null
 }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -55,6 +57,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [copied, setCopied] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -149,23 +152,53 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     }
   }, [isStreaming]);
 
+  const handleFileSelect = async (path: string) => {
+    setSelectedFilePath(path);
+    // If it's a file in the current artifact, use its content
+    if (artifact?.type === 'project') {
+      const file = artifact.files?.find(f => f.path === path);
+      if (file) {
+        setEditContent(file.content);
+        setSelectedFileId(file.id);
+        return;
+      }
+    } else if (artifact) {
+      const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
+      const artifactPath = `artifacts/${artifact.title}.${ext}`;
+      if (path === artifactPath) {
+        setEditContent(artifact.content);
+        return;
+      }
+    }
+    
+    setEditContent('// Content loading from disk is not yet implemented for external files\n// But you can see the structure!');
+  };
+
   React.useEffect(() => {
     if (artifact) {
       if (artifact.type === 'project' && artifact.files && artifact.files.length > 0) {
-        if (!selectedFileId || !artifact.files.find(f => f.id === selectedFileId)) {
-          setSelectedFileId(artifact.files[0].id);
-          setEditContent(artifact.files[0].content);
+        if (!selectedFilePath || !artifact.files.find(f => f.path === selectedFilePath)) {
+          const firstFile = artifact.files[0];
+          setSelectedFilePath(firstFile.path);
+          setSelectedFileId(firstFile.id);
+          setEditContent(firstFile.content);
         } else {
-          const file = artifact.files.find(f => f.id === selectedFileId);
-          if (file) setEditContent(file.content);
+          const file = artifact.files.find(f => f.path === selectedFilePath);
+          if (file) {
+            setEditContent(file.content);
+            setSelectedFileId(file.id);
+          }
         }
       } else {
+        const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
+        const artifactPath = `artifacts/${artifact.title}.${ext}`;
+        setSelectedFilePath(artifactPath);
         setEditContent(artifact.content);
         setSelectedFileId(null);
       }
       setIsEditing(false);
     }
-  }, [artifact, selectedFileId]);
+  }, [artifact, selectedFilePath]);
 
   if (!artifact) {
     return (
@@ -449,15 +482,18 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         <div className="flex-1 overflow-hidden relative bg-zinc-50 flex">
           {view === 'code' && (
             <FileExplorer 
-              files={artifact.type === 'project' && artifact.files ? artifact.files : [{
-                id: 'single-file',
-                name: `${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`,
-                path: `artifacts/${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`,
-                type: artifact.type as any,
-                content: artifact.content
-              }]}
-              selectedFileId={artifact.type === 'project' ? selectedFileId : 'single-file'}
-              onFileSelect={(id) => artifact.type === 'project' ? setSelectedFileId(id) : null}
+              tree={workspaceTree || {
+                name: workspaceHandle?.name || 'Workspace',
+                kind: 'directory',
+                children: artifact.type === 'project' && artifact.files 
+                  ? artifact.files.map(f => ({ name: f.path, kind: 'file' }))
+                  : [{ 
+                      name: `${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`, 
+                      kind: 'file' 
+                    }]
+              }}
+              selectedFile={selectedFilePath}
+              onFileSelect={handleFileSelect}
             />
           )}
 
@@ -504,7 +540,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 />
               ) : (
                 <pre className="p-6 font-mono text-sm text-zinc-800 leading-relaxed">
-                  <code>{currentFile ? currentFile.content : artifact.content}</code>
+                  <code>{editContent}</code>
                 </pre>
               )}
             </div>

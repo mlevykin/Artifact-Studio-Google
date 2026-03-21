@@ -14,24 +14,18 @@ import { ProjectFile } from '../types';
 import { cn } from '../utils';
 
 interface FileExplorerProps {
-  files: ProjectFile[];
-  selectedFileId: string | null;
-  onFileSelect: (fileId: string) => void;
+  files?: ProjectFile[];
+  tree?: any;
+  selectedFile: string | null;
+  onFileSelect: (path: string) => void;
   onAddFile?: () => void;
   onAddFolder?: () => void;
 }
 
-interface FileNode {
-  id: string;
-  name: string;
-  type: 'file' | 'folder';
-  children?: FileNode[];
-  file?: ProjectFile;
-}
-
 export const FileExplorer: React.FC<FileExplorerProps> = ({ 
   files, 
-  selectedFileId, 
+  tree: externalTree,
+  selectedFile, 
   onFileSelect,
   onAddFile,
   onAddFolder
@@ -42,10 +36,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     setExpandedFolders(prev => ({ ...prev, [path]: !prev[path] }));
   };
 
-  // Build tree structure from flat file list
-  const buildTree = (files: ProjectFile[]): FileNode[] => {
-    const root: FileNode[] = [];
-    const folders: Record<string, FileNode> = {};
+  // Build tree structure from flat file list if no external tree is provided
+  const buildTree = (files: ProjectFile[]): any[] => {
+    const root: any[] = [];
+    const folders: Record<string, any> = {};
 
     files.forEach(file => {
       const parts = file.path.split('/');
@@ -58,17 +52,17 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
 
         if (isLast) {
           currentLevel.push({
-            id: file.id,
             name: part,
-            type: 'file',
-            file
+            kind: 'file',
+            path: file.path,
+            type: file.type
           });
         } else {
           if (!folders[currentPath]) {
-            const newFolder: FileNode = {
-              id: currentPath,
+            const newFolder: any = {
               name: part,
-              type: 'folder',
+              kind: 'directory',
+              path: currentPath,
               children: []
             };
             folders[currentPath] = newFolder;
@@ -82,17 +76,18 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     return root;
   };
 
-  const tree = buildTree(files);
+  const tree = externalTree ? [externalTree] : (files ? buildTree(files) : []);
 
-  const renderNode = (node: FileNode, depth: number = 0) => {
-    const isExpanded = expandedFolders[node.id];
-    const isSelected = node.id === selectedFileId;
+  const renderNode = (node: any, depth: number = 0, parentPath: string = '') => {
+    const currentPath = node.path || (parentPath ? `${parentPath}/${node.name}` : node.name);
+    const isExpanded = expandedFolders[currentPath];
+    const isSelected = currentPath === selectedFile;
 
-    if (node.type === 'folder') {
+    if (node.kind === 'directory') {
       return (
-        <div key={node.id}>
+        <div key={currentPath}>
           <button 
-            onClick={() => toggleFolder(node.id)}
+            onClick={() => toggleFolder(currentPath)}
             className="w-full flex items-center gap-1.5 py-1 px-2 hover:bg-zinc-100 rounded text-xs text-zinc-600 transition-colors group"
             style={{ paddingLeft: `${depth * 12 + 8}px` }}
           >
@@ -100,31 +95,30 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
             <Folder size={14} className="text-amber-400 fill-amber-400/20" />
             <span className="truncate">{node.name}</span>
           </button>
-          {isExpanded && node.children?.map(child => renderNode(child, depth + 1))}
+          {isExpanded && node.children?.map((child: any) => renderNode(child, depth + 1, currentPath))}
         </div>
       );
     }
 
     const getIcon = (type: string) => {
-      switch (type) {
-        case 'html': return <FileCode size={14} className="text-orange-500" />;
-        case 'mermaid': return <FileText size={14} className="text-emerald-500" />;
-        case 'svg': return <ImageIcon size={14} className="text-pink-500" />;
-        default: return <File size={14} className="text-zinc-400" />;
-      }
+      if (type.endsWith('.html')) return <FileCode size={14} className="text-orange-500" />;
+      if (type.endsWith('.mmd')) return <FileText size={14} className="text-emerald-500" />;
+      if (type.endsWith('.md')) return <FileText size={14} className="text-blue-500" />;
+      if (type.endsWith('.svg')) return <ImageIcon size={14} className="text-pink-500" />;
+      return <File size={14} className="text-zinc-400" />;
     };
 
     return (
       <button 
-        key={node.id}
-        onClick={() => onFileSelect(node.id)}
+        key={currentPath}
+        onClick={() => onFileSelect(currentPath)}
         className={cn(
           "w-full flex items-center gap-2 py-1 px-2 rounded text-xs transition-colors group",
           isSelected ? "bg-zinc-200 text-zinc-900 font-medium" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
         )}
         style={{ paddingLeft: `${depth * 12 + 24}px` }}
       >
-        {getIcon(node.file?.type || '')}
+        {getIcon(node.name)}
         <span className="truncate">{node.name}</span>
       </button>
     );

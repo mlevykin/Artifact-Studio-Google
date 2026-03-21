@@ -5,6 +5,7 @@ import { get, set } from 'idb-keyval';
  */
 
 const HANDLE_KEY = 'artifact-studio-workspace-handle';
+const METADATA_DIR = '.artifact-studio';
 
 export function isFileSystemApiSupported(): boolean {
   return 'showDirectoryPicker' in window;
@@ -29,6 +30,8 @@ export async function selectLocalDirectory(): Promise<any | null> {
       mode: 'readwrite'
     });
     await storeDirectoryHandle(handle);
+    // Ensure base directories exist
+    await ensureBaseDirectories(handle);
     return handle;
   } catch (error) {
     if ((error as Error).name === 'AbortError') return null;
@@ -38,6 +41,13 @@ export async function selectLocalDirectory(): Promise<any | null> {
     console.error('Failed to select directory:', error);
     throw error;
   }
+}
+
+async function ensureBaseDirectories(rootHandle: any) {
+  const metaDir = await rootHandle.getDirectoryHandle(METADATA_DIR, { create: true });
+  await metaDir.getDirectoryHandle('skills', { create: true });
+  await metaDir.getDirectoryHandle('sessions', { create: true });
+  await rootHandle.getDirectoryHandle('artifacts', { create: true });
 }
 
 export async function checkPermission(handle: any, readWrite: boolean = true): Promise<boolean> {
@@ -71,8 +81,6 @@ export async function requestPermission(handle: any, readWrite: boolean = true):
 
 // --- Application State Management on Disk ---
 
-const METADATA_DIR = '.artifact-studio';
-
 async function ensureMetadataDir(rootHandle: any) {
   return await rootHandle.getDirectoryHandle(METADATA_DIR, { create: true });
 }
@@ -80,6 +88,31 @@ async function ensureMetadataDir(rootHandle: any) {
 export async function saveAppState(rootHandle: any, key: string, data: any) {
   try {
     const metaDir = await ensureMetadataDir(rootHandle);
+    
+    if (key === 'skills') {
+      const skillsDir = await metaDir.getDirectoryHandle('skills', { create: true });
+      const skills = data as any[];
+      for (const skill of skills) {
+        const fileHandle = await skillsDir.getFileHandle(`${skill.id}.json`, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(skill, null, 2));
+        await writable.close();
+      }
+      return;
+    }
+
+    if (key === 'sessions') {
+      const sessionsDir = await metaDir.getDirectoryHandle('sessions', { create: true });
+      const sessions = data as any[];
+      for (const session of sessions) {
+        const fileHandle = await sessionsDir.getFileHandle(`${session.id}.json`, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(session, null, 2));
+        await writable.close();
+      }
+      return;
+    }
+
     const fileHandle = await metaDir.getFileHandle(`${key}.json`, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(JSON.stringify(data, null, 2));
@@ -92,14 +125,74 @@ export async function saveAppState(rootHandle: any, key: string, data: any) {
 export async function loadAppState(rootHandle: any, key: string): Promise<any | null> {
   try {
     const metaDir = await ensureMetadataDir(rootHandle);
+    
+    if (key === 'skills') {
+      const skillsDir = await metaDir.getDirectoryHandle('skills', { create: true });
+      const skills: any[] = [];
+      // @ts-ignore
+      for await (const entry of (skillsDir as any).values()) {
+        if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+          const file = await entry.getFile();
+          const content = await file.text();
+          skills.push(JSON.parse(content));
+        }
+      }
+      return skills.length > 0 ? skills : null;
+    }
+
+    if (key === 'sessions') {
+      const sessionsDir = await metaDir.getDirectoryHandle('sessions', { create: true });
+      const sessions: any[] = [];
+      // @ts-ignore
+      for await (const entry of (sessionsDir as any).values()) {
+        if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+          const file = await entry.getFile();
+          const content = await file.text();
+          sessions.push(JSON.parse(content));
+        }
+      }
+      return sessions.length > 0 ? sessions.sort((a, b) => b.lastUpdated - a.lastUpdated) : null;
+    }
+
     const fileHandle = await metaDir.getFileHandle(`${key}.json`);
     const file = await fileHandle.getFile();
     const text = await file.text();
     return JSON.parse(text);
   } catch (err) {
-    // File might not exist yet
     return null;
   }
+}
+
+export async function getWorkspaceTree(handle: any): Promise<any> {
+  const tree: any = {
+    name: handle.name,
+    kind: 'directory',
+    children: []
+  };
+
+  async function scan(dirHandle: any, currentTree: any) {
+    // @ts-ignore
+    for await (const entry of (dirHandle as any).values()) {
+      const node: any = {
+        name: entry.name,
+        kind: entry.kind
+      };
+
+      if (entry.kind === 'directory') {
+        node.children = [];
+        await scan(entry, node);
+      }
+      
+      currentTree.children.push(node);
+    }
+    currentTree.children.sort((a: any, b: any) => {
+      if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  await scan(handle, tree);
+  return tree;
 }
 
 export async function writeProjectToDirectory(

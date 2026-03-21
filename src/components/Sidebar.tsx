@@ -178,23 +178,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="p-4 border-t border-zinc-800 bg-zinc-950/50">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-500">
-            <Database size={12} />
-            STORAGE USED
-          </div>
-          <span className="text-[10px] font-mono text-zinc-400">{storageUsage}%</span>
-        </div>
-        <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
-          <div 
-            className={cn(
-              "h-full transition-all duration-500",
-              storageUsage > 80 ? "bg-red-500" : storageUsage > 50 ? "bg-amber-500" : "bg-emerald-500"
-            )}
-            style={{ width: `${storageUsage}%` }}
-          />
-        </div>
-        <p className="mt-2 text-[9px] text-zinc-600 leading-tight">
+        <p className="text-[9px] text-zinc-600 leading-tight">
           Images are not stored in history to save space.
         </p>
       </div>

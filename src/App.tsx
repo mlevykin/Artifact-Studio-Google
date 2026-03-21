@@ -22,13 +22,17 @@ import {
   requestPermission, 
   checkPermission,
   saveAppState,
-  loadAppState
+  loadAppState,
+  storeDirectoryHandle,
+  getWorkspaceTree
 } from './services/fileSystemService';
 
 export default function App() {
   const [workspaceHandle, setWorkspaceHandle] = useState<any | null>(null);
+  const [workspaceTree, setWorkspaceTree] = useState<any | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isStateLoaded = useRef(false);
 
   const {
     sessions,
@@ -59,6 +63,15 @@ export default function App() {
   const [chatWidth, setChatWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
 
+  const updateWorkspaceTree = async (handle: any) => {
+    try {
+      const tree = await getWorkspaceTree(handle);
+      setWorkspaceTree(tree);
+    } catch (err) {
+      console.error('Failed to update workspace tree:', err);
+    }
+  };
+
   // Initialize workspace
   useEffect(() => {
     const initWorkspace = async () => {
@@ -67,8 +80,10 @@ export default function App() {
         if (storedHandle) {
           const hasPermission = await checkPermission(storedHandle);
           if (hasPermission) {
-            setWorkspaceHandle(storedHandle);
             await loadAllState(storedHandle);
+            setWorkspaceHandle(storedHandle);
+            await updateWorkspaceTree(storedHandle);
+            isStateLoaded.current = true;
           }
         }
       } catch (err) {
@@ -104,23 +119,38 @@ export default function App() {
 
   // Save state to disk whenever it changes
   useEffect(() => {
-    if (workspaceHandle) saveAppState(workspaceHandle, 'sessions', sessions);
+    if (workspaceHandle && isStateLoaded.current) {
+      saveAppState(workspaceHandle, 'sessions', sessions);
+      updateWorkspaceTree(workspaceHandle);
+    }
   }, [sessions, workspaceHandle]);
 
   useEffect(() => {
-    if (workspaceHandle) saveAppState(workspaceHandle, 'skills', skills);
+    if (workspaceHandle && isStateLoaded.current) {
+      saveAppState(workspaceHandle, 'skills', skills);
+      updateWorkspaceTree(workspaceHandle);
+    }
   }, [skills, workspaceHandle]);
 
   useEffect(() => {
-    if (workspaceHandle) saveAppState(workspaceHandle, 'mcp', mcpConfigs);
+    if (workspaceHandle && isStateLoaded.current) {
+      saveAppState(workspaceHandle, 'mcp', mcpConfigs);
+      updateWorkspaceTree(workspaceHandle);
+    }
   }, [mcpConfigs, workspaceHandle]);
 
   useEffect(() => {
-    if (workspaceHandle) saveAppState(workspaceHandle, 'provider', provider);
+    if (workspaceHandle && isStateLoaded.current) {
+      saveAppState(workspaceHandle, 'provider', provider);
+      updateWorkspaceTree(workspaceHandle);
+    }
   }, [provider, workspaceHandle]);
 
   useEffect(() => {
-    if (workspaceHandle) saveAppState(workspaceHandle, 'ollama', ollamaConfig);
+    if (workspaceHandle && isStateLoaded.current) {
+      saveAppState(workspaceHandle, 'ollama', ollamaConfig);
+      updateWorkspaceTree(workspaceHandle);
+    }
   }, [ollamaConfig, workspaceHandle]);
 
   const handleSelectWorkspace = async () => {
@@ -128,8 +158,10 @@ export default function App() {
       setError(null);
       const handle = await selectLocalDirectory();
       if (handle) {
-        setWorkspaceHandle(handle);
         await loadAllState(handle);
+        setWorkspaceHandle(handle);
+        await updateWorkspaceTree(handle);
+        isStateLoaded.current = true;
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to select workspace');
@@ -383,58 +415,6 @@ export default function App() {
     );
   }
 
-  if (!workspaceHandle) {
-    return (
-      <div className="h-screen w-full bg-zinc-950 flex flex-col items-center justify-center p-6 text-white font-sans overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/30 blur-[120px] rounded-full" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/30 blur-[120px] rounded-full" />
-        </div>
-
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-[32px] p-10 shadow-2xl relative z-10"
-        >
-          <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mb-8 mx-auto">
-            <FolderOpen className="w-10 h-10 text-emerald-500" />
-          </div>
-          
-          <h1 className="text-3xl font-bold text-center mb-3 tracking-tight">Welcome to Artifact Studio</h1>
-          <p className="text-zinc-400 text-center mb-10 text-sm leading-relaxed">
-            Please select a workspace folder on your computer. All your data, chats, and projects will be stored directly in this folder.
-          </p>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-400 text-sm">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <div>{error}</div>
-            </div>
-          )}
-
-          <button 
-            onClick={handleSelectWorkspace}
-            className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold rounded-2xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 group"
-          >
-            Select Workspace Folder
-            <motion.span
-              animate={{ x: [0, 4, 0] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
-            >
-              →
-            </motion.span>
-          </button>
-          
-          <div className="mt-8 pt-8 border-t border-zinc-800/50 text-center">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
-              Local-First • Privacy-Focused • AI-Powered
-            </p>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen w-full bg-zinc-100 font-sans text-zinc-900 overflow-hidden relative">
       {isResizing && (
@@ -478,7 +458,46 @@ export default function App() {
       </Sidebar>
 
       <main className="flex-1 flex overflow-hidden relative">
-        <div style={{ width: chatWidth }} className="flex-shrink-0 flex flex-col">
+        {!workspaceHandle ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-12 bg-zinc-50 text-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-md w-full bg-white border border-zinc-200 rounded-[32px] p-10 shadow-xl"
+            >
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                <FolderOpen className="w-8 h-8 text-emerald-500" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-zinc-800 mb-3">Connect Workspace</h2>
+              <p className="text-zinc-500 mb-8 text-sm leading-relaxed">
+                To start using Artifact Studio, please select a local folder where all your projects, chats, and settings will be stored.
+              </p>
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-red-600 text-xs text-left">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>{error}</div>
+                </div>
+              )}
+
+              <button 
+                onClick={handleSelectWorkspace}
+                className="w-full py-4 bg-zinc-800 hover:bg-zinc-900 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group"
+              >
+                Select Workspace Folder
+                <motion.span
+                  animate={{ x: [0, 4, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                >
+                  →
+                </motion.span>
+              </button>
+            </motion.div>
+          </div>
+        ) : (
+          <>
+            <div style={{ width: chatWidth }} className="flex-shrink-0 flex flex-col">
           <ChatPanel 
             messages={currentSession?.messages || []}
             onSendMessage={handleSendMessage}
@@ -510,6 +529,7 @@ export default function App() {
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             isSidebarOpen={isSidebarOpen}
             workspaceHandle={workspaceHandle}
+            workspaceTree={workspaceTree}
           />
           
           <AnimatePresence>
@@ -548,7 +568,9 @@ export default function App() {
             )}
           </AnimatePresence>
         </div>
-      </main>
-    </div>
-  );
+      </>
+    )}
+  </main>
+</div>
+);
 }
