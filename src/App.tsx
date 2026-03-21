@@ -37,6 +37,7 @@ export default function App() {
   const {
     sessions,
     currentSession,
+    currentSessionId,
     setCurrentSessionId,
     createSession,
     updateSession,
@@ -279,7 +280,7 @@ export default function App() {
       timestamp: Date.now()
     };
 
-    addMessage(userMessage);
+    addMessage(userMessage, sessionId);
     setIsStreaming(true);
     setStreamingText('');
     setStreamingArtifact(null);
@@ -317,7 +318,7 @@ export default function App() {
         timestamp: Date.now(),
         patches: patches.length > 0 ? patches : undefined
       };
-      addMessage(assistantMessage);
+      addMessage(assistantMessage, sessionId);
 
       const newArtifactData = parseArtifact(fullResponse);
       if (newArtifactData) {
@@ -340,26 +341,26 @@ export default function App() {
           version: 1,
           timestamp: Date.now()
         };
-        addArtifact(newArtifact);
+        addArtifact(newArtifact, sessionId);
       } else if (initialArtifact) {
         const patches = parsePatches(fullResponse);
         if (patches.length > 0) {
-          const { content: patchedContent, successCount } = applyPatches(currentArtifact.content, patches);
+          const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, patches);
           if (successCount > 0) {
             const updatedArtifact: Artifact = {
-              ...currentArtifact,
+              ...initialArtifact,
               id: generateId(),
               content: patchedContent,
-              version: currentArtifact.version + 1,
+              version: initialArtifact.version + 1,
               timestamp: Date.now()
             };
-            addArtifact(updatedArtifact);
+            addArtifact(updatedArtifact, sessionId);
           }
         }
       }
 
       if (messages.length === 1) {
-        updateSession({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') });
+        updateSession({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') }, sessionId);
       }
 
     } catch (error) {
@@ -369,14 +370,14 @@ export default function App() {
         role: 'assistant',
         content: 'Sorry, I encountered an error while processing your request.',
         timestamp: Date.now()
-      });
+      }, sessionId);
     } finally {
       setIsStreaming(false);
       setStreamingText('');
       setStreamingArtifact(null);
       abortControllerRef.current = null;
     }
-  }, [currentSession, addMessage, addArtifact, updateSession, provider, ollamaConfig, skills, mcpConfigs]);
+  }, [currentSession, addMessage, addArtifact, updateSession, provider, ollamaConfig, skills, mcpConfigs, createSession]);
 
   const handleVersionSelect = (index: number) => {
     if (!currentSession) return;
@@ -426,7 +427,7 @@ export default function App() {
       )}
       <Sidebar 
         sessions={sessions}
-        currentSessionId={currentSession?.id || null}
+        currentSessionId={currentSessionId}
         onSessionSelect={setCurrentSessionId}
         onNewSession={createSession}
         onDeleteSession={deleteSession}

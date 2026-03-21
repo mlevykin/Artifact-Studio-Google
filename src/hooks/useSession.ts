@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Session, Message, Artifact, Attachment } from '../types';
 import { generateId } from '../utils';
 
@@ -7,6 +7,11 @@ export function useSessions() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   const currentSession = sessions.find(s => s.id === currentSessionId) || null;
+  const currentSessionRef = useRef(currentSessionId);
+
+  useEffect(() => {
+    currentSessionRef.current = currentSessionId;
+  }, [currentSessionId]);
 
   const createSession = () => {
     const newSession: Session = {
@@ -23,36 +28,39 @@ export function useSessions() {
     return newSession;
   };
 
-  const updateSession = (updates: Partial<Session>) => {
-    if (!currentSessionId) return;
+  const updateSession = (updates: Partial<Session>, sessionId?: string) => {
+    const targetId = sessionId || currentSessionRef.current;
+    if (!targetId) return;
     setSessions(prev => prev.map(s => 
-      s.id === currentSessionId ? { ...s, ...updates, lastUpdated: Date.now() } : s
+      s.id === targetId ? { ...s, ...updates, lastUpdated: Date.now() } : s
     ));
   };
 
   const deleteSession = (id: string) => {
-    setSessions(prev => prev.filter(s => s.id !== id));
-    if (currentSessionId === id) {
-      setCurrentSessionId(prev => {
-        const remaining = sessions.filter(s => s.id !== id);
-        return remaining.length > 0 ? remaining[0].id : null;
-      });
-    }
+    setSessions(prev => {
+      const remaining = prev.filter(s => s.id !== id);
+      if (currentSessionRef.current === id) {
+        setCurrentSessionId(remaining.length > 0 ? remaining[0].id : null);
+      }
+      return remaining;
+    });
   };
 
-  const addMessage = (message: Message) => {
-    if (!currentSessionId) return;
+  const addMessage = (message: Message, sessionId?: string) => {
+    const targetId = sessionId || currentSessionRef.current;
+    if (!targetId) return;
     setSessions(prev => prev.map(s => 
-      s.id === currentSessionId 
+      s.id === targetId 
         ? { ...s, messages: [...s.messages, message], lastUpdated: Date.now() } 
         : s
     ));
   };
 
-  const addArtifact = (artifact: Artifact) => {
-    if (!currentSessionId) return;
+  const addArtifact = (artifact: Artifact, sessionId?: string) => {
+    const targetId = sessionId || currentSessionRef.current;
+    if (!targetId) return;
     setSessions(prev => prev.map(s => 
-      s.id === currentSessionId 
+      s.id === targetId 
         ? { ...s, artifacts: [...s.artifacts, artifact], currentArtifactId: artifact.id, lastUpdated: Date.now() } 
         : s
     ));
@@ -61,6 +69,7 @@ export function useSessions() {
   return {
     sessions,
     currentSession,
+    currentSessionId,
     setCurrentSessionId,
     createSession,
     updateSession,
