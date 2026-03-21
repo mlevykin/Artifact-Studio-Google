@@ -24,7 +24,7 @@ import { FileExplorer } from './FileExplorer';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import html2canvas from 'html2canvas';
-import { selectLocalDirectory, checkPermission, requestPermission, writeProjectToDirectory } from '../services/fileSystemService';
+import { selectLocalDirectory, checkPermission, requestPermission, writeProjectToDirectory, readFileFromDirectory } from '../services/fileSystemService';
 
 interface ArtifactPanelProps {
   artifact: Artifact | null;
@@ -59,7 +59,26 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ '': true });
   const panelRef = useRef<HTMLDivElement>(null);
+  const prevArtifactIdRef = useRef<string | null>(null);
+
+  // Expand parent folders when selected file changes
+  useEffect(() => {
+    if (selectedFilePath) {
+      const parts = selectedFilePath.split('/');
+      const newExpanded = { ...expandedFolders };
+      let currentPath = '';
+      
+      // Don't include the last part (the file itself)
+      for (let i = 0; i < parts.length - 1; i++) {
+        currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+        newExpanded[currentPath] = true;
+      }
+      
+      setExpandedFolders(newExpanded);
+    }
+  }, [selectedFilePath]);
 
   // Auto-sync when artifact changes if we have a workspace handle
   useEffect(() => {
@@ -154,6 +173,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
   const handleFileSelect = async (path: string) => {
     setSelectedFilePath(path);
+    
     // If it's a file in the current artifact, use its content
     if (artifact?.type === 'project') {
       const file = artifact.files?.find(f => f.path === path);
@@ -171,34 +191,70 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       }
     }
     
-    setEditContent('// Content loading from disk is not yet implemented for external files\n// But you can see the structure!');
+    // Try to load from disk if we have a handle
+    if (workspaceHandle) {
+      try {
+        const hasPermission = await checkPermission(workspaceHandle);
+        if (hasPermission) {
+          const content = await readFileFromDirectory(workspaceHandle, path);
+          setEditContent(content);
+          setSelectedFileId(null);
+        } else {
+          setEditContent('// Permission required to read from disk.\n// Click the sync button to request permission.');
+        }
+      } catch (err) {
+        console.error('Failed to read file from disk:', err);
+        setEditContent(`// Error loading file: ${path}\n// It might be a directory or deleted.`);
+      }
+    } else {
+      setEditContent('// No workspace connected to load external files.');
+    }
   };
 
   React.useEffect(() => {
     if (artifact) {
-      if (artifact.type === 'project' && artifact.files && artifact.files.length > 0) {
-        if (!selectedFilePath || !artifact.files.find(f => f.path === selectedFilePath)) {
-          const firstFile = artifact.files[0];
-          setSelectedFilePath(firstFile.path);
-          setSelectedFileId(firstFile.id);
-          setEditContent(firstFile.content);
-        } else {
-          const file = artifact.files.find(f => f.path === selectedFilePath);
+      const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
+      const defaultPath = artifact.type === 'project' && artifact.files?.[0] 
+        ? artifact.files[0].path 
+        : `artifacts/${artifact.title}.${ext}`;
+
+      // If we already have a selection that is part of this artifact, update its content
+      if (selectedFilePath) {
+        if (artifact.type === 'project') {
+          const file = artifact.files?.find(f => f.path === selectedFilePath);
           if (file) {
             setEditContent(file.content);
             setSelectedFileId(file.id);
+            return;
+          }
+        } else {
+          const artifactPath = `artifacts/${artifact.title}.${ext}`;
+          if (selectedFilePath === artifactPath) {
+            setEditContent(artifact.content);
+            setSelectedFileId(null);
+            return;
           }
         }
-      } else {
-        const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
-        const artifactPath = `artifacts/${artifact.title}.${ext}`;
-        setSelectedFilePath(artifactPath);
-        setEditContent(artifact.content);
-        setSelectedFileId(null);
       }
+
+      // If selection is not in artifact, only switch to default if it's a new artifact ID
+      // or if we have no selection at all
+      const isNewArtifact = !prevArtifactIdRef.current || prevArtifactIdRef.current !== artifact.id;
+      if (!selectedFilePath || isNewArtifact) {
+        setSelectedFilePath(defaultPath);
+        if (artifact.type === 'project' && artifact.files?.[0]) {
+          setSelectedFileId(artifact.files[0].id);
+          setEditContent(artifact.files[0].content);
+        } else {
+          setSelectedFileId(null);
+          setEditContent(artifact.content);
+        }
+      }
+      
+      prevArtifactIdRef.current = artifact.id;
       setIsEditing(false);
     }
-  }, [artifact, selectedFilePath]);
+  }, [artifact]);
 
   if (!artifact) {
     return (
@@ -485,15 +541,19 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               tree={workspaceTree || {
                 name: workspaceHandle?.name || 'Workspace',
                 kind: 'directory',
+                path: '',
                 children: artifact.type === 'project' && artifact.files 
-                  ? artifact.files.map(f => ({ name: f.path, kind: 'file' }))
+                  ? artifact.files.map(f => ({ name: f.path, kind: 'file', path: f.path }))
                   : [{ 
                       name: `${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`, 
-                      kind: 'file' 
+                      kind: 'file',
+                      path: `artifacts/${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`
                     }]
               }}
               selectedFile={selectedFilePath}
               onFileSelect={handleFileSelect}
+              expandedFolders={expandedFolders}
+              onToggleFolder={(path) => setExpandedFolders(prev => ({ ...prev, [path]: !prev[path] }))}
             />
           )}
 

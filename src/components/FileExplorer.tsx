@@ -20,6 +20,8 @@ interface FileExplorerProps {
   onFileSelect: (path: string) => void;
   onAddFile?: () => void;
   onAddFolder?: () => void;
+  expandedFolders?: Record<string, boolean>;
+  onToggleFolder?: (path: string) => void;
 }
 
 export const FileExplorer: React.FC<FileExplorerProps> = ({ 
@@ -28,12 +30,20 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   selectedFile, 
   onFileSelect,
   onAddFile,
-  onAddFolder
+  onAddFolder,
+  expandedFolders: externalExpandedFolders,
+  onToggleFolder
 }) => {
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ 'root': true });
+  const [internalExpandedFolders, setInternalExpandedFolders] = useState<Record<string, boolean>>({ '': true });
+  
+  const expandedFolders = externalExpandedFolders || internalExpandedFolders;
 
   const toggleFolder = (path: string) => {
-    setExpandedFolders(prev => ({ ...prev, [path]: !prev[path] }));
+    if (onToggleFolder) {
+      onToggleFolder(path);
+    } else {
+      setInternalExpandedFolders(prev => ({ ...prev, [path]: !prev[path] }));
+    }
   };
 
   // Build tree structure from flat file list if no external tree is provided
@@ -100,11 +110,15 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
       );
     }
 
-    const getIcon = (type: string) => {
-      if (type.endsWith('.html')) return <FileCode size={14} className="text-orange-500" />;
-      if (type.endsWith('.mmd')) return <FileText size={14} className="text-emerald-500" />;
-      if (type.endsWith('.md')) return <FileText size={14} className="text-blue-500" />;
-      if (type.endsWith('.svg')) return <ImageIcon size={14} className="text-pink-500" />;
+    const getIcon = (name: string) => {
+      const lowerName = name.toLowerCase();
+      if (lowerName.endsWith('.html') || lowerName.endsWith('.htm')) return <FileCode size={14} className="text-orange-500" />;
+      if (lowerName.endsWith('.mmd') || lowerName.endsWith('.mermaid')) return <FileText size={14} className="text-emerald-500" />;
+      if (lowerName.endsWith('.md') || lowerName.endsWith('.markdown')) return <FileText size={14} className="text-blue-500" />;
+      if (lowerName.endsWith('.svg') || lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) return <ImageIcon size={14} className="text-pink-500" />;
+      if (lowerName.endsWith('.js') || lowerName.endsWith('.ts') || lowerName.endsWith('.tsx') || lowerName.endsWith('.jsx')) return <FileCode size={14} className="text-blue-400" />;
+      if (lowerName.endsWith('.css') || lowerName.endsWith('.scss')) return <FileCode size={14} className="text-indigo-400" />;
+      if (lowerName.endsWith('.json')) return <FileCode size={14} className="text-amber-500" />;
       return <File size={14} className="text-zinc-400" />;
     };
 

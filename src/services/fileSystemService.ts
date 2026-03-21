@@ -167,15 +167,19 @@ export async function getWorkspaceTree(handle: any): Promise<any> {
   const tree: any = {
     name: handle.name,
     kind: 'directory',
+    path: '',
     children: []
   };
 
   async function scan(dirHandle: any, currentTree: any) {
     // @ts-ignore
     for await (const entry of (dirHandle as any).values()) {
+      if (entry.name.startsWith('.')) continue;
+      
       const node: any = {
         name: entry.name,
-        kind: entry.kind
+        kind: entry.kind,
+        path: currentTree.path ? `${currentTree.path}/${entry.name}` : entry.name
       };
 
       if (entry.kind === 'directory') {
@@ -185,14 +189,38 @@ export async function getWorkspaceTree(handle: any): Promise<any> {
       
       currentTree.children.push(node);
     }
-    currentTree.children.sort((a: any, b: any) => {
-      if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
+    if (currentTree.children) {
+      currentTree.children.sort((a: any, b: any) => {
+        if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    }
   }
 
   await scan(handle, tree);
   return tree;
+}
+
+export async function readFileFromDirectory(
+  directoryHandle: any,
+  path: string
+): Promise<string> {
+  try {
+    const pathParts = path.split('/').filter(Boolean);
+    const fileName = pathParts.pop()!;
+    let currentDir = directoryHandle;
+
+    for (const part of pathParts) {
+      currentDir = await currentDir.getDirectoryHandle(part);
+    }
+
+    const fileHandle = await currentDir.getFileHandle(fileName);
+    const file = await fileHandle.getFile();
+    return await file.text();
+  } catch (err) {
+    console.error(`Failed to read file ${path}:`, err);
+    throw err;
+  }
 }
 
 export async function writeProjectToDirectory(
