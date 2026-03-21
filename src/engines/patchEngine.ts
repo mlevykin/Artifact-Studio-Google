@@ -127,7 +127,51 @@ export function parseThought(text: string): string | null {
 }
 
 /**
- * Strips <artifact>, <patch>, and <thought> blocks from the text for display in chat
+ * Parses <skill_call> blocks from LLM response
+ */
+export function parseInvokedSkills(text: string): string[] {
+  const skills: string[] = [];
+  const skillRegex = /<skill_call\s+name="([^"]+)"\s*\/>/g;
+  
+  let match;
+  while ((match = skillRegex.exec(text)) !== null) {
+    skills.push(match[1]);
+  }
+  
+  return skills;
+}
+
+/**
+ * Parses <mcp_call> blocks from LLM response
+ */
+export function parseMcpCalls(text: string): { name: string; request: any; response: any }[] {
+  const calls: { name: string; request: any; response: any }[] = [];
+  const mcpRegex = /<mcp_call\s+name="([^"]+)">\s*<request>([\s\S]*?)<\/request>\s*<response>([\s\S]*?)<\/response>\s*<\/mcp_call>/g;
+  
+  let match;
+  while ((match = mcpRegex.exec(text)) !== null) {
+    try {
+      calls.push({
+        name: match[1],
+        request: JSON.parse(match[2].trim()),
+        response: JSON.parse(match[3].trim())
+      });
+    } catch (e) {
+      console.error('Failed to parse MCP call JSON', e);
+      // Fallback to raw text if JSON parsing fails
+      calls.push({
+        name: match[1],
+        request: match[2].trim(),
+        response: match[3].trim()
+      });
+    }
+  }
+  
+  return calls;
+}
+
+/**
+ * Strips <artifact>, <patch>, <thought>, <skill_call>, and <mcp_call> blocks from the text for display in chat
  */
 export function stripArtifactsAndPatches(text: string): string {
   let cleaned = text;
@@ -140,6 +184,12 @@ export function stripArtifactsAndPatches(text: string): string {
 
   // Strip thoughts
   cleaned = cleaned.replace(/<thought>[\s\S]*?<\/thought>/g, '');
+
+  // Strip skill calls
+  cleaned = cleaned.replace(/<skill_call\s+name="([^"]+)"\s*\/>/g, '');
+
+  // Strip mcp calls
+  cleaned = cleaned.replace(/<mcp_call\s+name="([^"]+)">[\s\S]*?<\/mcp_call>/g, '');
   
   return cleaned.trim();
 }

@@ -1,6 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, X, Image as ImageIcon, FileText, Loader2, Menu, ChevronDown, ChevronUp, Diff, Sparkles } from 'lucide-react';
-import { Message, Attachment } from '../types';
+import { 
+  Send, 
+  Paperclip, 
+  X, 
+  Image as ImageIcon, 
+  FileText, 
+  Loader2, 
+  Menu, 
+  ChevronDown, 
+  ChevronUp, 
+  Diff, 
+  Sparkles,
+  Plus,
+  Book,
+  Server,
+  CheckCircle2,
+  Circle,
+  Wand2
+} from 'lucide-react';
+import { Message, Attachment, Skill, MCPConfig } from '../types';
 import { cn, generateId } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -17,6 +35,14 @@ interface ChatPanelProps {
   onOllamaConfigChange: (config: { baseUrl?: string; selectedModel?: string }) => void;
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
+  skills: Skill[];
+  mcpConfigs: MCPConfig[];
+  activeSkillIds: string[];
+  onToggleSkill: (id: string) => void;
+  activeMcpIds: string[];
+  onToggleMcp: (id: string) => void;
+  autoSelectSkills: boolean;
+  onToggleAutoSelect: () => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -28,13 +54,24 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   availableModels,
   onOllamaConfigChange,
   isSidebarOpen,
-  onToggleSidebar
+  onToggleSidebar,
+  skills,
+  mcpConfigs,
+  activeSkillIds,
+  onToggleSkill,
+  activeMcpIds,
+  onToggleMcp,
+  autoSelectSkills,
+  onToggleAutoSelect
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showOllamaSettings, setShowOllamaSettings] = useState(false);
+  const [showSelection, setShowSelection] = useState(false);
   const [expandedPatches, setExpandedPatches] = useState<Record<string, boolean>>({});
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
+  const [expandedSkills, setExpandedSkills] = useState<Record<string, boolean>>({});
+  const [expandedMcpCalls, setExpandedMcpCalls] = useState<Record<string, boolean>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -44,6 +81,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const toggleThought = (messageId: string) => {
     setExpandedThoughts(prev => ({ ...prev, [messageId]: !prev[messageId] }));
+  };
+
+  const toggleInvokedSkills = (messageId: string) => {
+    setExpandedSkills(prev => ({ ...prev, [messageId]: !prev[messageId] }));
+  };
+
+  const toggleMcpCalls = (messageId: string) => {
+    setExpandedMcpCalls(prev => ({ ...prev, [messageId]: !prev[messageId] }));
   };
 
   useEffect(() => {
@@ -219,6 +264,79 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 </div>
               )}
 
+              {m.invokedSkills && m.invokedSkills.length > 0 && (
+                <div className="mb-3 pb-3 border-b border-zinc-100">
+                  <button 
+                    onClick={() => toggleInvokedSkills(m.id)}
+                    className="flex items-center gap-2 text-[10px] font-bold text-emerald-500 hover:text-emerald-700 transition-colors"
+                  >
+                    <Book size={12} />
+                    INVOKED {m.invokedSkills.length} SKILLS
+                    {expandedSkills[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
+                  
+                  <AnimatePresence>
+                    {expandedSkills[m.id] && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="mt-2 space-y-1 overflow-hidden"
+                      >
+                        {m.invokedSkills.map((skill, i) => (
+                          <div key={i} className="text-[10px] text-zinc-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 flex items-center gap-2">
+                            <CheckCircle2 size={10} className="text-emerald-500" />
+                            {skill}
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {m.mcpCalls && m.mcpCalls.length > 0 && (
+                <div className="mb-3 pb-3 border-b border-zinc-100">
+                  <button 
+                    onClick={() => toggleMcpCalls(m.id)}
+                    className="flex items-center gap-2 text-[10px] font-bold text-amber-500 hover:text-amber-700 transition-colors"
+                  >
+                    <Server size={12} />
+                    MCP CALLS ({m.mcpCalls.length})
+                    {expandedMcpCalls[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
+                  
+                  <AnimatePresence>
+                    {expandedMcpCalls[m.id] && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="mt-2 space-y-2 overflow-hidden"
+                      >
+                        {m.mcpCalls.map((call, i) => (
+                          <div key={i} className="text-[10px] font-mono rounded-lg border border-zinc-100 overflow-hidden">
+                            <div className="bg-zinc-50 text-zinc-700 p-2 border-b border-zinc-100 font-bold flex items-center justify-between">
+                              <span>{call.name}</span>
+                              <span className="text-[8px] uppercase tracking-widest text-zinc-400">Request</span>
+                            </div>
+                            <pre className="p-2 bg-white text-zinc-600 overflow-x-auto">
+                              {JSON.stringify(call.request, null, 2)}
+                            </pre>
+                            <div className="bg-amber-50 text-amber-700 p-2 border-t border-amber-100 font-bold flex items-center justify-between">
+                              <span>Response</span>
+                            </div>
+                            <pre className="p-2 bg-white text-zinc-600 overflow-x-auto">
+                              {JSON.stringify(call.response, null, 2)}
+                            </pre>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               <div className={cn(
                 "prose prose-sm max-w-none break-words",
                 m.role === 'user' ? "text-white prose-invert" : "text-zinc-800"
@@ -330,12 +448,24 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         </AnimatePresence>
 
         <div className="relative flex items-end gap-2">
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors"
-          >
-            <Paperclip size={20} />
-          </button>
+          <div className="flex flex-col gap-2">
+            <button 
+              onClick={() => setShowSelection(!showSelection)}
+              className={cn(
+                "p-2 rounded-lg transition-all",
+                showSelection ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+              )}
+              title="Select Skills & MCP"
+            >
+              <Plus size={20} className={cn(showSelection && "rotate-45 transition-transform")} />
+            </button>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors"
+            >
+              <Paperclip size={20} />
+            </button>
+          </div>
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -343,6 +473,105 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             multiple 
             onChange={handleFileChange}
           />
+
+          <AnimatePresence>
+            {showSelection && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute bottom-full left-0 mb-4 w-72 bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden z-50"
+              >
+                <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Context Selection</h3>
+                  <button 
+                    onClick={onToggleAutoSelect}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all",
+                      autoSelectSkills 
+                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" 
+                        : "bg-zinc-100 text-zinc-400 hover:text-zinc-600"
+                    )}
+                  >
+                    <Wand2 size={12} />
+                    AUTO
+                  </button>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto p-2 space-y-4">
+                  <div className="space-y-1">
+                    <div className="px-2 py-1 text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Book size={10} />
+                      Skills
+                    </div>
+                    {skills.length === 0 ? (
+                      <div className="px-2 py-3 text-[10px] text-zinc-400 italic">No skills available</div>
+                    ) : (
+                      skills.map(skill => (
+                        <button 
+                          key={skill.id}
+                          onClick={() => onToggleSkill(skill.id)}
+                          disabled={autoSelectSkills}
+                          className={cn(
+                            "w-full flex items-center gap-3 p-2 rounded-xl transition-all text-left group",
+                            activeSkillIds.includes(skill.id) ? "bg-emerald-50" : "hover:bg-zinc-50",
+                            autoSelectSkills && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          {activeSkillIds.includes(skill.id) ? (
+                            <CheckCircle2 size={16} className="text-emerald-500" />
+                          ) : (
+                            <Circle size={16} className="text-zinc-300 group-hover:text-zinc-400" />
+                          )}
+                          <div className="min-w-0">
+                            <div className={cn("text-xs font-medium truncate", activeSkillIds.includes(skill.id) ? "text-emerald-700" : "text-zinc-700")}>
+                              {skill.name}
+                            </div>
+                            <div className="text-[9px] text-zinc-400 truncate">{skill.description}</div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="px-2 py-1 text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Server size={10} />
+                      MCP Servers
+                    </div>
+                    {mcpConfigs.length === 0 ? (
+                      <div className="px-2 py-3 text-[10px] text-zinc-400 italic">No MCP servers configured</div>
+                    ) : (
+                      mcpConfigs.map(mcp => (
+                        <button 
+                          key={mcp.id}
+                          onClick={() => onToggleMcp(mcp.id)}
+                          disabled={autoSelectSkills}
+                          className={cn(
+                            "w-full flex items-center gap-3 p-2 rounded-xl transition-all text-left group",
+                            activeMcpIds.includes(mcp.id) ? "bg-amber-50" : "hover:bg-zinc-50",
+                            autoSelectSkills && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          {activeMcpIds.includes(mcp.id) ? (
+                            <CheckCircle2 size={16} className="text-amber-500" />
+                          ) : (
+                            <Circle size={16} className="text-zinc-300 group-hover:text-zinc-400" />
+                          )}
+                          <div className="min-w-0">
+                            <div className={cn("text-xs font-medium truncate", activeMcpIds.includes(mcp.id) ? "text-amber-700" : "text-zinc-700")}>
+                              {mcp.name}
+                            </div>
+                            <div className="text-[9px] text-zinc-400 truncate">{mcp.url}</div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           <textarea
             value={input}

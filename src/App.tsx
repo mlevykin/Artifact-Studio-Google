@@ -11,7 +11,15 @@ import { SkillsPanel } from './components/SkillsPanel';
 import { MCPPanel } from './components/MCPPanel';
 import { useSessions } from './hooks/useSession';
 import { streamResponse, fetchOllamaModels } from './engines/streamEngine';
-import { parseArtifact, parsePatches, applyPatches, stripArtifactsAndPatches, parseThought } from './engines/patchEngine';
+import { 
+  parseArtifact, 
+  parsePatches, 
+  applyPatches, 
+  stripArtifactsAndPatches, 
+  parseThought,
+  parseInvokedSkills,
+  parseMcpCalls
+} from './engines/patchEngine';
 import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig } from './types';
 import { generateId } from './utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -221,6 +229,20 @@ export default function App() {
     updateSession({ activeSkills: newActiveSkills });
   };
 
+  const handleToggleMcp = (mcpId: string) => {
+    if (!currentSession) return;
+    const activeMcpIds = currentSession.activeMcpIds || [];
+    const newActiveMcpIds = activeMcpIds.includes(mcpId)
+      ? activeMcpIds.filter(id => id !== mcpId)
+      : [...activeMcpIds, mcpId];
+    updateSession({ activeMcpIds: newActiveMcpIds });
+  };
+
+  const handleToggleAutoSelect = () => {
+    if (!currentSession) return;
+    updateSession({ autoSelectSkills: !currentSession.autoSelectSkills });
+  };
+
   const handleAddSkill = (skill: Skill) => {
     setSkills(prev => [skill, ...prev]);
   };
@@ -306,12 +328,31 @@ export default function App() {
       initialArtifact = null;
     }
 
+    const isAutoSelect = currentSession?.autoSelectSkills;
     const activeSkills = skills.filter(s => currentSession?.activeSkills?.includes(s.id));
-    const skillsContext = activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n');
-    const activeMCPs = mcpConfigs.filter(c => c.enabled);
-    const mcpContext = activeMCPs.length > 0 
-      ? `ACTIVE MCP SERVERS: ${activeMCPs.map(c => c.name).join(', ')}` 
-      : '';
+    const activeMCPs = mcpConfigs.filter(c => currentSession?.activeMcpIds?.includes(c.id));
+
+    let skillsContext = '';
+    let mcpContext = '';
+
+    const reportingInstruction = `
+IMPORTANT: When you use a skill or an MCP server, you MUST report it at the beginning of your response using these tags:
+- For skills: <skill_call name="Skill Name" />
+- For MCP: <mcp_call name="MCP Name"><request>JSON_REQUEST</request><response>JSON_RESPONSE</response></mcp_call>
+Do NOT mention these calls in the visible chat text.
+`;
+
+    if (isAutoSelect) {
+      skillsContext = `AUTO-SELECT SKILLS ENABLED: You have access to all skills. Choose the most relevant one if needed. Available skills: ${skills.map(s => s.name).join(', ')}\n${reportingInstruction}`;
+      mcpContext = `AUTO-SELECT MCP ENABLED: You have access to all MCP servers. Call them if needed. Available MCPs: ${mcpConfigs.map(c => c.name).join(', ')}`;
+    } else {
+      skillsContext = activeSkills.length > 0 
+        ? activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${reportingInstruction}`
+        : '';
+      mcpContext = activeMCPs.length > 0 
+        ? `ACTIVE MCP SERVERS: ${activeMCPs.map(c => c.name).join(', ')}` 
+        : '';
+    }
 
     const fullPrompt = selectedFilePath 
       ? `CONTEXT: Currently working on file: ${selectedFilePath}\n\n${skillsContext}\n\n${mcpContext}\n\n${content}`
@@ -355,13 +396,18 @@ export default function App() {
 
       const patches = parsePatches(fullResponse);
       const thought = parseThought(fullResponse);
+      const invokedSkills = parseInvokedSkills(fullResponse);
+      const mcpCalls = parseMcpCalls(fullResponse);
+
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
         content: stripArtifactsAndPatches(fullResponse),
         thought: thought || undefined,
         timestamp: Date.now(),
-        patches: patches.length > 0 ? patches : undefined
+        patches: patches.length > 0 ? patches : undefined,
+        invokedSkills: invokedSkills.length > 0 ? invokedSkills : undefined,
+        mcpCalls: mcpCalls.length > 0 ? mcpCalls : undefined
       };
       addMessage(assistantMessage, sessionId);
 
@@ -501,6 +547,7 @@ export default function App() {
             onDeleteSkill={handleDeleteSkill}
             activeSkillIds={currentSession?.activeSkills || []}
             onToggleSkill={handleToggleSkill}
+            autoSelectSkills={currentSession?.autoSelectSkills || false}
           />
         )}
         {activeTab === 'mcp' && (
@@ -564,6 +611,14 @@ export default function App() {
             onOllamaConfigChange={handleOllamaConfigChange}
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            skills={skills}
+            mcpConfigs={mcpConfigs}
+            activeSkillIds={currentSession?.activeSkills || []}
+            onToggleSkill={handleToggleSkill}
+            activeMcpIds={currentSession?.activeMcpIds || []}
+            onToggleMcp={handleToggleMcp}
+            autoSelectSkills={currentSession?.autoSelectSkills || false}
+            onToggleAutoSelect={handleToggleAutoSelect}
           />
         </div>
 

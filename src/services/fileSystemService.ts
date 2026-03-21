@@ -98,6 +98,10 @@ async function ensureMetadataDir(rootHandle: any) {
   return await rootHandle.getDirectoryHandle(METADATA_DIR, { create: true });
 }
 
+function sanitizeFilename(name: string): string {
+  return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+}
+
 export async function saveAppState(rootHandle: any, key: string, data: any) {
   try {
     const metaDir = await ensureMetadataDir(rootHandle);
@@ -105,18 +109,19 @@ export async function saveAppState(rootHandle: any, key: string, data: any) {
     if (key === 'skills') {
       const skillsDir = await metaDir.getDirectoryHandle('skills', { create: true });
       const skills = data as any[];
-      const currentIds = new Set(skills.map(s => `${s.id}.json`));
+      const currentFilenames = new Set(skills.map(s => `${sanitizeFilename(s.name)}.skill.json`));
       
       // Delete old files
       // @ts-ignore
       for await (const entry of (skillsDir as any).values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.json') && !currentIds.has(entry.name)) {
+        if (entry.kind === 'file' && entry.name.endsWith('.skill.json') && !currentFilenames.has(entry.name)) {
           await skillsDir.removeEntry(entry.name);
         }
       }
 
       for (const skill of skills) {
-        const fileHandle = await skillsDir.getFileHandle(`${skill.id}.json`, { create: true });
+        const filename = `${sanitizeFilename(skill.name)}.skill.json`;
+        const fileHandle = await skillsDir.getFileHandle(filename, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(JSON.stringify(skill, null, 2));
         await writable.close();
@@ -164,7 +169,7 @@ export async function loadAppState(rootHandle: any, key: string): Promise<any | 
       const skills: any[] = [];
       // @ts-ignore
       for await (const entry of (skillsDir as any).values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+        if (entry.kind === 'file' && (entry.name.endsWith('.skill.json') || entry.name.endsWith('.json'))) {
           const file = await entry.getFile();
           const content = await file.text();
           skills.push(JSON.parse(content));

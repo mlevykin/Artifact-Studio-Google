@@ -50,6 +50,12 @@ export interface Message {
   timestamp: number;
   patches?: Patch[];
   thought?: string; // For reasoning/planning
+  invokedSkills?: string[];
+  mcpCalls?: {
+    name: string;
+    request: any;
+    response: any;
+  }[];
 }
 
 export interface Session {
@@ -60,6 +66,8 @@ export interface Session {
   currentArtifactId: string | null;
   lastUpdated: number;
   activeSkills?: string[]; // IDs of enabled skills for this session
+  activeMcpIds?: string[]; // IDs of enabled MCPs for this session
+  autoSelectSkills?: boolean; // Whether AI should auto-select skills/MCPs
 }
 
 export interface Patch {

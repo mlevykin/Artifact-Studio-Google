@@ -24,6 +24,7 @@ interface SkillsPanelProps {
   onDeleteSkill: (id: string) => void;
   activeSkillIds: string[];
   onToggleSkill: (id: string) => void;
+  autoSelectSkills?: boolean;
 }
 
 export const SkillsPanel: React.FC<SkillsPanelProps> = ({
@@ -32,7 +33,8 @@ export const SkillsPanel: React.FC<SkillsPanelProps> = ({
   onAddSkill,
   onDeleteSkill,
   activeSkillIds,
-  onToggleSkill
+  onToggleSkill,
+  autoSelectSkills = false
 }) => {
   const [search, setSearch] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -138,11 +140,13 @@ export const SkillsPanel: React.FC<SkillsPanelProps> = ({
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => onToggleSkill(skill.id)}
+                      disabled={autoSelectSkills}
                       className={cn(
                         "p-1 transition-colors",
-                        activeSkillIds.includes(skill.id) ? "text-emerald-400" : "text-zinc-500 hover:text-zinc-300"
+                        activeSkillIds.includes(skill.id) ? "text-emerald-400" : "text-zinc-500 hover:text-zinc-300",
+                        autoSelectSkills && "opacity-50 cursor-not-allowed"
                       )}
-                      title={activeSkillIds.includes(skill.id) ? "Disable for this chat" : "Enable for this chat"}
+                      title={autoSelectSkills ? "Auto-select is enabled" : (activeSkillIds.includes(skill.id) ? "Disable for this chat" : "Enable for this chat")}
                     >
                       {activeSkillIds.includes(skill.id) ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
                     </button>
