@@ -50,9 +50,13 @@ export interface Message {
   timestamp: number;
   patches?: Patch[];
   thought?: string; // For reasoning/planning
-  invokedSkills?: string[];
+  invokedSkills?: {
+    name: string;
+    description?: string;
+  }[];
   mcpCalls?: {
     name: string;
+    description?: string;
     request: any;
     response: any;
   }[];

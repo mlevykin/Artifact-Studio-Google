@@ -13,6 +13,16 @@ Example:
 3. Implement the components one by one.
 </thought>
 
+REPORTING ACTIONS (STEPS):
+When you use a skill or an MCP server, you MUST report it at the beginning of your response using these tags.
+Each tag MUST include a "description" attribute explaining what you are doing in a human-readable way.
+Example:
+<skill_call name="Senior QA" description="Adding context from the Senior QA skill to better understand your testing requirements." />
+<mcp_call name="File Search" description="Searching the workspace for relevant files using the File Search MCP."><request>{"query": "App.tsx"}</request><response>{"files": ["src/App.tsx"]}</response></mcp_call>
+
+These reports should look like "steps" you are taking to fulfill the request.
+Do NOT mention these calls in the visible chat text.
+
 ARTIFACTS:
 ONLY generate an artifact if the user's request explicitly or implicitly requires a substantial piece of content.
 DO NOT generate artifacts for simple greetings or conversational filler.
@@ -60,14 +70,17 @@ Guidelines:
 export async function* streamGeminiResponse(
   messages: Message[],
   currentArtifactContent?: string,
-  onAbort?: (controller: AbortController) => void
+  onAbort?: (controller: AbortController) => void,
+  overrideLastMessageContent?: string
 ) {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
   const controller = new AbortController();
   if (onAbort) onAbort(controller);
 
-  const formattedMessages = messages.map(m => {
+  const formattedMessages = messages.map((m, index) => {
     const parts: any[] = [];
+    const isLast = index === messages.length - 1;
+    const content = (isLast && overrideLastMessageContent) ? overrideLastMessageContent : m.content;
     
     // Add attachments
     if (m.attachments) {
@@ -87,7 +100,7 @@ export async function* streamGeminiResponse(
     }
     
     // Add main content
-    parts.push({ text: m.content || (m.attachments?.length ? "" : " ") });
+    parts.push({ text: content || (m.attachments?.length ? "" : " ") });
     
     return {
       role: m.role === 'user' ? 'user' : 'model' as any,
@@ -154,14 +167,16 @@ export async function* streamOllamaResponse(
   baseUrl: string,
   model: string,
   currentArtifactContent?: string,
-  onAbort?: (controller: AbortController) => void
+  onAbort?: (controller: AbortController) => void,
+  overrideLastMessageContent?: string
 ) {
   const controller = new AbortController();
   if (onAbort) onAbort(controller);
 
-  const ollamaMessages = messages.map(m => {
+  const ollamaMessages = messages.map((m, index) => {
     const images: string[] = [];
-    let content = m.content || "";
+    const isLast = index === messages.length - 1;
+    let content = (isLast && overrideLastMessageContent) ? overrideLastMessageContent : (m.content || "");
     
     if (m.attachments) {
       for (const a of m.attachments) {
@@ -246,11 +261,12 @@ export async function* streamResponse(
   messages: Message[],
   ollamaConfig: { baseUrl: string; model: string },
   currentArtifactContent?: string,
-  onAbort?: (controller: AbortController) => void
+  onAbort?: (controller: AbortController) => void,
+  overrideLastMessageContent?: string
 ) {
   if (provider === 'gemini') {
-    yield* streamGeminiResponse(messages, currentArtifactContent, onAbort);
+    yield* streamGeminiResponse(messages, currentArtifactContent, onAbort, overrideLastMessageContent);
   } else {
-    yield* streamOllamaResponse(messages, ollamaConfig.baseUrl, ollamaConfig.model, currentArtifactContent, onAbort);
+    yield* streamOllamaResponse(messages, ollamaConfig.baseUrl, ollamaConfig.model, currentArtifactContent, onAbort, overrideLastMessageContent);
   }
 }

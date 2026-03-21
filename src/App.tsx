@@ -336,9 +336,10 @@ export default function App() {
     let mcpContext = '';
 
     const reportingInstruction = `
-IMPORTANT: When you use a skill or an MCP server, you MUST report it at the beginning of your response using these tags:
-- For skills: <skill_call name="Skill Name" />
-- For MCP: <mcp_call name="MCP Name"><request>JSON_REQUEST</request><response>JSON_RESPONSE</response></mcp_call>
+IMPORTANT: When you use a skill or an MCP server, you MUST report it at the beginning of your response using these tags.
+Each tag MUST include a "description" attribute explaining what you are doing in a human-readable way.
+- For skills: <skill_call name="Skill Name" description="Human-readable description of what this skill adds to the context" />
+- For MCP: <mcp_call name="MCP Name" description="Human-readable description of why you are calling this tool"><request>JSON_REQUEST</request><response>JSON_RESPONSE</response></mcp_call>
 Do NOT mention these calls in the visible chat text.
 `;
 
@@ -361,7 +362,7 @@ Do NOT mention these calls in the visible chat text.
     const userMessage: Message = {
       id: generateId(),
       role: 'user',
-      content: fullPrompt,
+      content: content,
       attachments,
       timestamp: Date.now()
     };
@@ -380,7 +381,8 @@ Do NOT mention these calls in the visible chat text.
         messages,
         { baseUrl: ollamaConfig.baseUrl, model: ollamaConfig.selectedModel },
         initialArtifact?.content,
-        (controller) => { abortControllerRef.current = controller; }
+        (controller) => { abortControllerRef.current = controller; },
+        fullPrompt
       );
 
       for await (const chunk of stream) {
@@ -605,6 +607,7 @@ Do NOT mention these calls in the visible chat text.
             messages={currentSession?.messages || []}
             onSendMessage={handleSendMessage}
             isStreaming={isStreaming}
+            streamingText={streamingText}
             provider={provider}
             ollamaConfig={ollamaConfig}
             availableModels={availableModels}

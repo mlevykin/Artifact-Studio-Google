@@ -21,6 +21,12 @@ import {
 import { Message, Attachment, Skill, MCPConfig } from '../types';
 import { cn, generateId } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  stripArtifactsAndPatches, 
+  parseThought, 
+  parseInvokedSkills, 
+  parseMcpCalls 
+} from '../engines/patchEngine';
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -29,6 +35,7 @@ interface ChatPanelProps {
   messages: Message[];
   onSendMessage: (content: string, attachments: Attachment[]) => void;
   isStreaming: boolean;
+  streamingText: string;
   provider: 'gemini' | 'ollama';
   ollamaConfig: { baseUrl: string; selectedModel: string };
   availableModels: string[];
@@ -49,6 +56,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages, 
   onSendMessage, 
   isStreaming,
+  streamingText,
   provider,
   ollamaConfig,
   availableModels,
@@ -234,106 +242,118 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               className={cn(
                 "p-3 rounded-2xl text-sm",
                 m.role === 'user' 
-                  ? "bg-zinc-800 text-white rounded-tr-none" 
+                  ? "bg-zinc-800 text-white rounded-tr-none shadow-md" 
                   : "bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm"
               )}
             >
-              {m.thought && (
-                <div className="mb-3 pb-3 border-b border-zinc-100">
-                  <button 
-                    onClick={() => toggleThought(m.id)}
-                    className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
-                  >
-                    <Sparkles size={12} />
-                    THOUGHT PROCESS
-                    {expandedThoughts[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                  </button>
-                  
-                  <AnimatePresence>
-                    {expandedThoughts[m.id] && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap"
+              {m.role === 'assistant' && (
+                <div className="flex flex-col gap-3">
+                  {m.thought && (
+                    <div className="pb-3 border-b border-zinc-100">
+                      <button 
+                        onClick={() => toggleThought(m.id)}
+                        className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
                       >
-                        {m.thought}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
+                        <Sparkles size={12} />
+                        THOUGHT PROCESS
+                        {expandedThoughts[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      </button>
+                      
+                      <AnimatePresence>
+                        {expandedThoughts[m.id] && (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap"
+                          >
+                            {m.thought}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
 
-              {m.invokedSkills && m.invokedSkills.length > 0 && (
-                <div className="mb-3 pb-3 border-b border-zinc-100">
-                  <button 
-                    onClick={() => toggleInvokedSkills(m.id)}
-                    className="flex items-center gap-2 text-[10px] font-bold text-emerald-500 hover:text-emerald-700 transition-colors"
-                  >
-                    <Book size={12} />
-                    INVOKED {m.invokedSkills.length} SKILLS
-                    {expandedSkills[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                  </button>
-                  
-                  <AnimatePresence>
-                    {expandedSkills[m.id] && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="mt-2 space-y-1 overflow-hidden"
-                      >
-                        {m.invokedSkills.map((skill, i) => (
-                          <div key={i} className="text-[10px] text-zinc-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 flex items-center gap-2">
-                            <CheckCircle2 size={10} className="text-emerald-500" />
-                            {skill}
+                  {(m.invokedSkills?.length || 0) + (m.mcpCalls?.length || 0) > 0 && (
+                    <div className="flex flex-col gap-3 relative pl-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-100">
+                      {m.invokedSkills?.map((skill, i) => (
+                        <div key={`skill-${i}`} className="relative">
+                          <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-white" />
+                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-2 shadow-sm">
+                            <button 
+                              onClick={() => toggleInvokedSkills(m.id)}
+                              className="flex items-center gap-2 text-[10px] font-bold text-emerald-700"
+                            >
+                              <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
+                                {i + 1}
+                              </div>
+                              SKILL: {skill.name}
+                              {expandedSkills[m.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                            </button>
+                            <AnimatePresence>
+                              {expandedSkills[m.id] && skill.description && (
+                                <motion.div 
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-emerald-200 overflow-hidden"
+                                >
+                                  {skill.description}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
+                        </div>
+                      ))}
 
-              {m.mcpCalls && m.mcpCalls.length > 0 && (
-                <div className="mb-3 pb-3 border-b border-zinc-100">
-                  <button 
-                    onClick={() => toggleMcpCalls(m.id)}
-                    className="flex items-center gap-2 text-[10px] font-bold text-amber-500 hover:text-amber-700 transition-colors"
-                  >
-                    <Server size={12} />
-                    MCP CALLS ({m.mcpCalls.length})
-                    {expandedMcpCalls[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                  </button>
-                  
-                  <AnimatePresence>
-                    {expandedMcpCalls[m.id] && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="mt-2 space-y-2 overflow-hidden"
-                      >
-                        {m.mcpCalls.map((call, i) => (
-                          <div key={i} className="text-[10px] font-mono rounded-lg border border-zinc-100 overflow-hidden">
-                            <div className="bg-zinc-50 text-zinc-700 p-2 border-b border-zinc-100 font-bold flex items-center justify-between">
-                              <span>{call.name}</span>
-                              <span className="text-[8px] uppercase tracking-widest text-zinc-400">Request</span>
+                      {m.mcpCalls?.map((call, i) => {
+                        const stepNum = (m.invokedSkills?.length || 0) + i + 1;
+                        return (
+                          <div key={`mcp-${i}`} className="relative">
+                            <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-amber-500 ring-4 ring-white" />
+                            <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 shadow-sm">
+                              <button 
+                                onClick={() => toggleMcpCalls(m.id)}
+                                className="flex items-center gap-2 text-[10px] font-bold text-amber-700"
+                              >
+                                <div className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[8px]">
+                                  {stepNum}
+                                </div>
+                                MCP TOOL: {call.name}
+                                {expandedMcpCalls[m.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                              </button>
+                              <AnimatePresence>
+                                {expandedMcpCalls[m.id] && (
+                                  <motion.div 
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="mt-2 space-y-2 overflow-hidden pl-6 border-l border-amber-200"
+                                  >
+                                    {call.description && (
+                                      <div className="text-[10px] text-zinc-500 italic">{call.description}</div>
+                                    )}
+                                    <div className="space-y-1">
+                                      <div className="text-[8px] uppercase tracking-widest text-zinc-400">Request</div>
+                                      <pre className="p-1.5 bg-white text-[9px] font-mono text-zinc-600 overflow-x-auto rounded-lg border border-zinc-100">
+                                        {JSON.stringify(call.request, null, 2)}
+                                      </pre>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="text-[8px] uppercase tracking-widest text-zinc-400">Response</div>
+                                      <pre className="p-1.5 bg-white text-[9px] font-mono text-zinc-600 overflow-x-auto rounded-lg border border-zinc-100">
+                                        {JSON.stringify(call.response, null, 2)}
+                                      </pre>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
-                            <pre className="p-2 bg-white text-zinc-600 overflow-x-auto">
-                              {JSON.stringify(call.request, null, 2)}
-                            </pre>
-                            <div className="bg-amber-50 text-amber-700 p-2 border-t border-amber-100 font-bold flex items-center justify-between">
-                              <span>Response</span>
-                            </div>
-                            <pre className="p-2 bg-white text-zinc-600 overflow-x-auto">
-                              {JSON.stringify(call.response, null, 2)}
-                            </pre>
                           </div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -412,7 +432,78 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         ))}
         
-        {isStreaming && (
+        {isStreaming && streamingText && (
+          <div className="mr-auto items-start max-w-[85%] flex flex-col">
+            <div className="p-3 rounded-2xl text-sm bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm w-full">
+              <div className="flex flex-col gap-3">
+                {parseThought(streamingText) && (
+                  <div className="pb-3 border-b border-zinc-100">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-500">
+                      <Sparkles size={12} />
+                      THOUGHT PROCESS
+                    </div>
+                    <div className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap">
+                      {parseThought(streamingText)}
+                    </div>
+                  </div>
+                )}
+
+                {(parseInvokedSkills(streamingText).length > 0 || parseMcpCalls(streamingText).length > 0) && (
+                  <div className="flex flex-col gap-3 relative pl-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-100">
+                    {parseInvokedSkills(streamingText).map((skill, i) => (
+                      <div key={`stream-skill-${i}`} className="relative">
+                        <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-white" />
+                        <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-2 shadow-sm">
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-700">
+                            <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
+                              {i + 1}
+                            </div>
+                            SKILL: {skill.name}
+                          </div>
+                          {skill.description && (
+                            <div className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-emerald-200">
+                              {skill.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {parseMcpCalls(streamingText).map((call, i) => {
+                      const stepNum = parseInvokedSkills(streamingText).length + i + 1;
+                      return (
+                        <div key={`stream-mcp-${i}`} className="relative">
+                          <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-amber-500 ring-4 ring-white" />
+                          <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 shadow-sm">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-amber-700">
+                              <div className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[8px]">
+                                {stepNum}
+                              </div>
+                              MCP TOOL: {call.name}
+                            </div>
+                            {call.description && (
+                              <div className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-amber-200">
+                                {call.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="prose prose-sm max-w-none break-words text-zinc-800 mt-3">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {stripArtifactsAndPatches(streamingText)}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isStreaming && !streamingText && (
           <div className="flex items-center gap-2 text-zinc-400 text-xs animate-pulse">
             <Loader2 size={12} className="animate-spin" />
             AI is thinking...
