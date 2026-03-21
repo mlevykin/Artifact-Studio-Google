@@ -92,6 +92,16 @@ export async function saveAppState(rootHandle: any, key: string, data: any) {
     if (key === 'skills') {
       const skillsDir = await metaDir.getDirectoryHandle('skills', { create: true });
       const skills = data as any[];
+      const currentIds = new Set(skills.map(s => `${s.id}.json`));
+      
+      // Delete old files
+      // @ts-ignore
+      for await (const entry of (skillsDir as any).values()) {
+        if (entry.kind === 'file' && entry.name.endsWith('.json') && !currentIds.has(entry.name)) {
+          await skillsDir.removeEntry(entry.name);
+        }
+      }
+
       for (const skill of skills) {
         const fileHandle = await skillsDir.getFileHandle(`${skill.id}.json`, { create: true });
         const writable = await fileHandle.createWritable();
@@ -104,6 +114,16 @@ export async function saveAppState(rootHandle: any, key: string, data: any) {
     if (key === 'sessions') {
       const sessionsDir = await metaDir.getDirectoryHandle('sessions', { create: true });
       const sessions = data as any[];
+      const currentIds = new Set(sessions.map(s => `${s.id}.json`));
+
+      // Delete old files
+      // @ts-ignore
+      for await (const entry of (sessionsDir as any).values()) {
+        if (entry.kind === 'file' && entry.name.endsWith('.json') && !currentIds.has(entry.name)) {
+          await sessionsDir.removeEntry(entry.name);
+        }
+      }
+
       for (const session of sessions) {
         const fileHandle = await sessionsDir.getFileHandle(`${session.id}.json`, { create: true });
         const writable = await fileHandle.createWritable();

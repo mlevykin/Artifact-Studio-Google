@@ -19,8 +19,17 @@ export default defineConfig(({mode}) => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      watch: {
-        ignored: ['**/.artifact-studio/**'],
+      watch: process.env.DISABLE_HMR === 'true' ? null : {
+        ignored: [
+          '**/.artifact-studio/**',
+          '**/artifacts/**',
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/dist/**',
+          '**/.env*',
+          path.resolve(__dirname, '.artifact-studio') + '/**',
+          path.resolve(__dirname, 'artifacts') + '/**',
+        ],
       },
     },
   };

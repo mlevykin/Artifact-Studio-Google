@@ -75,6 +75,7 @@ export default function App() {
 
   // Initialize workspace
   useEffect(() => {
+    console.log('App: Initializing workspace...');
     const initWorkspace = async () => {
       try {
         const storedHandle = await getStoredDirectoryHandle();
@@ -84,7 +85,10 @@ export default function App() {
             await loadAllState(storedHandle);
             setWorkspaceHandle(storedHandle);
             await updateWorkspaceTree(storedHandle);
-            isStateLoaded.current = true;
+            // Wait for state updates to settle before enabling auto-save
+            setTimeout(() => {
+              isStateLoaded.current = true;
+            }, 1500);
           }
         }
       } catch (err) {
@@ -103,56 +107,63 @@ export default function App() {
       if (savedSessions.length > 0) {
         setCurrentSessionId(savedSessions[0].id);
       }
+      lastSavedRef.current['sessions'] = JSON.stringify(savedSessions, null, 2);
     }
 
     const savedSkills = await loadAppState(handle, 'skills');
-    if (savedSkills) setSkills(savedSkills);
+    if (savedSkills) {
+      setSkills(savedSkills);
+      lastSavedRef.current['skills'] = JSON.stringify(savedSkills, null, 2);
+    }
 
     const savedMcp = await loadAppState(handle, 'mcp');
-    if (savedMcp) setMcpConfigs(savedMcp);
+    if (savedMcp) {
+      setMcpConfigs(savedMcp);
+      lastSavedRef.current['mcp'] = JSON.stringify(savedMcp, null, 2);
+    }
 
     const savedProvider = await loadAppState(handle, 'provider');
-    if (savedProvider) setProvider(savedProvider);
+    if (savedProvider) {
+      setProvider(savedProvider);
+      lastSavedRef.current['provider'] = JSON.stringify(savedProvider, null, 2);
+    }
 
     const savedOllama = await loadAppState(handle, 'ollama');
-    if (savedOllama) setOllamaConfig(savedOllama);
+    if (savedOllama) {
+      setOllamaConfig(savedOllama);
+      lastSavedRef.current['ollama'] = JSON.stringify(savedOllama, null, 2);
+    }
   };
 
-  // Save state to disk whenever it changes
-  useEffect(() => {
-    if (workspaceHandle && isStateLoaded.current) {
-      saveAppState(workspaceHandle, 'sessions', sessions);
-      updateWorkspaceTree(workspaceHandle);
-    }
-  }, [sessions, workspaceHandle]);
+  // Save state to disk whenever it changes (debounced)
+  const lastSavedRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
-    if (workspaceHandle && isStateLoaded.current) {
-      saveAppState(workspaceHandle, 'skills', skills);
-      updateWorkspaceTree(workspaceHandle);
-    }
-  }, [skills, workspaceHandle]);
+    if (!workspaceHandle || !isStateLoaded.current) return;
 
-  useEffect(() => {
-    if (workspaceHandle && isStateLoaded.current) {
-      saveAppState(workspaceHandle, 'mcp', mcpConfigs);
-      updateWorkspaceTree(workspaceHandle);
-    }
-  }, [mcpConfigs, workspaceHandle]);
+    const saveState = async () => {
+      console.log('App: Checking for state changes to save...');
+      const states = [
+        { key: 'sessions', data: sessions },
+        { key: 'skills', data: skills },
+        { key: 'mcp', data: mcpConfigs },
+        { key: 'provider', data: provider },
+        { key: 'ollama', data: ollamaConfig }
+      ];
 
-  useEffect(() => {
-    if (workspaceHandle && isStateLoaded.current) {
-      saveAppState(workspaceHandle, 'provider', provider);
-      updateWorkspaceTree(workspaceHandle);
-    }
-  }, [provider, workspaceHandle]);
+      for (const { key, data } of states) {
+        const serialized = JSON.stringify(data, null, 2);
+        if (lastSavedRef.current[key] !== serialized) {
+          console.log(`App: Saving ${key} to disk...`);
+          await saveAppState(workspaceHandle, key, data);
+          lastSavedRef.current[key] = serialized;
+        }
+      }
+    };
 
-  useEffect(() => {
-    if (workspaceHandle && isStateLoaded.current) {
-      saveAppState(workspaceHandle, 'ollama', ollamaConfig);
-      updateWorkspaceTree(workspaceHandle);
-    }
-  }, [ollamaConfig, workspaceHandle]);
+    const timeoutId = setTimeout(saveState, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [sessions, skills, mcpConfigs, provider, ollamaConfig, workspaceHandle]);
 
   const handleSelectWorkspace = async () => {
     try {
