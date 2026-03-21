@@ -68,7 +68,8 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
   return (
     <div 
       ref={containerRef} 
-      className={cn("bg-white p-8 shadow-sm rounded-lg", className)}
+      className={cn("svg-preview-container bg-white p-8 shadow-sm rounded-lg", className)}
+      style={{ width: '800px', minHeight: '400px' }}
     />
   );
 };

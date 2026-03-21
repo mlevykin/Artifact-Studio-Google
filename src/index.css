@@ -56,3 +56,10 @@
 .prose th { @apply bg-zinc-50 font-bold; }
 .prose-invert th, .prose-invert td { @apply border-white/20; }
 .prose-invert th { @apply bg-white/10; }
+
+/* SVG Preview styling */
+.svg-preview-container svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}

@@ -137,7 +137,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
     
     // Limit extreme zoom-in for very small diagrams to keep them readable but not pixelated
     // but still allow significant zoom
-    newZoom = Math.min(newZoom, 4); 
+    newZoom = Math.min(newZoom, 10); 
 
     setZoom(newZoom);
     setPosition({ x: 0, y: 0 });

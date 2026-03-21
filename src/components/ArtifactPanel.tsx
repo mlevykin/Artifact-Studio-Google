@@ -414,6 +414,21 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     ? artifact.files?.find(f => f.id === selectedFileId) 
     : null;
 
+  const pContent = currentFile ? currentFile.content : (isWorkspaceMode ? editContent : artifact.content);
+  const getPreviewType = () => {
+    if (currentFile) return currentFile.type;
+    if (isWorkspaceMode && selectedFilePath) {
+      const ext = selectedFilePath.split('.').pop()?.toLowerCase();
+      if (ext === 'html') return 'html';
+      if (ext === 'md' || ext === 'markdown') return 'markdown';
+      if (ext === 'mmd' || ext === 'mermaid') return 'mermaid';
+      if (ext === 'svg') return 'svg';
+      return 'text';
+    }
+    return artifact.type;
+  };
+  const pType = getPreviewType();
+
   return (
     <div ref={panelRef} className={cn("flex-1 flex flex-col h-full bg-white overflow-hidden", isFullScreen && "fixed inset-0 z-[100]")}>
       {/* Header */}
@@ -426,10 +441,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             <h2 className="font-semibold text-zinc-800 leading-tight">
               {artifact.title}
               {currentFile && <span className="text-zinc-400 font-normal ml-2">/ {currentFile.name}</span>}
+              {!currentFile && isWorkspaceMode && selectedFilePath && <span className="text-zinc-400 font-normal ml-2">/ {selectedFilePath.split('/').pop()}</span>}
             </h2>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 bg-zinc-50 px-1.5 py-0.5 rounded border border-zinc-100">
-                {currentFile ? currentFile.type : artifact.type}
+                {pType}
               </span>
               {artifact.id !== 'workspace-explorer' && (
                 <span className="text-[10px] text-zinc-400">
@@ -605,30 +621,31 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         <div className="flex-1 overflow-hidden relative">
           {view === 'preview' ? (
             <div className="w-full h-full" id="artifact-preview-container">
-              {(artifact.type === 'html' || (currentFile?.type === 'html')) ? (
+              {pType === 'html' ? (
                 <div className="w-full h-full bg-white">
-                  <HtmlPreview content={currentFile ? currentFile.content : artifact.content} />
+                  <HtmlPreview content={pContent} />
                 </div>
-              ) : (artifact.type === 'markdown' || (currentFile?.type === 'markdown')) ? (
+              ) : pType === 'markdown' ? (
                 <div className="w-full h-full overflow-auto bg-white p-8 md:p-12 lg:p-16">
                   <div className="max-w-3xl mx-auto">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentFile ? currentFile.content : artifact.content}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{pContent}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
               ) : (
                 <ZoomableContainer className="w-full h-full">
-                  {(artifact.type === 'mermaid' || (currentFile?.type === 'mermaid')) && <MermaidPreview content={currentFile ? currentFile.content : artifact.content} />}
-                  {(artifact.type === 'svg' || (currentFile?.type === 'svg')) && (
+                  {pType === 'mermaid' && <MermaidPreview content={pContent} />}
+                  {pType === 'svg' && (
                     <div 
-                      className="p-12 bg-white shadow-lg rounded-xl"
-                      dangerouslySetInnerHTML={{ __html: currentFile ? currentFile.content : artifact.content }}
+                      className="svg-preview-container bg-white shadow-sm rounded-lg overflow-hidden"
+                      style={{ width: '800px', height: '500px' }}
+                      dangerouslySetInnerHTML={{ __html: pContent }}
                     />
                   )}
-                  {(artifact.type === 'text' || (currentFile?.type === 'text')) && (
+                  {pType === 'text' && (
                     <pre className="w-[800px] p-12 font-mono text-sm whitespace-pre-wrap bg-white shadow-lg rounded-xl">
-                      {currentFile ? currentFile.content : artifact.content}
+                      {pContent}
                     </pre>
                   )}
                 </ZoomableContainer>
