@@ -194,7 +194,8 @@ export async function getWorkspaceTree(handle: any): Promise<any> {
   async function scan(dirHandle: any, currentTree: any) {
     // @ts-ignore
     for await (const entry of (dirHandle as any).values()) {
-      if (entry.name.startsWith('.')) continue;
+      // Show .artifact-studio but hide other dot-files
+      if (entry.name.startsWith('.') && entry.name !== METADATA_DIR) continue;
       
       const node: any = {
         name: entry.name,

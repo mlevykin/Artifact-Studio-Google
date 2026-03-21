@@ -38,6 +38,8 @@ interface ArtifactPanelProps {
   workspaceHandle?: any | null;
   workspaceTree?: any | null;
   onRefreshTree?: () => void;
+  selectedFilePath: string | null;
+  onFileSelect: (path: string) => void;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -51,7 +53,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   isSidebarOpen = true,
   workspaceHandle = null,
   workspaceTree = null,
-  onRefreshTree
+  onRefreshTree,
+  selectedFilePath,
+  onFileSelect
 }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -59,11 +63,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [copied, setCopied] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ '': true });
   const panelRef = useRef<HTMLDivElement>(null);
   const prevArtifactIdRef = useRef<string | null>(null);
+
+  const isWorkspaceMode = artifact?.id === 'workspace-explorer';
 
   // Expand parent folders when selected file changes
   useEffect(() => {
@@ -72,7 +77,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       const newExpanded = { ...expandedFolders };
       let currentPath = '';
       
-      // Don't include the last part (the file itself)
+      // Expand all parent directories
       for (let i = 0; i < parts.length - 1; i++) {
         currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
         newExpanded[currentPath] = true;
@@ -166,18 +171,20 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Switch to code view when streaming starts
+  // Switch to code view when streaming starts or if it's the default workspace artifact
   React.useEffect(() => {
     if (isStreaming) {
+      setView('code');
+    } else if (artifact && artifact.id === 'workspace-explorer') {
       setView('code');
     } else if (artifact && artifact.id !== 'streaming') {
       // Switch back to preview when streaming ends and we have a real artifact
       setView('preview');
     }
-  }, [isStreaming]);
+  }, [isStreaming, artifact?.id]);
 
   const handleFileSelect = async (path: string) => {
-    setSelectedFilePath(path);
+    onFileSelect(path);
     
     // If it's a file in the current artifact, use its content
     if (artifact?.type === 'project') {
@@ -246,7 +253,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       // or if we have no selection at all
       const isNewArtifact = !prevArtifactIdRef.current || prevArtifactIdRef.current !== artifact.id;
       if (!selectedFilePath || isNewArtifact) {
-        setSelectedFilePath(defaultPath);
+        onFileSelect(defaultPath);
         if (artifact.type === 'project' && artifact.files?.[0]) {
           setSelectedFileId(artifact.files[0].id);
           setEditContent(artifact.files[0].content);
@@ -261,7 +268,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     }
   }, [artifact]);
 
-  if (!artifact) {
+  if (!artifact || (artifact.id === 'workspace-explorer' && !workspaceHandle)) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-zinc-100 text-zinc-400 p-12 text-center">
         <div className="w-16 h-16 rounded-3xl bg-white shadow-sm flex items-center justify-center mb-6">
@@ -275,9 +282,23 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     );
   }
 
-  const handleSave = () => {
-    onSave(editContent, selectedFileId || undefined);
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (isWorkspaceMode && selectedFilePath && workspaceHandle) {
+      try {
+        setIsSyncing(true);
+        await writeProjectToDirectory(workspaceHandle, [{ path: selectedFilePath, content: editContent }]);
+        if (onRefreshTree) onRefreshTree();
+        setIsSyncing(false);
+        setIsEditing(false);
+      } catch (error) {
+        console.error('Failed to save workspace file:', error);
+        alert('Failed to save file to disk.');
+        setIsSyncing(false);
+      }
+    } else {
+      onSave(editContent, selectedFileId || undefined);
+      setIsEditing(false);
+    }
   };
 
   const handleCancel = () => {
@@ -407,9 +428,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 bg-zinc-50 px-1.5 py-0.5 rounded border border-zinc-100">
                 {currentFile ? currentFile.type : artifact.type}
               </span>
-              <span className="text-[10px] text-zinc-400">
-                v{artifact.version} • {new Date(artifact.timestamp).toLocaleTimeString()}
-              </span>
+              {artifact.id !== 'workspace-explorer' && (
+                <span className="text-[10px] text-zinc-400">
+                  v{artifact.version} • {new Date(artifact.timestamp).toLocaleTimeString()}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -464,25 +487,29 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             </>
           )}
 
-          <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
-            <button 
-              disabled={currentIndex <= 0}
-              onClick={() => onVersionSelect(currentIndex - 1)}
-              className="p-1.5 text-zinc-500 hover:text-zinc-800 disabled:opacity-30"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-[10px] font-mono px-2 text-zinc-500">
-              {currentIndex + 1} / {history.length}
-            </span>
-            <button 
-              disabled={currentIndex >= history.length - 1}
-              onClick={() => onVersionSelect(currentIndex + 1)}
-              className="p-1.5 text-zinc-500 hover:text-zinc-800 disabled:opacity-30"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+        <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
+          {artifact.id !== 'workspace-explorer' && (
+            <>
+              <button 
+                disabled={currentIndex <= 0}
+                onClick={() => onVersionSelect(currentIndex - 1)}
+                className="p-1.5 text-zinc-500 hover:text-zinc-800 disabled:opacity-30"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-[10px] font-mono px-2 text-zinc-500">
+                {currentIndex + 1} / {history.length}
+              </span>
+              <button 
+                disabled={currentIndex >= history.length - 1}
+                onClick={() => onVersionSelect(currentIndex + 1)}
+                className="p-1.5 text-zinc-500 hover:text-zinc-800 disabled:opacity-30"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </>
+          )}
+        </div>
 
           <button 
             onClick={toggleFullScreen}
@@ -597,7 +624,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             </div>
           ) : (
             <div className="w-full h-full bg-white overflow-auto">
-              {isEditing ? (
+              {isWorkspaceMode && !selectedFilePath ? (
+                <div className="flex flex-col items-center justify-center h-full text-zinc-400 p-8 text-center">
+                  <FolderSync size={48} className="mb-4 opacity-20" />
+                  <p className="text-sm">Select a file from the explorer to start working with it.</p>
+                </div>
+              ) : isEditing ? (
                 <textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}

@@ -63,6 +63,7 @@ export default function App() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const [chatWidth, setChatWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
 
   const updateWorkspaceTree = async (handle: any) => {
     try {
@@ -281,7 +282,9 @@ export default function App() {
       ? `ACTIVE MCP SERVERS: ${activeMCPs.map(c => c.name).join(', ')}` 
       : '';
 
-    const fullPrompt = `${skillsContext}\n\n${mcpContext}\n\n${content}`;
+    const fullPrompt = selectedFilePath 
+      ? `CONTEXT: Currently working on file: ${selectedFilePath}\n\n${skillsContext}\n\n${mcpContext}\n\n${content}`
+      : `${skillsContext}\n\n${mcpContext}\n\n${content}`;
 
     const userMessage: Message = {
       id: generateId(),
@@ -411,12 +414,22 @@ export default function App() {
   const currentArtifact = currentSession?.artifacts.find(a => a.id === currentSession.currentArtifactId) || null;
   const currentIndex = currentSession?.artifacts.findIndex(a => a.id === currentSession.currentArtifactId) ?? -1;
 
+  const workspaceArtifact: Artifact = {
+    id: 'workspace-explorer',
+    type: 'project',
+    title: 'Workspace Explorer',
+    content: '[]',
+    files: [],
+    version: 1,
+    timestamp: Date.now()
+  };
+
   const displayArtifact = isStreaming && streamingArtifact ? {
     id: 'streaming',
     ...streamingArtifact,
     version: currentArtifact ? currentArtifact.version : 1,
     timestamp: Date.now()
-  } as Artifact : currentArtifact;
+  } as Artifact : (currentArtifact || workspaceArtifact);
 
   if (isInitializing) {
     return (
@@ -543,6 +556,8 @@ export default function App() {
             workspaceHandle={workspaceHandle}
             workspaceTree={workspaceTree}
             onRefreshTree={() => updateWorkspaceTree(workspaceHandle)}
+            selectedFilePath={selectedFilePath}
+            onFileSelect={setSelectedFilePath}
           />
           
           <AnimatePresence>
