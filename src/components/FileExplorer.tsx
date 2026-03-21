@@ -9,7 +9,8 @@ import {
   Image as ImageIcon,
   Plus,
   MoreVertical,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { ProjectFile } from '../types';
 import { cn } from '../utils';
@@ -24,6 +25,7 @@ interface FileExplorerProps {
   expandedFolders?: Record<string, boolean>;
   onToggleFolder?: (path: string) => void;
   onRefresh?: () => void;
+  onDisconnect?: () => void;
 }
 
 export const FileExplorer: React.FC<FileExplorerProps> = ({ 
@@ -35,7 +37,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   onAddFolder,
   expandedFolders: externalExpandedFolders,
   onToggleFolder,
-  onRefresh
+  onRefresh,
+  onDisconnect
 }) => {
   const [internalExpandedFolders, setInternalExpandedFolders] = useState<Record<string, boolean>>({ '': true });
   
@@ -149,6 +152,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
           {onRefresh && (
             <button onClick={onRefresh} className="p-1 hover:bg-zinc-200 rounded text-zinc-500" title="Refresh">
               <RefreshCw size={14} />
+            </button>
+          )}
+          {onDisconnect && (
+            <button onClick={onDisconnect} className="p-1 hover:bg-zinc-200 rounded text-zinc-500 hover:text-red-500" title="Disconnect Workspace">
+              <X size={14} />
             </button>
           )}
           <button onClick={onAddFile} className="p-1 hover:bg-zinc-200 rounded text-zinc-500" title="New File">

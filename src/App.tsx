@@ -24,6 +24,7 @@ import {
   saveAppState,
   loadAppState,
   storeDirectoryHandle,
+  clearStoredDirectoryHandle,
   getWorkspaceTree
 } from './services/fileSystemService';
 
@@ -67,11 +68,25 @@ export default function App() {
 
   const updateWorkspaceTree = async (handle: any) => {
     try {
+      // Try to verify the handle is still valid by doing a simple operation
       const tree = await getWorkspaceTree(handle);
       setWorkspaceTree(tree);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update workspace tree:', err);
+      // If the folder was deleted or moved, clear the handle
+      // File System API throws NotFoundError when the underlying file/folder is gone
+      if (err.name === 'NotFoundError' || err.message?.toLowerCase().includes('not found')) {
+        console.warn('Workspace folder not found. Clearing handle.');
+        await handleDisconnectWorkspace();
+      }
     }
+  };
+
+  const handleDisconnectWorkspace = async () => {
+    await clearStoredDirectoryHandle();
+    setWorkspaceHandle(null);
+    setWorkspaceTree(null);
+    setSelectedFilePath(null);
   };
 
   // Initialize workspace
@@ -81,15 +96,31 @@ export default function App() {
       try {
         const storedHandle = await getStoredDirectoryHandle();
         if (storedHandle) {
-          const hasPermission = await checkPermission(storedHandle);
-          if (hasPermission) {
-            await loadAllState(storedHandle);
-            setWorkspaceHandle(storedHandle);
-            await updateWorkspaceTree(storedHandle);
-            // Wait for state updates to settle before enabling auto-save
-            setTimeout(() => {
-              isStateLoaded.current = true;
-            }, 1500);
+          try {
+            const hasPermission = await checkPermission(storedHandle);
+            if (hasPermission) {
+              await loadAllState(storedHandle);
+              setWorkspaceHandle(storedHandle);
+              try {
+                await updateWorkspaceTree(storedHandle);
+              } catch (err) {
+                console.error('Initial workspace scan failed:', err);
+              }
+              // Wait for state updates to settle before enabling auto-save
+              setTimeout(() => {
+                isStateLoaded.current = true;
+              }, 1500);
+            } else {
+              console.log('Workspace handle found but permission not granted. Showing connect screen.');
+            }
+          } catch (err: any) {
+            console.error('Workspace permission/load error:', err);
+            // If the folder was deleted or moved, clear the handle
+            if (err.name === 'NotFoundError' || err.message?.toLowerCase().includes('not found')) {
+              console.warn('Stored workspace handle is invalid. Clearing storage.');
+              await handleDisconnectWorkspace();
+              setError('The previously selected workspace folder was not found. Please select a new folder.');
+            }
           }
         }
       } catch (err) {
@@ -556,6 +587,7 @@ export default function App() {
             workspaceHandle={workspaceHandle}
             workspaceTree={workspaceTree}
             onRefreshTree={() => updateWorkspaceTree(workspaceHandle)}
+            onDisconnectWorkspace={handleDisconnectWorkspace}
             selectedFilePath={selectedFilePath}
             onFileSelect={setSelectedFilePath}
           />

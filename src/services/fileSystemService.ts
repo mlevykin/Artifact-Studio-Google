@@ -1,4 +1,4 @@
-import { get, set } from 'idb-keyval';
+import { get, set, del } from 'idb-keyval';
 
 /**
  * Service to handle direct file system access using the File System Access API.
@@ -17,6 +17,10 @@ export async function getStoredDirectoryHandle(): Promise<any | null> {
 
 export async function storeDirectoryHandle(handle: any) {
   await set(HANDLE_KEY, handle);
+}
+
+export async function clearStoredDirectoryHandle() {
+  await del(HANDLE_KEY);
 }
 
 export async function selectLocalDirectory(): Promise<any | null> {
@@ -58,8 +62,17 @@ export async function checkPermission(handle: any, readWrite: boolean = true): P
   
   try {
     // @ts-ignore
-    return (await handle.queryPermission(options)) === 'granted';
-  } catch (e) {
+    const status = await handle.queryPermission(options);
+    if (status === 'granted') return true;
+    return false;
+  } catch (e: any) {
+    console.warn('Permission check failed, handle might be invalid:', e);
+    // If it's a NotFoundError or similar, the handle is definitely invalid
+    if (e.name === 'NotFoundError' || e.message?.toLowerCase().includes('not found')) {
+      const error = new Error('Workspace folder not found or inaccessible');
+      error.name = 'NotFoundError';
+      throw error;
+    }
     return false;
   }
 }

@@ -38,6 +38,7 @@ interface ArtifactPanelProps {
   workspaceHandle?: any | null;
   workspaceTree?: any | null;
   onRefreshTree?: () => void;
+  onDisconnectWorkspace?: () => void;
   selectedFilePath: string | null;
   onFileSelect: (path: string) => void;
 }
@@ -54,6 +55,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   workspaceHandle = null,
   workspaceTree = null,
   onRefreshTree,
+  onDisconnectWorkspace,
   selectedFilePath,
   onFileSelect
 }) => {
@@ -65,6 +67,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ '': true });
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const prevArtifactIdRef = useRef<string | null>(null);
 
@@ -433,6 +436,14 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   v{artifact.version} • {new Date(artifact.timestamp).toLocaleTimeString()}
                 </span>
               )}
+              {artifact.id === 'workspace-explorer' && workspaceHandle && (
+                <button 
+                  onClick={() => onDisconnectWorkspace?.()}
+                  className="text-[10px] text-zinc-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                >
+                  <X size={10} /> Disconnect
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -587,6 +598,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               expandedFolders={expandedFolders}
               onToggleFolder={(path) => setExpandedFolders(prev => ({ ...prev, [path]: !prev[path] }))}
               onRefresh={onRefreshTree}
+              onDisconnect={onDisconnectWorkspace}
             />
           )}
 
