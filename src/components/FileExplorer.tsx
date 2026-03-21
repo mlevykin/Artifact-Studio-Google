@@ -8,7 +8,8 @@ import {
   FileText, 
   Image as ImageIcon,
   Plus,
-  MoreVertical
+  MoreVertical,
+  RefreshCw
 } from 'lucide-react';
 import { ProjectFile } from '../types';
 import { cn } from '../utils';
@@ -22,6 +23,7 @@ interface FileExplorerProps {
   onAddFolder?: () => void;
   expandedFolders?: Record<string, boolean>;
   onToggleFolder?: (path: string) => void;
+  onRefresh?: () => void;
 }
 
 export const FileExplorer: React.FC<FileExplorerProps> = ({ 
@@ -32,7 +34,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   onAddFile,
   onAddFolder,
   expandedFolders: externalExpandedFolders,
-  onToggleFolder
+  onToggleFolder,
+  onRefresh
 }) => {
   const [internalExpandedFolders, setInternalExpandedFolders] = useState<Record<string, boolean>>({ '': true });
   
@@ -143,6 +146,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
       <div className="p-3 border-b border-zinc-200 flex items-center justify-between">
         <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Explorer</span>
         <div className="flex items-center gap-1">
+          {onRefresh && (
+            <button onClick={onRefresh} className="p-1 hover:bg-zinc-200 rounded text-zinc-500" title="Refresh">
+              <RefreshCw size={14} />
+            </button>
+          )}
           <button onClick={onAddFile} className="p-1 hover:bg-zinc-200 rounded text-zinc-500" title="New File">
             <Plus size={14} />
           </button>

@@ -37,6 +37,7 @@ interface ArtifactPanelProps {
   isSidebarOpen?: boolean;
   workspaceHandle?: any | null;
   workspaceTree?: any | null;
+  onRefreshTree?: () => void;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -49,7 +50,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   onToggleSidebar,
   isSidebarOpen = true,
   workspaceHandle = null,
-  workspaceTree = null
+  workspaceTree = null,
+  onRefreshTree
 }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -126,6 +128,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
       if (filesToSync.length > 0) {
         await writeProjectToDirectory(workspaceHandle, filesToSync);
+        if (onRefreshTree) {
+          onRefreshTree();
+        }
       }
       setIsSyncing(false);
     } catch (error) {
@@ -554,6 +559,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               onFileSelect={handleFileSelect}
               expandedFolders={expandedFolders}
               onToggleFolder={(path) => setExpandedFolders(prev => ({ ...prev, [path]: !prev[path] }))}
+              onRefresh={onRefreshTree}
             />
           )}
 

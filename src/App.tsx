@@ -531,6 +531,7 @@ export default function App() {
             isSidebarOpen={isSidebarOpen}
             workspaceHandle={workspaceHandle}
             workspaceTree={workspaceTree}
+            onRefreshTree={() => updateWorkspaceTree(workspaceHandle)}
           />
           
           <AnimatePresence>
