@@ -15,9 +15,21 @@ import { parseArtifact, parsePatches, applyPatches, stripArtifactsAndPatches, pa
 import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig } from './types';
 import { generateId } from './utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { Layers, Diff, MessageSquare, Book, Network } from 'lucide-react';
+import { Layers, Diff, FolderOpen, AlertCircle, Loader2 } from 'lucide-react';
+import { 
+  getStoredDirectoryHandle, 
+  selectLocalDirectory, 
+  requestPermission, 
+  checkPermission,
+  saveAppState,
+  loadAppState
+} from './services/fileSystemService';
 
 export default function App() {
+  const [workspaceHandle, setWorkspaceHandle] = useState<any | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const {
     sessions,
     currentSession,
@@ -26,50 +38,103 @@ export default function App() {
     updateSession,
     deleteSession,
     addMessage,
-    addArtifact
+    addArtifact,
+    setSessions
   } = useSessions();
 
-  const [provider, setProvider] = useState<'gemini' | 'ollama'>(() => {
-    const saved = localStorage.getItem('ai_provider');
-    return (saved as 'gemini' | 'ollama') || 'gemini';
+  const [provider, setProvider] = useState<'gemini' | 'ollama'>('gemini');
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [mcpConfigs, setMcpConfigs] = useState<MCPConfig[]>([]);
+  const [ollamaConfig, setOllamaConfig] = useState<OllamaConfig>({
+    baseUrl: 'http://localhost:11434',
+    selectedModel: 'llama3'
   });
-
-  const [skills, setSkills] = useState<Skill[]>(() => {
-    const saved = localStorage.getItem('artifact_studio_skills');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('artifact_studio_skills', JSON.stringify(skills));
-  }, [skills]);
-
-  const [mcpConfigs, setMcpConfigs] = useState<MCPConfig[]>(() => {
-    const saved = localStorage.getItem('artifact_studio_mcp');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('artifact_studio_mcp', JSON.stringify(mcpConfigs));
-  }, [mcpConfigs]);
-
   const [activeTab, setActiveTab] = useState<'chats' | 'skills' | 'mcp'>('chats');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [availableModels, setAvailableModels] = useState<string[]>(['llama3']);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [streamingArtifact, setStreamingArtifact] = useState<{ type: string; title: string; content: string } | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [chatWidth, setChatWidth] = useState(500);
+  const [isResizing, setIsResizing] = useState(false);
 
+  // Initialize workspace
   useEffect(() => {
-    console.log('Saving AI Provider to localStorage:', provider);
-    localStorage.setItem('ai_provider', provider);
-  }, [provider]);
-
-  const [ollamaConfig, setOllamaConfig] = useState<OllamaConfig>(() => {
-    const saved = localStorage.getItem('ollama_config');
-    return saved ? JSON.parse(saved) : {
-      baseUrl: 'http://localhost:11434',
-      selectedModel: 'llama3'
+    const initWorkspace = async () => {
+      try {
+        const storedHandle = await getStoredDirectoryHandle();
+        if (storedHandle) {
+          const hasPermission = await checkPermission(storedHandle);
+          if (hasPermission) {
+            setWorkspaceHandle(storedHandle);
+            await loadAllState(storedHandle);
+          }
+        }
+      } catch (err) {
+        console.error('Workspace init error:', err);
+      } finally {
+        setIsInitializing(false);
+      }
     };
-  });
+    initWorkspace();
+  }, []);
+
+  const loadAllState = async (handle: any) => {
+    const savedSessions = await loadAppState(handle, 'sessions');
+    if (savedSessions) {
+      setSessions(savedSessions);
+      if (savedSessions.length > 0) {
+        setCurrentSessionId(savedSessions[0].id);
+      }
+    }
+
+    const savedSkills = await loadAppState(handle, 'skills');
+    if (savedSkills) setSkills(savedSkills);
+
+    const savedMcp = await loadAppState(handle, 'mcp');
+    if (savedMcp) setMcpConfigs(savedMcp);
+
+    const savedProvider = await loadAppState(handle, 'provider');
+    if (savedProvider) setProvider(savedProvider);
+
+    const savedOllama = await loadAppState(handle, 'ollama');
+    if (savedOllama) setOllamaConfig(savedOllama);
+  };
+
+  // Save state to disk whenever it changes
+  useEffect(() => {
+    if (workspaceHandle) saveAppState(workspaceHandle, 'sessions', sessions);
+  }, [sessions, workspaceHandle]);
 
   useEffect(() => {
-    localStorage.setItem('ollama_config', JSON.stringify(ollamaConfig));
-  }, [ollamaConfig]);
+    if (workspaceHandle) saveAppState(workspaceHandle, 'skills', skills);
+  }, [skills, workspaceHandle]);
+
+  useEffect(() => {
+    if (workspaceHandle) saveAppState(workspaceHandle, 'mcp', mcpConfigs);
+  }, [mcpConfigs, workspaceHandle]);
+
+  useEffect(() => {
+    if (workspaceHandle) saveAppState(workspaceHandle, 'provider', provider);
+  }, [provider, workspaceHandle]);
+
+  useEffect(() => {
+    if (workspaceHandle) saveAppState(workspaceHandle, 'ollama', ollamaConfig);
+  }, [ollamaConfig, workspaceHandle]);
+
+  const handleSelectWorkspace = async () => {
+    try {
+      setError(null);
+      const handle = await selectLocalDirectory();
+      if (handle) {
+        setWorkspaceHandle(handle);
+        await loadAllState(handle);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to select workspace');
+    }
+  };
 
   const handleToggleSkill = (skillId: string) => {
     if (!currentSession) return;
@@ -104,55 +169,9 @@ export default function App() {
     setMcpConfigs(prev => prev.filter(c => c.id !== id));
   };
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [availableModels, setAvailableModels] = useState<string[]>(() => {
-    const saved = localStorage.getItem('ollama_config');
-    const config = saved ? JSON.parse(saved) : null;
-    const defaultModels = ['llama3'];
-    if (config?.selectedModel && !defaultModels.includes(config.selectedModel)) {
-      return [...defaultModels, config.selectedModel];
-    }
-    return defaultModels;
-  });
-
-  // Sync state across tabs
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'ai_provider' && e.newValue) {
-        console.log('AI Provider synced from another tab:', e.newValue);
-        setProvider(e.newValue as any);
-      }
-      if (e.key === 'ollama_config' && e.newValue) {
-        const newConfig = JSON.parse(e.newValue);
-        setOllamaConfig(newConfig);
-        // Ensure the selected model is in the list
-        setAvailableModels(prev => {
-          if (!prev.includes(newConfig.selectedModel)) {
-            return [...prev, newConfig.selectedModel];
-          }
-          return prev;
-        });
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState('');
-  const [streamingArtifact, setStreamingArtifact] = useState<{ type: string; title: string; content: string } | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  // Resizable divider state
-  const [chatWidth, setChatWidth] = useState(500);
-  const [isResizing, setIsResizing] = useState(false);
-
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    // Calculate new width based on sidebar state
     const sidebarWidth = isSidebarOpen ? 280 : 0;
     const newWidth = e.clientX - sidebarWidth;
-    
-    // Constraints
     if (newWidth > 300 && newWidth < window.innerWidth - 400) {
       setChatWidth(newWidth);
     }
@@ -184,7 +203,6 @@ export default function App() {
     document.body.style.userSelect = 'none';
   }, []);
 
-  // Fetch models when provider is ollama or baseUrl changes
   useEffect(() => {
     if (provider === 'ollama') {
       fetchOllamaModels(ollamaConfig.baseUrl).then(models => {
@@ -212,11 +230,8 @@ export default function App() {
       initialArtifact = null;
     }
 
-    // Prepare context from active skills
     const activeSkills = skills.filter(s => currentSession?.activeSkills?.includes(s.id));
     const skillsContext = activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n');
-    
-    // Prepare context from MCP servers (placeholder for now)
     const activeMCPs = mcpConfigs.filter(c => c.enabled);
     const mcpContext = activeMCPs.length > 0 
       ? `ACTIVE MCP SERVERS: ${activeMCPs.map(c => c.name).join(', ')}` 
@@ -253,8 +268,6 @@ export default function App() {
         if (chunk.text) {
           fullResponse = chunk.fullText;
           setStreamingText(fullResponse);
-
-          // Extract partial artifact for live preview
           const partialArtifact = parseArtifact(fullResponse);
           if (partialArtifact) {
             setStreamingArtifact(partialArtifact as any);
@@ -262,7 +275,6 @@ export default function App() {
         }
       }
 
-      // Process the final response
       const patches = parsePatches(fullResponse);
       const thought = parseThought(fullResponse);
       const assistantMessage: Message = {
@@ -275,14 +287,12 @@ export default function App() {
       };
       addMessage(assistantMessage);
 
-      // Check for new artifact
       const newArtifactData = parseArtifact(fullResponse);
       if (newArtifactData) {
         let files: any[] | undefined;
         if (newArtifactData.type === 'project') {
           try {
             files = JSON.parse(newArtifactData.content);
-            // Add IDs to files
             files = files.map(f => ({ ...f, id: generateId() }));
           } catch (e) {
             console.error('Failed to parse project artifact JSON', e);
@@ -300,25 +310,22 @@ export default function App() {
         };
         addArtifact(newArtifact);
       } else if (initialArtifact) {
-        // Check for patches
         const patches = parsePatches(fullResponse);
         if (patches.length > 0) {
           const { content: patchedContent, successCount } = applyPatches(currentArtifact.content, patches);
           if (successCount > 0) {
             const updatedArtifact: Artifact = {
               ...currentArtifact,
-              id: generateId(), // New ID for version history
+              id: generateId(),
               content: patchedContent,
               version: currentArtifact.version + 1,
               timestamp: Date.now()
             };
             addArtifact(updatedArtifact);
-            // Optional: toast successCount
           }
         }
       }
 
-      // Update session title if it's the first message
       if (messages.length === 1) {
         updateSession({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') });
       }
@@ -337,7 +344,7 @@ export default function App() {
       setStreamingArtifact(null);
       abortControllerRef.current = null;
     }
-  }, [currentSession, addMessage, addArtifact, updateSession, provider, ollamaConfig]);
+  }, [currentSession, addMessage, addArtifact, updateSession, provider, ollamaConfig, skills, mcpConfigs]);
 
   const handleVersionSelect = (index: number) => {
     if (!currentSession) return;
@@ -367,9 +374,69 @@ export default function App() {
     timestamp: Date.now()
   } as Artifact : currentArtifact;
 
+  if (isInitializing) {
+    return (
+      <div className="h-screen w-full bg-zinc-950 flex flex-col items-center justify-center text-white font-sans">
+        <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-4" />
+        <div className="text-zinc-400 animate-pulse">Initializing Workspace...</div>
+      </div>
+    );
+  }
+
+  if (!workspaceHandle) {
+    return (
+      <div className="h-screen w-full bg-zinc-950 flex flex-col items-center justify-center p-6 text-white font-sans overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/30 blur-[120px] rounded-full" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/30 blur-[120px] rounded-full" />
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-[32px] p-10 shadow-2xl relative z-10"
+        >
+          <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mb-8 mx-auto">
+            <FolderOpen className="w-10 h-10 text-emerald-500" />
+          </div>
+          
+          <h1 className="text-3xl font-bold text-center mb-3 tracking-tight">Welcome to Artifact Studio</h1>
+          <p className="text-zinc-400 text-center mb-10 text-sm leading-relaxed">
+            Please select a workspace folder on your computer. All your data, chats, and projects will be stored directly in this folder.
+          </p>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-400 text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <div>{error}</div>
+            </div>
+          )}
+
+          <button 
+            onClick={handleSelectWorkspace}
+            className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold rounded-2xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 group"
+          >
+            Select Workspace Folder
+            <motion.span
+              animate={{ x: [0, 4, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+            >
+              →
+            </motion.span>
+          </button>
+          
+          <div className="mt-8 pt-8 border-t border-zinc-800/50 text-center">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
+              Local-First • Privacy-Focused • AI-Powered
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-full bg-zinc-100 font-sans text-zinc-900 overflow-hidden relative">
-      {/* Resizing Overlay */}
       {isResizing && (
         <div 
           className="fixed inset-0 z-[9999] cursor-col-resize"
@@ -425,7 +492,6 @@ export default function App() {
           />
         </div>
 
-        {/* Resizable Divider */}
         <div 
           onMouseDown={startResizing}
           className="w-1.5 h-full bg-zinc-200 hover:bg-zinc-400 cursor-col-resize transition-colors z-30 flex-shrink-0 flex items-center justify-center group"
@@ -443,9 +509,9 @@ export default function App() {
             isStreaming={isStreaming}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             isSidebarOpen={isSidebarOpen}
+            workspaceHandle={workspaceHandle}
           />
           
-          {/* Overlay for streaming artifact */}
           <AnimatePresence>
             {isStreaming && streamingText.includes('<artifact') && !streamingText.includes('</artifact>') && (
               <motion.div 

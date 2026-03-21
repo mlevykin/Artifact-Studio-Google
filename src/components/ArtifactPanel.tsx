@@ -24,7 +24,7 @@ import { FileExplorer } from './FileExplorer';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import html2canvas from 'html2canvas';
-import { selectLocalDirectory, verifyPermission, writeProjectToDirectory } from '../services/fileSystemService';
+import { selectLocalDirectory, checkPermission, requestPermission, writeProjectToDirectory } from '../services/fileSystemService';
 
 interface ArtifactPanelProps {
   artifact: Artifact | null;
@@ -35,6 +35,7 @@ interface ArtifactPanelProps {
   isStreaming?: boolean;
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
+  workspaceHandle?: any | null;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -45,7 +46,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   onSave,
   isStreaming = false,
   onToggleSidebar,
-  isSidebarOpen = true
+  isSidebarOpen = true,
+  workspaceHandle = null
 }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -53,43 +55,63 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [copied, setCopied] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
-  const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Auto-sync when artifact changes if we have a directory handle
+  // Auto-sync when artifact changes if we have a workspace handle
   useEffect(() => {
-    if (dirHandle && artifact && !isStreaming) {
-      handleSyncToDisk();
-    }
-  }, [artifact?.version, artifact?.id, isStreaming]);
+    const autoSync = async () => {
+      if (workspaceHandle && artifact && !isStreaming && artifact.id !== 'streaming') {
+        const hasPermission = await checkPermission(workspaceHandle);
+        if (hasPermission) {
+          handleSyncToDisk(true); // silent sync
+        }
+      }
+    };
+    autoSync();
+  }, [artifact?.version, artifact?.id, isStreaming, workspaceHandle]);
 
-  const handleSyncToDisk = async () => {
+  const handleSyncToDisk = async (silent: boolean = false) => {
     try {
-      let handle = dirHandle;
-      if (!handle) {
-        handle = await selectLocalDirectory();
-        if (!handle) return;
-        setDirHandle(handle);
+      if (!workspaceHandle) {
+        if (!silent) alert('Пожалуйста, сначала выберите рабочую папку.');
+        return;
       }
 
-      const hasPermission = await verifyPermission(handle);
-      if (!hasPermission) return;
+      const hasPermission = silent 
+        ? await checkPermission(workspaceHandle)
+        : await requestPermission(workspaceHandle);
+        
+      if (!hasPermission) {
+        if (!silent) alert('Не удалось получить разрешение на запись в папку.');
+        return;
+      }
 
       setIsSyncing(true);
       
-      const filesToSync = artifact?.type === 'project' && artifact.files 
-        ? artifact.files.map(f => ({ path: f.path, content: f.content }))
-        : artifact ? [{ path: `${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`, content: artifact.content }] : [];
-
-      await writeProjectToDirectory(handle, filesToSync);
-      setIsSyncing(false);
+      let filesToSync: { path: string; content: string }[] = [];
       
-      // Show success toast or similar (optional)
+      if (artifact?.type === 'project' && artifact.files) {
+        filesToSync = artifact.files.map(f => ({ path: f.path, content: f.content }));
+      } else if (artifact) {
+        // For single artifacts, save them in an 'artifacts' folder
+        const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
+        filesToSync = [{ 
+          path: `artifacts/${artifact.title}.${ext}`, 
+          content: artifact.content 
+        }];
+      }
+
+      if (filesToSync.length > 0) {
+        await writeProjectToDirectory(workspaceHandle, filesToSync);
+      }
+      setIsSyncing(false);
     } catch (error) {
       console.error('Sync failed:', error);
       setIsSyncing(false);
-      alert('Failed to sync to disk. Please check permissions.');
+      if (!silent) {
+        alert(error instanceof Error ? error.message : 'Ошибка при синхронизации с диском.');
+      }
     }
   };
 
@@ -380,13 +402,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           </button>
 
           <button 
-            onClick={handleSyncToDisk}
+            onClick={() => handleSyncToDisk(false)}
             disabled={isSyncing}
             className={cn(
               "p-2 rounded-lg transition-colors mr-1",
-              dirHandle ? "text-emerald-500 bg-emerald-50" : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
+              workspaceHandle ? "text-emerald-500 bg-emerald-50" : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
             )}
-            title={dirHandle ? `Syncing to local folder: ${dirHandle.name}` : "Sync to Local Folder"}
+            title={workspaceHandle ? `Workspace: ${workspaceHandle.name}` : "Select Workspace"}
           >
             {isSyncing ? <RefreshCw size={18} className="animate-spin" /> : <FolderSync size={18} />}
           </button>
@@ -424,15 +446,20 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-hidden relative bg-zinc-50 flex">
-        {view === 'code' && artifact.type === 'project' && (
-          <FileExplorer 
-            files={artifact.files || []}
-            selectedFileId={selectedFileId}
-            onFileSelect={setSelectedFileId}
-          />
-        )}
+        <div className="flex-1 overflow-hidden relative bg-zinc-50 flex">
+          {view === 'code' && (
+            <FileExplorer 
+              files={artifact.type === 'project' && artifact.files ? artifact.files : [{
+                id: 'single-file',
+                name: `${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`,
+                path: `artifacts/${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`,
+                type: artifact.type as any,
+                content: artifact.content
+              }]}
+              selectedFileId={artifact.type === 'project' ? selectedFileId : 'single-file'}
+              onFileSelect={(id) => artifact.type === 'project' ? setSelectedFileId(id) : null}
+            />
+          )}
 
         <div className="flex-1 overflow-hidden relative">
           {view === 'preview' ? (
