@@ -1,9 +1,12 @@
 # Artifact Studio 🎨
 
-Artifact Studio is a professional, AI-powered environment designed for generating, editing, and versioning artifacts. It provides a seamless experience for creating Mermaid diagrams, HTML/CSS/JS snippets, Markdown documents, and SVGs using Large Language Models (LLMs) with real-time streaming and fuzzy patching.
+Artifact Studio is a professional, AI-powered environment designed for generating, editing, and versioning artifacts. It provides a seamless experience for creating Mermaid diagrams, HTML/CSS/JS snippets, Markdown documents, SVGs, and complex multi-file projects using Large Language Models (LLMs) with real-time streaming and fuzzy patching.
 
 ## 🚀 Key Features
 
+- **Multi-File Project Management**: Create and manage complex applications with multiple files and folders. The integrated File Explorer allows you to navigate and edit project structures seamlessly.
+- **AI Skills Management**: Define and manage AI "skills" using Markdown. Enable specific skills for each chat session to guide the AI's behavior and expertise (e.g., Senior QA Engineer, Frontend Architect).
+- **Planning & Reasoning**: View the AI's thought process and planning steps through collapsible "Thought" sections in the chat.
 - **AI-Powered Chat**: Real-time streaming chat interface with support for multiple providers:
   - **Gemini AI**: High-performance cloud-based models.
   - **Ollama**: Connect to locally running LLMs (e.g., Llama 3, Mistral) for private, local-first generation.
@@ -12,7 +15,9 @@ Artifact Studio is a professional, AI-powered environment designed for generatin
   - **HTML/CSS/JS Previews**: Live preview of web snippets in a sandboxed environment.
   - **Markdown Rendering**: Rich text formatting with GFM (GitHub Flavored Markdown) support.
   - **SVG Previews**: Direct rendering of vector graphics.
-  - **Plain Text**: Clean view for code or text snippets.
+  - **Multi-file Projects**: Hierarchical file explorer for complex codebases.
+- **Smart Patching**: AI can perform surgical edits to existing artifacts using a robust fuzzy patch engine, preserving your changes while updating specific parts.
+- **MCP Integration**: Connect to Model Context Protocol (MCP) servers to augment the AI's context with external tools and data sources.
 - **Version Control**: Track changes with automatic versioning. Easily switch between previous versions of any artifact.
 - **Direct Code Editing**: Modify the generated code directly in the "Code" view and save changes.
 - **Advanced Export Options**:
@@ -21,10 +26,6 @@ Artifact Studio is a professional, AI-powered environment designed for generatin
   - **HTML**: Export standalone web pages.
   - **Markdown**: Save formatted documents.
 - **Interactive Diagram View**: Zoom and pan capabilities for large diagrams, including a "Fit to Screen" feature.
-- **Productivity Tools**:
-  - **Zen Mode**: Fullscreen preview for focused work.
-  - **Resizable Layout**: Flexible sidebar and chat/preview split.
-  - **Copy to Clipboard**: One-click code copying.
 
 ## 🛠 Tech Stack
 

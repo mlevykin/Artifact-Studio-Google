@@ -1,35 +1,55 @@
-export type ArtifactType = 'mermaid' | 'html' | 'markdown' | 'svg' | 'text';
+export type ArtifactType = 'mermaid' | 'html' | 'markdown' | 'svg' | 'text' | 'project';
+
+export interface ProjectFile {
+  id: string;
+  name: string;
+  path: string; // e.g., "src/App.tsx"
+  content: string;
+  type: ArtifactType;
+}
 
 export interface Artifact {
   id: string;
   type: ArtifactType;
   title: string;
   content: string;
+  files?: ProjectFile[]; // For multi-file artifacts
   version: number;
   timestamp: number;
 }
 
-export interface ArtifactVersion {
-  content: string;
-  meta: string; // e.g., "new" or "patch (3)"
-  timestamp: number;
+export interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  content: string; // Markdown content describing the skill
+  path: string; // Folder structure (e.g., "Testing/QA")
+  enabled: boolean;
+}
+
+export interface MCPConfig {
+  id: string;
+  name: string;
+  url: string;
+  enabled: boolean;
 }
 
 export interface Attachment {
   id: string;
   type: 'image' | 'text';
   name: string;
-  data: string; // base64 for images, plaintext for text
+  data: string; // Base64 for images, raw text for files
   mimeType: string;
 }
 
 export interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   attachments?: Attachment[];
   timestamp: number;
   patches?: Patch[];
+  thought?: string; // For reasoning/planning
 }
 
 export interface Session {
@@ -39,6 +59,7 @@ export interface Session {
   artifacts: Artifact[]; // History of artifacts in this session
   currentArtifactId: string | null;
   lastUpdated: number;
+  activeSkills?: string[]; // IDs of enabled skills for this session
 }
 
 export interface Patch {
@@ -56,4 +77,5 @@ export interface Settings {
   ollama: OllamaConfig;
   mermaidTheme: 'default' | 'dark' | 'forest' | 'neutral';
   language: 'en' | 'ru';
+  mcpConfigs: MCPConfig[];
 }

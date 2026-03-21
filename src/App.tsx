@@ -7,13 +7,15 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatPanel } from './components/ChatPanel';
 import { ArtifactPanel } from './components/ArtifactPanel';
+import { SkillsPanel } from './components/SkillsPanel';
+import { MCPPanel } from './components/MCPPanel';
 import { useSessions } from './hooks/useSession';
 import { streamResponse, fetchOllamaModels } from './engines/streamEngine';
-import { parseArtifact, parsePatches, applyPatches, stripArtifactsAndPatches } from './engines/patchEngine';
-import { Message, Attachment, Artifact, OllamaConfig } from './types';
+import { parseArtifact, parsePatches, applyPatches, stripArtifactsAndPatches, parseThought } from './engines/patchEngine';
+import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig } from './types';
 import { generateId } from './utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { Layers, Diff } from 'lucide-react';
+import { Layers, Diff, MessageSquare, Book, Network } from 'lucide-react';
 
 export default function App() {
   const {
@@ -29,9 +31,28 @@ export default function App() {
 
   const [provider, setProvider] = useState<'gemini' | 'ollama'>(() => {
     const saved = localStorage.getItem('ai_provider');
-    console.log('Initial AI Provider from localStorage:', saved);
     return (saved as 'gemini' | 'ollama') || 'gemini';
   });
+
+  const [skills, setSkills] = useState<Skill[]>(() => {
+    const saved = localStorage.getItem('artifact_studio_skills');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('artifact_studio_skills', JSON.stringify(skills));
+  }, [skills]);
+
+  const [mcpConfigs, setMcpConfigs] = useState<MCPConfig[]>(() => {
+    const saved = localStorage.getItem('artifact_studio_mcp');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('artifact_studio_mcp', JSON.stringify(mcpConfigs));
+  }, [mcpConfigs]);
+
+  const [activeTab, setActiveTab] = useState<'chats' | 'skills' | 'mcp'>('chats');
 
   useEffect(() => {
     console.log('Saving AI Provider to localStorage:', provider);
@@ -49,6 +70,39 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('ollama_config', JSON.stringify(ollamaConfig));
   }, [ollamaConfig]);
+
+  const handleToggleSkill = (skillId: string) => {
+    if (!currentSession) return;
+    const activeSkills = currentSession.activeSkills || [];
+    const newActiveSkills = activeSkills.includes(skillId)
+      ? activeSkills.filter(id => id !== skillId)
+      : [...activeSkills, skillId];
+    updateSession({ activeSkills: newActiveSkills });
+  };
+
+  const handleAddSkill = (skill: Skill) => {
+    setSkills(prev => [skill, ...prev]);
+  };
+
+  const handleUpdateSkill = (updatedSkill: Skill) => {
+    setSkills(prev => prev.map(s => s.id === updatedSkill.id ? updatedSkill : s));
+  };
+
+  const handleDeleteSkill = (id: string) => {
+    setSkills(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleAddMCP = (config: MCPConfig) => {
+    setMcpConfigs(prev => [config, ...prev]);
+  };
+
+  const handleUpdateMCP = (updatedConfig: MCPConfig) => {
+    setMcpConfigs(prev => prev.map(c => c.id === updatedConfig.id ? updatedConfig : c));
+  };
+
+  const handleDeleteMCP = (id: string) => {
+    setMcpConfigs(prev => prev.filter(c => c.id !== id));
+  };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [availableModels, setAvailableModels] = useState<string[]>(() => {
@@ -158,10 +212,22 @@ export default function App() {
       initialArtifact = null;
     }
 
+    // Prepare context from active skills
+    const activeSkills = skills.filter(s => currentSession?.activeSkills?.includes(s.id));
+    const skillsContext = activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n');
+    
+    // Prepare context from MCP servers (placeholder for now)
+    const activeMCPs = mcpConfigs.filter(c => c.enabled);
+    const mcpContext = activeMCPs.length > 0 
+      ? `ACTIVE MCP SERVERS: ${activeMCPs.map(c => c.name).join(', ')}` 
+      : '';
+
+    const fullPrompt = `${skillsContext}\n\n${mcpContext}\n\n${content}`;
+
     const userMessage: Message = {
       id: generateId(),
       role: 'user',
-      content,
+      content: fullPrompt,
       attachments,
       timestamp: Date.now()
     };
@@ -198,10 +264,12 @@ export default function App() {
 
       // Process the final response
       const patches = parsePatches(fullResponse);
+      const thought = parseThought(fullResponse);
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
         content: stripArtifactsAndPatches(fullResponse),
+        thought: thought || undefined,
         timestamp: Date.now(),
         patches: patches.length > 0 ? patches : undefined
       };
@@ -210,16 +278,28 @@ export default function App() {
       // Check for new artifact
       const newArtifactData = parseArtifact(fullResponse);
       if (newArtifactData) {
+        let files: any[] | undefined;
+        if (newArtifactData.type === 'project') {
+          try {
+            files = JSON.parse(newArtifactData.content);
+            // Add IDs to files
+            files = files.map(f => ({ ...f, id: generateId() }));
+          } catch (e) {
+            console.error('Failed to parse project artifact JSON', e);
+          }
+        }
+
         const newArtifact: Artifact = {
           id: generateId(),
           type: newArtifactData.type as any,
           title: newArtifactData.title,
           content: newArtifactData.content,
+          files,
           version: 1,
           timestamp: Date.now()
         };
         addArtifact(newArtifact);
-      } else if (currentArtifact) {
+      } else if (initialArtifact) {
         // Check for patches
         const patches = parsePatches(fullResponse);
         if (patches.length > 0) {
@@ -307,7 +387,28 @@ export default function App() {
         onProviderChange={setProvider}
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-      />
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      >
+        {activeTab === 'skills' && (
+          <SkillsPanel 
+            skills={skills}
+            onAddSkill={handleAddSkill}
+            onUpdateSkill={handleUpdateSkill}
+            onDeleteSkill={handleDeleteSkill}
+            activeSkillIds={currentSession?.activeSkills || []}
+            onToggleSkill={handleToggleSkill}
+          />
+        )}
+        {activeTab === 'mcp' && (
+          <MCPPanel 
+            configs={mcpConfigs}
+            onAddConfig={handleAddMCP}
+            onUpdateConfig={handleUpdateMCP}
+            onDeleteConfig={handleDeleteMCP}
+          />
+        )}
+      </Sidebar>
 
       <main className="flex-1 flex overflow-hidden relative">
         <div style={{ width: chatWidth }} className="flex-shrink-0 flex flex-col">

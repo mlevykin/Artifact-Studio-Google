@@ -11,23 +11,27 @@ import {
   Check,
   Edit,
   Save,
-  X
+  X,
+  FolderSync,
+  RefreshCw
 } from 'lucide-react';
-import { Artifact } from '../types';
+import { Artifact, ProjectFile } from '../types';
 import { cn } from '../utils';
 import { MermaidPreview } from './MermaidPreview';
 import { HtmlPreview } from './HtmlPreview';
 import { ZoomableContainer } from './ZoomableContainer';
+import { FileExplorer } from './FileExplorer';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import html2canvas from 'html2canvas';
+import { selectLocalDirectory, verifyPermission, writeProjectToDirectory } from '../services/fileSystemService';
 
 interface ArtifactPanelProps {
   artifact: Artifact | null;
   history: Artifact[];
   onVersionSelect: (index: number) => void;
   currentIndex: number;
-  onSave: (content: string) => void;
+  onSave: (content: string, fileId?: string) => void;
   isStreaming?: boolean;
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
@@ -48,7 +52,46 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [editContent, setEditContent] = useState('');
   const [copied, setCopied] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Auto-sync when artifact changes if we have a directory handle
+  useEffect(() => {
+    if (dirHandle && artifact && !isStreaming) {
+      handleSyncToDisk();
+    }
+  }, [artifact?.version, artifact?.id, isStreaming]);
+
+  const handleSyncToDisk = async () => {
+    try {
+      let handle = dirHandle;
+      if (!handle) {
+        handle = await selectLocalDirectory();
+        if (!handle) return;
+        setDirHandle(handle);
+      }
+
+      const hasPermission = await verifyPermission(handle);
+      if (!hasPermission) return;
+
+      setIsSyncing(true);
+      
+      const filesToSync = artifact?.type === 'project' && artifact.files 
+        ? artifact.files.map(f => ({ path: f.path, content: f.content }))
+        : artifact ? [{ path: `${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`, content: artifact.content }] : [];
+
+      await writeProjectToDirectory(handle, filesToSync);
+      setIsSyncing(false);
+      
+      // Show success toast or similar (optional)
+    } catch (error) {
+      console.error('Sync failed:', error);
+      setIsSyncing(false);
+      alert('Failed to sync to disk. Please check permissions.');
+    }
+  };
 
   const toggleFullScreen = () => {
     if (!isFullScreen) {
@@ -86,10 +129,21 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
   React.useEffect(() => {
     if (artifact) {
-      setEditContent(artifact.content);
+      if (artifact.type === 'project' && artifact.files && artifact.files.length > 0) {
+        if (!selectedFileId || !artifact.files.find(f => f.id === selectedFileId)) {
+          setSelectedFileId(artifact.files[0].id);
+          setEditContent(artifact.files[0].content);
+        } else {
+          const file = artifact.files.find(f => f.id === selectedFileId);
+          if (file) setEditContent(file.content);
+        }
+      } else {
+        setEditContent(artifact.content);
+        setSelectedFileId(null);
+      }
       setIsEditing(false);
     }
-  }, [artifact]);
+  }, [artifact, selectedFileId]);
 
   if (!artifact) {
     return (
@@ -106,17 +160,25 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   }
 
   const handleSave = () => {
-    onSave(editContent);
+    onSave(editContent, selectedFileId || undefined);
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditContent(artifact.content);
+    if (artifact.type === 'project' && selectedFileId) {
+      const file = artifact.files?.find(f => f.id === selectedFileId);
+      if (file) setEditContent(file.content);
+    } else {
+      setEditContent(artifact.content);
+    }
     setIsEditing(false);
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(artifact.content);
+    const contentToCopy = artifact.type === 'project' && selectedFileId 
+      ? artifact.files?.find(f => f.id === selectedFileId)?.content || ''
+      : artifact.content;
+    navigator.clipboard.writeText(contentToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -125,11 +187,20 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     const element = document.getElementById('artifact-preview-container');
     if (!element) return;
 
+    const contentToExport = artifact.type === 'project' && selectedFileId
+      ? artifact.files?.find(f => f.id === selectedFileId)?.content || ''
+      : artifact.content;
+
     if (format === 'png') {
       try {
         // Special handling for SVG/Mermaid which html2canvas often fails on
         const svgElement = element.querySelector('svg');
-        if (svgElement && (artifact.type === 'mermaid' || artifact.type === 'svg')) {
+        const isMermaidOrSvg = artifact.type === 'mermaid' || artifact.type === 'svg' || 
+          (artifact.type === 'project' && selectedFileId && 
+           (artifact.files?.find(f => f.id === selectedFileId)?.type === 'mermaid' || 
+            artifact.files?.find(f => f.id === selectedFileId)?.type === 'svg'));
+
+        if (svgElement && isMermaidOrSvg) {
           try {
             const svgData = new XMLSerializer().serializeToString(svgElement);
             const canvas = document.createElement('canvas');
@@ -167,7 +238,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         let targetElement: HTMLElement = element;
         
         // For HTML artifacts, try to capture the iframe body
-        if (artifact.type === 'html') {
+        if (artifact.type === 'html' || (artifact.type === 'project' && selectedFileId && artifact.files?.find(f => f.id === selectedFileId)?.type === 'html')) {
           const iframe = element.querySelector('iframe');
           if (iframe && iframe.contentDocument && iframe.contentDocument.body) {
             targetElement = iframe.contentDocument.body;
@@ -191,13 +262,17 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         alert('Failed to export PNG. Try Export HTML or SVG instead.');
       }
     } else {
-      const blob = new Blob([artifact.content], { type: 'text/plain' });
+      const blob = new Blob([contentToExport], { type: 'text/plain' });
       const link = document.createElement('a');
       link.download = `${artifact.title}.${format}`;
       link.href = URL.createObjectURL(blob);
       link.click();
     }
   };
+
+  const currentFile = artifact.type === 'project' && selectedFileId 
+    ? artifact.files?.find(f => f.id === selectedFileId) 
+    : null;
 
   return (
     <div ref={panelRef} className={cn("flex-1 flex flex-col h-full bg-white overflow-hidden", isFullScreen && "fixed inset-0 z-[100]")}>
@@ -208,10 +283,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             <Code size={18} className="text-zinc-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-zinc-800 leading-tight">{artifact.title}</h2>
+            <h2 className="font-semibold text-zinc-800 leading-tight">
+              {artifact.title}
+              {currentFile && <span className="text-zinc-400 font-normal ml-2">/ {currentFile.name}</span>}
+            </h2>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 bg-zinc-50 px-1.5 py-0.5 rounded border border-zinc-100">
-                {artifact.type}
+                {currentFile ? currentFile.type : artifact.type}
               </span>
               <span className="text-[10px] text-zinc-400">
                 v{artifact.version} • {new Date(artifact.timestamp).toLocaleTimeString()}
@@ -302,6 +380,18 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           </button>
 
           <button 
+            onClick={handleSyncToDisk}
+            disabled={isSyncing}
+            className={cn(
+              "p-2 rounded-lg transition-colors mr-1",
+              dirHandle ? "text-emerald-500 bg-emerald-50" : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
+            )}
+            title={dirHandle ? `Syncing to local folder: ${dirHandle.name}` : "Sync to Local Folder"}
+          >
+            {isSyncing ? <RefreshCw size={18} className="animate-spin" /> : <FolderSync size={18} />}
+          </button>
+
+          <button 
             onClick={handleCopy}
             className="p-2 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors relative"
             title="Copy Code"
@@ -335,54 +425,64 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden relative bg-zinc-50">
-        {view === 'preview' ? (
-          <div className="w-full h-full" id="artifact-preview-container">
-            {artifact.type === 'html' ? (
-              <div className="w-full h-full bg-white">
-                <HtmlPreview content={artifact.content} />
-              </div>
-            ) : artifact.type === 'markdown' ? (
-              <div className="w-full h-full overflow-auto bg-white p-8 md:p-12 lg:p-16">
-                <div className="max-w-3xl mx-auto">
-                  <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.content}</ReactMarkdown>
+      <div className="flex-1 overflow-hidden relative bg-zinc-50 flex">
+        {view === 'code' && artifact.type === 'project' && (
+          <FileExplorer 
+            files={artifact.files || []}
+            selectedFileId={selectedFileId}
+            onFileSelect={setSelectedFileId}
+          />
+        )}
+
+        <div className="flex-1 overflow-hidden relative">
+          {view === 'preview' ? (
+            <div className="w-full h-full" id="artifact-preview-container">
+              {(artifact.type === 'html' || (currentFile?.type === 'html')) ? (
+                <div className="w-full h-full bg-white">
+                  <HtmlPreview content={currentFile ? currentFile.content : artifact.content} />
+                </div>
+              ) : (artifact.type === 'markdown' || (currentFile?.type === 'markdown')) ? (
+                <div className="w-full h-full overflow-auto bg-white p-8 md:p-12 lg:p-16">
+                  <div className="max-w-3xl mx-auto">
+                    <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentFile ? currentFile.content : artifact.content}</ReactMarkdown>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <ZoomableContainer className="w-full h-full">
-                {artifact.type === 'mermaid' && <MermaidPreview content={artifact.content} />}
-                {artifact.type === 'svg' && (
-                  <div 
-                    className="p-12 bg-white shadow-lg rounded-xl"
-                    dangerouslySetInnerHTML={{ __html: artifact.content }}
-                  />
-                )}
-                {artifact.type === 'text' && (
-                  <pre className="w-[800px] p-12 font-mono text-sm whitespace-pre-wrap bg-white shadow-lg rounded-xl">
-                    {artifact.content}
-                  </pre>
-                )}
-              </ZoomableContainer>
-            )}
-          </div>
-        ) : (
-          <div className="w-full h-full bg-white overflow-auto">
-            {isEditing ? (
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="w-full h-full p-6 font-mono text-sm text-zinc-800 leading-relaxed resize-none outline-none bg-zinc-50/50"
-                spellCheck={false}
-              />
-            ) : (
-              <pre className="p-6 font-mono text-sm text-zinc-800 leading-relaxed">
-                <code>{artifact.content}</code>
-              </pre>
-            )}
-          </div>
-        )}
+              ) : (
+                <ZoomableContainer className="w-full h-full">
+                  {(artifact.type === 'mermaid' || (currentFile?.type === 'mermaid')) && <MermaidPreview content={currentFile ? currentFile.content : artifact.content} />}
+                  {(artifact.type === 'svg' || (currentFile?.type === 'svg')) && (
+                    <div 
+                      className="p-12 bg-white shadow-lg rounded-xl"
+                      dangerouslySetInnerHTML={{ __html: currentFile ? currentFile.content : artifact.content }}
+                    />
+                  )}
+                  {(artifact.type === 'text' || (currentFile?.type === 'text')) && (
+                    <pre className="w-[800px] p-12 font-mono text-sm whitespace-pre-wrap bg-white shadow-lg rounded-xl">
+                      {currentFile ? currentFile.content : artifact.content}
+                    </pre>
+                  )}
+                </ZoomableContainer>
+              )}
+            </div>
+          ) : (
+            <div className="w-full h-full bg-white overflow-auto">
+              {isEditing ? (
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full h-full p-6 font-mono text-sm text-zinc-800 leading-relaxed resize-none outline-none bg-zinc-50/50"
+                  spellCheck={false}
+                />
+              ) : (
+                <pre className="p-6 font-mono text-sm text-zinc-800 leading-relaxed">
+                  <code>{currentFile ? currentFile.content : artifact.content}</code>
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

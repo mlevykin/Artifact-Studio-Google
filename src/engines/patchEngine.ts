@@ -118,7 +118,16 @@ export function parseArtifact(text: string): { type: string; title: string; cont
 }
 
 /**
- * Strips <artifact> and <patch> blocks from the text for display in chat
+ * Parses <thought> blocks from LLM response
+ */
+export function parseThought(text: string): string | null {
+  const thoughtRegex = /<thought>([\s\S]*?)<\/thought>/;
+  const match = text.match(thoughtRegex);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Strips <artifact>, <patch>, and <thought> blocks from the text for display in chat
  */
 export function stripArtifactsAndPatches(text: string): string {
   let cleaned = text;
@@ -128,6 +137,9 @@ export function stripArtifactsAndPatches(text: string): string {
   
   // Strip patches
   cleaned = cleaned.replace(/<patch>[\s\S]*?<\/patch>/g, '');
+
+  // Strip thoughts
+  cleaned = cleaned.replace(/<thought>[\s\S]*?<\/thought>/g, '');
   
   return cleaned.trim();
 }

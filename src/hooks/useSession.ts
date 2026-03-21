@@ -83,7 +83,8 @@ export function useSessions() {
       messages: [],
       artifacts: [],
       currentArtifactId: null,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
+      activeSkills: []
     };
     setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);

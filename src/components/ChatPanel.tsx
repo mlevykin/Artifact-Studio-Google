@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, X, Image as ImageIcon, FileText, Loader2, Menu, ChevronDown, ChevronUp, Diff } from 'lucide-react';
+import { Send, Paperclip, X, Image as ImageIcon, FileText, Loader2, Menu, ChevronDown, ChevronUp, Diff, Sparkles } from 'lucide-react';
 import { Message, Attachment } from '../types';
 import { cn, generateId } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -34,11 +34,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showOllamaSettings, setShowOllamaSettings] = useState(false);
   const [expandedPatches, setExpandedPatches] = useState<Record<string, boolean>>({});
+  const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const togglePatch = (messageId: string) => {
     setExpandedPatches(prev => ({ ...prev, [messageId]: !prev[messageId] }));
+  };
+
+  const toggleThought = (messageId: string) => {
+    setExpandedThoughts(prev => ({ ...prev, [messageId]: !prev[messageId] }));
   };
 
   useEffect(() => {
@@ -188,6 +193,32 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   : "bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm"
               )}
             >
+              {m.thought && (
+                <div className="mb-3 pb-3 border-b border-zinc-100">
+                  <button 
+                    onClick={() => toggleThought(m.id)}
+                    className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
+                  >
+                    <Sparkles size={12} />
+                    THOUGHT PROCESS
+                    {expandedThoughts[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
+                  
+                  <AnimatePresence>
+                    {expandedThoughts[m.id] && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap"
+                      >
+                        {m.thought}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               <div className={cn(
                 "prose prose-sm max-w-none break-words",
                 m.role === 'user' ? "text-white prose-invert" : "text-zinc-800"
