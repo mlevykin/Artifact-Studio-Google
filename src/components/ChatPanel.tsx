@@ -287,7 +287,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                               <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
                                 {i + 1}
                               </div>
-                              SKILL: {skill.name}
+                              Добавляю в контекст skill: {skill.name}
                               {expandedSkills[m.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                             </button>
                             <AnimatePresence>
@@ -458,7 +458,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
                               {i + 1}
                             </div>
-                            SKILL: {skill.name}
+                            Добавляю в контекст skill: {skill.name}
                           </div>
                           {skill.description && (
                             <div className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-emerald-200">

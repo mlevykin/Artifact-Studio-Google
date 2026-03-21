@@ -41,6 +41,7 @@ interface ArtifactPanelProps {
   onDisconnectWorkspace?: () => void;
   selectedFilePath: string | null;
   onFileSelect: (path: string) => void;
+  sessionId?: string | null;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -57,7 +58,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   onRefreshTree,
   onDisconnectWorkspace,
   selectedFilePath,
-  onFileSelect
+  onFileSelect,
+  sessionId
 }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -124,12 +126,18 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       let filesToSync: { path: string; content: string }[] = [];
       
       if (artifact?.type === 'project' && artifact.files) {
-        filesToSync = artifact.files.map(f => ({ path: f.path, content: f.content }));
+        filesToSync = artifact.files.map(f => {
+          const path = sessionId ? `artifacts/${sessionId}/${f.path}` : f.path;
+          return { path, content: f.content };
+        });
       } else if (artifact) {
         // For single artifacts, save them in an 'artifacts' folder
         const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
+        const path = sessionId 
+          ? `artifacts/${sessionId}/${artifact.title}.${ext}` 
+          : `artifacts/${artifact.title}.${ext}`;
         filesToSync = [{ 
-          path: `artifacts/${artifact.title}.${ext}`, 
+          path, 
           content: artifact.content 
         }];
       }
@@ -230,20 +238,25 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     if (artifact) {
       const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
       const defaultPath = artifact.type === 'project' && artifact.files?.[0] 
-        ? artifact.files[0].path 
-        : `artifacts/${artifact.title}.${ext}`;
+        ? (sessionId ? `artifacts/${sessionId}/${artifact.files[0].path}` : artifact.files[0].path)
+        : (sessionId ? `artifacts/${sessionId}/${artifact.title}.${ext}` : `artifacts/${artifact.title}.${ext}`);
 
       // If we already have a selection that is part of this artifact, update its content
       if (selectedFilePath) {
         if (artifact.type === 'project') {
-          const file = artifact.files?.find(f => f.path === selectedFilePath);
+          const file = artifact.files?.find(f => {
+            const path = sessionId ? `artifacts/${sessionId}/${f.path}` : f.path;
+            return path === selectedFilePath;
+          });
           if (file) {
             setEditContent(file.content);
             setSelectedFileId(file.id);
             return;
           }
         } else {
-          const artifactPath = `artifacts/${artifact.title}.${ext}`;
+          const artifactPath = sessionId 
+            ? `artifacts/${sessionId}/${artifact.title}.${ext}` 
+            : `artifacts/${artifact.title}.${ext}`;
           if (selectedFilePath === artifactPath) {
             setEditContent(artifact.content);
             setSelectedFileId(null);

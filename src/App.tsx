@@ -255,6 +255,16 @@ export default function App() {
     setSkills(prev => prev.filter(s => s.id !== id));
   };
 
+  const handleDeleteSession = async (id: string) => {
+    if (workspaceHandle) {
+      const { deleteSessionFolder } = await import('./services/fileSystemService');
+      await deleteSessionFolder(workspaceHandle, id);
+      // Refresh tree to show folder is gone
+      updateWorkspaceTree(workspaceHandle);
+    }
+    deleteSession(id);
+  };
+
   const handleAddMCP = (config: MCPConfig) => {
     setMcpConfigs(prev => [config, ...prev]);
   };
@@ -340,7 +350,11 @@ IMPORTANT: When you use a skill or an MCP server, you MUST report it at the begi
 Each tag MUST include a "description" attribute explaining what you are doing in a human-readable way.
 - For skills: <skill_call name="Skill Name" description="Human-readable description of what this skill adds to the context" />
 - For MCP: <mcp_call name="MCP Name" description="Human-readable description of why you are calling this tool"><request>JSON_REQUEST</request><response>JSON_RESPONSE</response></mcp_call>
-Do NOT mention these calls in the visible chat text.
+
+CRITICAL: DO NOT write any code, scripts, or large blocks of data directly in the chat text. 
+ALL code must be wrapped in <artifact> tags or <patch> tags. 
+The chat text should only contain explanations, summaries, and conversational responses.
+Do NOT mention skill or MCP calls in the visible chat text; use the tags instead.
 `;
 
     if (isAutoSelect) {
@@ -533,7 +547,7 @@ Do NOT mention these calls in the visible chat text.
         currentSessionId={currentSessionId}
         onSessionSelect={setCurrentSessionId}
         onNewSession={createSession}
-        onDeleteSession={deleteSession}
+        onDeleteSession={handleDeleteSession}
         provider={provider}
         onProviderChange={setProvider}
         isOpen={isSidebarOpen}
@@ -648,6 +662,7 @@ Do NOT mention these calls in the visible chat text.
             onDisconnectWorkspace={handleDisconnectWorkspace}
             selectedFilePath={selectedFilePath}
             onFileSelect={setSelectedFilePath}
+            sessionId={currentSession?.id}
           />
           
           <AnimatePresence>

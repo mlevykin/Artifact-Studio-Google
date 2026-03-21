@@ -99,7 +99,9 @@ async function ensureMetadataDir(rootHandle: any) {
 }
 
 function sanitizeFilename(name: string): string {
-  return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  // Allow Cyrillic, spaces, dots, and common symbols, but remove illegal filesystem characters
+  // Illegal: \ / : * ? " < > |
+  return name.replace(/[\\/:*?"<>|]/g, '_').trim();
 }
 
 export async function saveAppState(rootHandle: any, key: string, data: any) {
@@ -201,6 +203,18 @@ export async function loadAppState(rootHandle: any, key: string): Promise<any | 
   }
 }
 
+export async function deleteSessionFolder(rootHandle: any, sessionId: string) {
+  try {
+    const artifactsDir = await rootHandle.getDirectoryHandle('artifacts', { create: true });
+    try {
+      await artifactsDir.removeEntry(sessionId, { recursive: true });
+    } catch (e) {
+      // Ignore if folder doesn't exist
+    }
+  } catch (err) {
+    console.error(`Failed to delete session folder ${sessionId}:`, err);
+  }
+}
 export async function getWorkspaceTree(handle: any): Promise<any> {
   const tree: any = {
     name: handle.name,
