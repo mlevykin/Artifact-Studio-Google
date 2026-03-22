@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { Message, Attachment } from "../types";
+import { Message, Attachment, Artifact, OllamaConfig } from "../types";
 
 const SYSTEM_PROMPT = `You are an expert assistant capable of generating high-quality "Artifacts".
 Artifacts are self-contained pieces of content like diagrams, code, documents, or graphics.
@@ -18,6 +18,8 @@ ARTIFACTS vs. CONVERSATION:
 PATCHES (EDITING):
 - When asked to edit, fix, or update an existing artifact, you MUST use <patch> blocks instead of regenerating the entire artifact.
 - Regenerating the entire artifact is only allowed if the changes are so extensive that a patch would be impractical (e.g., > 70% of the content changes).
+- If you use <artifact> to update an existing one, you MUST provide the FULL content. NEVER use <artifact> for partial updates.
+- DO NOT nest <patch> tags inside <artifact> tags or vice versa.
 - Format for patches:
 <patch>
 <old>
@@ -43,10 +45,11 @@ Guidelines:
 
 export async function* streamGeminiResponse(
   messages: Message[],
-  currentArtifactContent?: string,
+  initialArtifact?: Artifact | null,
   onAbort?: (controller: AbortController) => void,
   overrideLastMessageContent?: string
 ) {
+  const currentArtifactContent = initialArtifact?.content;
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
   const controller = new AbortController();
   if (onAbort) onAbort(controller);
@@ -90,9 +93,9 @@ export async function* streamGeminiResponse(
       const hasImages = lastUserMsg.parts.some(p => p.inlineData);
       const mentionsArtifact = lastUserMsg.parts.some(p => p.text && /artifact|code|diagram|edit|change|fix|update/i.test(p.text));
       
-      if (!hasImages || mentionsArtifact) {
+      if (currentArtifactContent && initialArtifact && (!hasImages || mentionsArtifact)) {
         lastUserMsg.parts.push({
-          text: `\n\n[CONTEXT: The current artifact content is provided below. Use it if the user asks to edit or reference it.]\n\`\`\`\n${currentArtifactContent}\n\`\`\``
+          text: `\n\n[CONTEXT: Current Active Artifact]\nID: ${initialArtifact.id}\nTitle: ${initialArtifact.title}\nType: ${initialArtifact.type}\nContent:\n\`\`\`\n${currentArtifactContent}\n\`\`\``
         });
       }
     }
@@ -140,10 +143,11 @@ export async function* streamOllamaResponse(
   messages: Message[],
   baseUrl: string,
   model: string,
-  currentArtifactContent?: string,
+  initialArtifact?: Artifact | null,
   onAbort?: (controller: AbortController) => void,
   overrideLastMessageContent?: string
 ) {
+  const currentArtifactContent = initialArtifact?.content;
   const controller = new AbortController();
   if (onAbort) onAbort(controller);
 
@@ -175,8 +179,8 @@ export async function* streamOllamaResponse(
       const hasImages = lastUserMsg.images && lastUserMsg.images.length > 0;
       const mentionsArtifact = /artifact|code|diagram|edit|change|fix|update/i.test(lastUserMsg.content);
       
-      if (!hasImages || mentionsArtifact) {
-        lastUserMsg.content += `\n\n[CONTEXT: The current artifact content is provided below. Use it if the user asks to edit or reference it.]\n\`\`\`\n${currentArtifactContent}\n\`\`\``;
+      if (currentArtifactContent && initialArtifact && (!hasImages || mentionsArtifact)) {
+        lastUserMsg.content += `\n\n[CONTEXT: Current Active Artifact]\nID: ${initialArtifact.id}\nTitle: ${initialArtifact.title}\nType: ${initialArtifact.type}\nContent:\n\`\`\`\n${currentArtifactContent}\n\`\`\``;
       }
     }
   }
@@ -249,14 +253,14 @@ export async function* streamOllamaResponse(
 export async function* streamResponse(
   provider: 'gemini' | 'ollama',
   messages: Message[],
-  ollamaConfig: { baseUrl: string; model: string },
-  currentArtifactContent?: string,
+  ollamaConfig: OllamaConfig,
+  initialArtifact?: Artifact | null,
   onAbort?: (controller: AbortController) => void,
   overrideLastMessageContent?: string
 ) {
   if (provider === 'gemini') {
-    yield* streamGeminiResponse(messages, currentArtifactContent, onAbort, overrideLastMessageContent);
+    yield* streamGeminiResponse(messages, initialArtifact, onAbort, overrideLastMessageContent);
   } else {
-    yield* streamOllamaResponse(messages, ollamaConfig.baseUrl, ollamaConfig.model, currentArtifactContent, onAbort, overrideLastMessageContent);
+    yield* streamOllamaResponse(messages, ollamaConfig.baseUrl, ollamaConfig.selectedModel, initialArtifact, onAbort, overrideLastMessageContent);
   }
 }

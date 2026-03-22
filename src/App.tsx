@@ -407,8 +407,8 @@ CRITICAL RULES FOR CONTENT:
       const stream = streamResponse(
         provider,
         messages,
-        { baseUrl: ollamaConfig.baseUrl, model: ollamaConfig.selectedModel },
-        initialArtifact?.content,
+        ollamaConfig,
+        initialArtifact,
         (controller) => { abortControllerRef.current = controller; },
         fullPrompt
       );
@@ -450,26 +450,38 @@ CRITICAL RULES FOR CONTENT:
       };
       addMessage(assistantMessage, sessionId);
 
+      const updatedArtifactIds = new Set<string>();
+
       // Handle patches for the current artifact
-      if (initialArtifact) {
-        const patches = parsePatches(fullResponse);
-        if (patches.length > 0) {
-          const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, patches);
-          if (successCount > 0) {
-            const updatedArtifact: Artifact = {
-              ...initialArtifact,
-              id: generateId(),
-              content: patchedContent,
-              version: initialArtifact.version + 1,
-              timestamp: Date.now()
-            };
-            addArtifact(updatedArtifact, sessionId);
-          }
+      if (initialArtifact && patches.length > 0) {
+        const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, patches);
+        if (successCount > 0) {
+          const updatedArtifact: Artifact = {
+            ...initialArtifact,
+            id: generateId(),
+            content: patchedContent,
+            version: initialArtifact.version + 1,
+            timestamp: Date.now()
+          };
+          addArtifact(updatedArtifact, sessionId);
+          updatedArtifactIds.add(initialArtifact.id);
         }
       }
 
       const newArtifacts = parseArtifacts(fullResponse);
       newArtifacts.forEach(newArtifactData => {
+        // Find if this artifact already exists in the session (by ID or Title+Type)
+        const currentSessionObj = sessions.find(s => s.id === sessionId);
+        const existingArtifact = currentSessionObj?.artifacts.find(a => 
+          (newArtifactData.id && a.id === newArtifactData.id) || 
+          (!newArtifactData.id && a.title === newArtifactData.title && a.type === newArtifactData.type)
+        );
+
+        // If we already updated this artifact via patches, skip the full block to avoid double-versioning
+        if (existingArtifact && updatedArtifactIds.has(existingArtifact.id)) {
+          return;
+        }
+
         let files: any[] | undefined;
         if (newArtifactData.type === 'project') {
           try {
@@ -480,16 +492,30 @@ CRITICAL RULES FOR CONTENT:
           }
         }
 
-        const newArtifact: Artifact = {
-          id: generateId(),
-          type: newArtifactData.type as any,
-          title: newArtifactData.title,
-          content: newArtifactData.content,
-          files,
-          version: 1,
-          timestamp: Date.now()
-        };
-        addArtifact(newArtifact, sessionId);
+        if (existingArtifact) {
+          // Update existing artifact (new version)
+          const updatedArtifact: Artifact = {
+            ...existingArtifact,
+            id: generateId(),
+            content: newArtifactData.content,
+            files,
+            version: existingArtifact.version + 1,
+            timestamp: Date.now()
+          };
+          addArtifact(updatedArtifact, sessionId);
+        } else {
+          // Create new artifact
+          const newArtifact: Artifact = {
+            id: generateId(),
+            type: newArtifactData.type as any,
+            title: newArtifactData.title,
+            content: newArtifactData.content,
+            files,
+            version: 1,
+            timestamp: Date.now()
+          };
+          addArtifact(newArtifact, sessionId);
+        }
       });
 
       if (messages.length === 1) {

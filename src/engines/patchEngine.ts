@@ -104,17 +104,27 @@ export function applyPatches(content: string, patches: Patch[]): { content: stri
 /**
  * Parses all <artifact> blocks from LLM response
  */
-export function parseArtifacts(text: string): { type: string; title: string; content: string }[] {
-  const artifacts: { type: string; title: string; content: string }[] = [];
-  const artifactRegex = /<artifact\s+type="(\w+)"\s+title="([^"]+)">([\s\S]*?)<\/artifact>/g;
+export function parseArtifacts(text: string): { type: string; title: string; content: string; id?: string }[] {
+  const artifacts: { type: string; title: string; content: string; id?: string }[] = [];
+  const artifactRegex = /<artifact\s+([^>]+)>([\s\S]*?)<\/artifact>/g;
   
   let match;
   while ((match = artifactRegex.exec(text)) !== null) {
-    artifacts.push({
-      type: match[1],
-      title: match[2],
-      content: match[3].trim()
-    });
+    const attrString = match[1];
+    const content = match[2].trim();
+    
+    const typeMatch = attrString.match(/type="([^"]+)"/);
+    const titleMatch = attrString.match(/title="([^"]+)"/);
+    const idMatch = attrString.match(/id="([^"]+)"/);
+    
+    if (typeMatch && titleMatch) {
+      artifacts.push({
+        type: typeMatch[1],
+        title: titleMatch[1],
+        id: idMatch ? idMatch[1] : undefined,
+        content
+      });
+    }
   }
   
   return artifacts;
@@ -124,8 +134,8 @@ export function parseArtifacts(text: string): { type: string; title: string; con
  * Parses a full or partial artifact from LLM response for streaming.
  * Returns the LAST artifact found in the text (the one currently being typed).
  */
-export function parsePartialArtifact(text: string): { type: string; title: string; content: string; isComplete: boolean } | null {
-  const artifactStartRegex = /<artifact\s+type="(\w+)"\s+title="([^"]+)">/g;
+export function parsePartialArtifact(text: string): { type: string; title: string; content: string; id?: string; isComplete: boolean } | null {
+  const artifactStartRegex = /<artifact\s+([^>]+)>/g;
   let lastMatch = null;
   let match;
   
@@ -134,18 +144,26 @@ export function parsePartialArtifact(text: string): { type: string; title: strin
   }
   
   if (lastMatch) {
-    const startIndex = lastMatch.index + lastMatch[0].length;
-    const remaining = text.substring(startIndex);
-    const endIndex = remaining.indexOf('</artifact>');
-    
-    const content = endIndex !== -1 ? remaining.substring(0, endIndex) : remaining;
-    
-    return {
-      type: lastMatch[1],
-      title: lastMatch[2],
-      content: content,
-      isComplete: endIndex !== -1
-    };
+    const attrString = lastMatch[1];
+    const typeMatch = attrString.match(/type="([^"]+)"/);
+    const titleMatch = attrString.match(/title="([^"]+)"/);
+    const idMatch = attrString.match(/id="([^"]+)"/);
+
+    if (typeMatch && titleMatch) {
+      const startIndex = lastMatch.index + lastMatch[0].length;
+      const remaining = text.substring(startIndex);
+      const endIndex = remaining.indexOf('</artifact>');
+      
+      const content = endIndex !== -1 ? remaining.substring(0, endIndex) : remaining;
+      
+      return {
+        type: typeMatch[1],
+        title: titleMatch[1],
+        id: idMatch ? idMatch[1] : undefined,
+        content: content,
+        isComplete: endIndex !== -1
+      };
+    }
   }
   
   return null;
@@ -253,7 +271,7 @@ export function stripArtifactsAndPatches(text: string): string {
   let cleaned = text;
   
   // Strip artifacts (including partial)
-  cleaned = cleaned.replace(/<artifact\s+type="(\w+)"\s+title="([^"]+)">([\s\S]*?)(?:<\/artifact>|$)/g, '');
+  cleaned = cleaned.replace(/<artifact\s+([^>]+)>([\s\S]*?)(?:<\/artifact>|$)/g, '');
   
   // Strip patches (including partial)
   cleaned = cleaned.replace(/<patch>([\s\S]*?)(?:<\/patch>|$)/g, '');

@@ -319,7 +319,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         <div 
           className={cn(
             "relative",
-            !isDocMode && "w-full h-full flex items-center justify-center pointer-events-none"
+            !isDocMode ? "w-full h-full flex items-center justify-center pointer-events-none" : "flex justify-center"
           )}
           style={{ 
             height: isDocMode ? (contentHeight * zoom + 128) : '100%',
@@ -331,13 +331,13 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
             className="pointer-events-auto"
             style={{ 
               transform: isDocMode 
-                ? `scale(${zoom})` 
+                ? `translateX(-50%) scale(${zoom})` 
                 : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-              transformOrigin: isDocMode ? 'top left' : 'center',
+              transformOrigin: isDocMode ? 'top center' : 'center',
               width: isDocMode ? contentWidth : 'auto',
               position: isDocMode ? 'absolute' : 'relative',
               top: isDocMode ? 64 : 0,
-              left: isDocMode ? Math.max(64, (containerWidth - contentWidth * zoom) / 2) : 0
+              left: isDocMode ? '50%' : 0
             }}
           >
             <div ref={contentRef} className={cn(isDocMode ? "w-fit" : "w-full flex justify-center")}>
