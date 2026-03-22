@@ -19,10 +19,13 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
 }) => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [contentHeight, setContentHeight] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [panMode, setPanMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const isDocMode = fitMode === 'width';
 
   // Use refs to avoid re-attaching wheel listener too often
   const stateRef = useRef({ zoom, position });
@@ -47,7 +50,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const handleWheel = useCallback((e: WheelEvent) => {
     setHasInteracted(true);
     // If fitMode is 'width', we want to allow normal scrolling unless Ctrl is pressed
-    const isZoomAction = e.ctrlKey || e.metaKey || fitMode === 'both';
+    const isZoomAction = e.ctrlKey || e.metaKey || (!isDocMode && fitMode === 'both');
     
     if (isZoomAction) {
       e.preventDefault();
@@ -62,32 +65,49 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       
       if (newZoom !== currentZoom && containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
 
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
+        if (isDocMode) {
+          // Document mode zoom: adjust scrollTop to keep focal point
+          const mouseY = e.clientY - rect.top;
+          const scrollY = containerRef.current.scrollTop;
+          const relY = (scrollY + mouseY) / currentZoom;
+          
+          setZoom(newZoom);
+          
+          // Use requestAnimationFrame to ensure the new height is applied before scrolling
+          requestAnimationFrame(() => {
+            if (containerRef.current) {
+              containerRef.current.scrollTop = relY * newZoom - mouseY;
+            }
+          });
+        } else {
+          // Diagram mode zoom: adjust position
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
 
-        const relX = (mouseX - centerX - currentPos.x) / currentZoom;
-        const relY = (mouseY - centerY - currentPos.y) / currentZoom;
+          const relX = (mouseX - centerX - currentPos.x) / currentZoom;
+          const relY = (mouseY - centerY - currentPos.y) / currentZoom;
 
-        const newX = mouseX - centerX - relX * newZoom;
-        const newY = mouseY - centerY - relY * newZoom;
+          const newX = mouseX - centerX - relX * newZoom;
+          const newY = mouseY - centerY - relY * newZoom;
 
-        setZoom(newZoom);
-        setPosition({ x: newX, y: newY });
+          setZoom(newZoom);
+          setPosition({ x: newX, y: newY });
+        }
       }
     } else {
-      // Normal scrolling: update position based on wheel delta
-      // We only do this if we're in a mode that supports vertical scrolling
-      if (fitMode === 'width') {
+      // Normal scrolling: browser handles it in DocMode via overflow-y: auto
+      // For diagrams, we still simulate it if fitMode is width (though usually it's both)
+      if (!isDocMode && fitMode === 'width') {
         setPosition(prev => ({
           ...prev,
           y: prev.y - e.deltaY
         }));
       }
     }
-  }, [fitMode]);
+  }, [fitMode, isDocMode]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -114,7 +134,6 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     }
 
     // If left click on the BACKGROUND (not on content), we still want to pan
-    // This allows panning by clicking empty space even when not in pan mode
     if (e.button === 0 && e.target === containerRef.current) {
       setIsDragging(true);
       e.preventDefault();
@@ -124,10 +143,17 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
-        setPosition(prev => ({
-          x: prev.x + e.movementX,
-          y: prev.y + e.movementY
-        }));
+        if (isDocMode && containerRef.current) {
+          // Document mode: pan by scrolling
+          containerRef.current.scrollTop -= e.movementY;
+          containerRef.current.scrollLeft -= e.movementX;
+        } else {
+          // Diagram mode: pan by translating
+          setPosition(prev => ({
+            x: prev.x + e.movementX,
+            y: prev.y + e.movementY
+          }));
+        }
       }
     };
 
@@ -144,7 +170,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, isDocMode]);
 
   const resetZoom = () => {
     setHasInteracted(false);
@@ -165,7 +191,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     const unscaledWidth = content.width / zoom;
     const unscaledHeight = content.height / zoom;
 
-    const padding = 64; // Increased padding for better framing
+    const padding = 64;
     const availableWidth = Math.max(container.width - padding, 100);
     const availableHeight = Math.max(container.height - padding, 100);
 
@@ -175,19 +201,21 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     // Calculate new zoom to fit the available space
     let newZoom = fitMode === 'width' ? scaleX : Math.min(scaleX, scaleY);
     
-    // Limit extreme zoom-in for very small diagrams to keep them readable but not pixelated
+    // Limit extreme zoom-in
     newZoom = Math.min(newZoom, 10); 
 
     setZoom(newZoom);
     
-    // Calculate offsets to center/align
-    const xOffset = (container.width - unscaledWidth * newZoom) / 2;
-    
-    if (fitMode === 'width') {
-      // For width mode (documents), align to top with padding
-      setPosition({ x: xOffset, y: padding / 2 });
+    if (isDocMode) {
+      // Reset scroll for documents
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+        containerRef.current.scrollLeft = 0;
+      }
+      setPosition({ x: 0, y: 0 });
     } else {
-      // For both mode (diagrams), center both ways
+      // Calculate offsets to center/align for diagrams
+      const xOffset = (container.width - unscaledWidth * newZoom) / 2;
       const yOffset = (container.height - unscaledHeight * newZoom) / 2;
       setPosition({ x: xOffset, y: yOffset });
     }
@@ -195,7 +223,6 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
 
   // Automatically fit to screen when content size changes
   const lastFitSize = useRef({ width: 0, height: 0 });
-  const lastContainerSize = useRef({ width: 0, height: 0 });
   const fitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const debouncedFit = useCallback(() => {
@@ -215,10 +242,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       for (const entry of entries) {
         if (entry.target === contentRef.current) {
           const { width, height } = entry.contentRect;
-          // During streaming, we always want to fit to keep content visible
-          // Otherwise, only fit once initially. 
-          // After initial fit, we STOP fitting automatically even if user hasn't interacted,
-          // to prevent zoom resets on window/frame resize.
+          setContentHeight(height);
+
           if (isStreaming || !initialFitDone.current) {
             if (Math.abs(width - lastFitSize.current.width) > 2 || 
                 Math.abs(height - lastFitSize.current.height) > 2) {
@@ -241,7 +266,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       observer.disconnect();
       if (fitTimeoutRef.current) clearTimeout(fitTimeoutRef.current);
     };
-  }, [debouncedFit, hasInteracted]);
+  }, [debouncedFit, isStreaming]);
 
   const zoomIn = () => {
     setHasInteracted(true);
@@ -257,7 +282,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     <div 
       ref={containerRef}
       className={cn(
-        "relative w-full h-full overflow-hidden bg-zinc-50 transition-colors duration-200",
+        "relative w-full h-full transition-colors duration-200",
+        isDocMode ? "overflow-auto" : "overflow-hidden bg-zinc-50",
         isDragging && "select-none",
         className
       )}
@@ -265,13 +291,27 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       style={{ cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto') }}
     >
       <div 
-        className="w-full h-full origin-center flex items-center justify-center pointer-events-none"
+        className={cn(
+          "relative origin-top",
+          !isDocMode && "w-full h-full flex items-center justify-center pointer-events-none"
+        )}
         style={{ 
-          transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+          height: isDocMode ? (contentHeight * zoom + 128) : '100%',
+          transform: isDocMode ? 'none' : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
         }}
       >
-        <div ref={contentRef} className={cn("pointer-events-auto", fitMode === 'width' && "w-full flex justify-center")}>
-          {children}
+        <div 
+          className={cn(
+            "origin-top",
+            isDocMode ? "absolute top-8 left-1/2 pointer-events-auto" : "pointer-events-auto"
+          )}
+          style={{ 
+            transform: isDocMode ? `translateX(-50%) scale(${zoom})` : 'none',
+          }}
+        >
+          <div ref={contentRef} className={cn(isDocMode && "w-full flex justify-center")}>
+            {children}
+          </div>
         </div>
       </div>
 
