@@ -197,7 +197,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     fitToScreen();
   };
 
-  const fitToScreen = useCallback(() => {
+  const fitToScreen = useCallback((resetScroll = true) => {
     if (!contentRef.current || !containerRef.current) return;
     
     const container = containerRef.current.getBoundingClientRect();
@@ -228,8 +228,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     setZoom(newZoom);
     
     if (isDocMode) {
-      // Reset scroll for documents
-      if (containerRef.current) {
+      // Reset scroll for documents only if requested
+      if (resetScroll && containerRef.current) {
         containerRef.current.scrollTop = 0;
         containerRef.current.scrollLeft = 0;
       }
@@ -244,10 +244,10 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const lastFitSize = useRef({ width: 0, height: 0 });
   const fitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const debouncedFit = useCallback(() => {
+  const debouncedFit = useCallback((resetScroll = true) => {
     if (fitTimeoutRef.current) clearTimeout(fitTimeoutRef.current);
     fitTimeoutRef.current = setTimeout(() => {
-      fitToScreen();
+      fitToScreen(resetScroll);
       initialFitDone.current = true;
     }, 50);
   }, [fitToScreen]);
@@ -264,7 +264,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           setContentHeight(height);
           setContentWidth(width);
 
-          if (isStreaming || !initialFitDone.current) {
+          if ((isStreaming && !hasInteracted) || !initialFitDone.current) {
             if (Math.abs(width - lastFitSize.current.width) > 2 || 
                 Math.abs(height - lastFitSize.current.height) > 2) {
               lastFitSize.current = { width, height };
@@ -282,7 +282,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       }
 
       if (shouldFit) {
-        debouncedFit();
+        debouncedFit(!isStreaming);
       }
     });
 
