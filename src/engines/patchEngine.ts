@@ -28,24 +28,35 @@ export function fuzzyReplace(content: string, patch: Patch): string | null {
     
     if (oldLines.length === 0) return content;
 
-    for (let i = 0; i <= lines.length - oldLines.length; i++) {
+    for (let i = 0; i < lines.length; i++) {
       let match = true;
-      for (let j = 0; j < oldLines.length; j++) {
-        // Check if the line contains the expected text, ignoring leading/trailing whitespace
-        if (!lines[i + j].trim().includes(oldLines[j])) {
+      let linesConsumed = 0;
+      let oldLinesMatched = 0;
+
+      while (oldLinesMatched < oldLines.length && (i + linesConsumed) < lines.length) {
+        const currentLine = lines[i + linesConsumed].trim();
+        const targetLine = oldLines[oldLinesMatched];
+
+        if (currentLine === '') {
+          linesConsumed++;
+          continue;
+        }
+
+        if (currentLine.includes(targetLine)) {
+          linesConsumed++;
+          oldLinesMatched++;
+        } else {
           match = false;
           break;
         }
       }
-      
-      if (match) {
+
+      if (match && oldLinesMatched === oldLines.length) {
         const newLines = [...lines];
-        // Replace the matched range with the new text
-        // We try to preserve the indentation of the first line
         const indentation = lines[i].match(/^\s*/)?.[0] || '';
         const indentedNewText = newText.split('\n').map(l => indentation + l).join('\n');
         
-        newLines.splice(i, oldLines.length, indentedNewText);
+        newLines.splice(i, linesConsumed, indentedNewText);
         return newLines.join('\n');
       }
     }

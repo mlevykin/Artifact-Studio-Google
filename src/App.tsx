@@ -450,6 +450,24 @@ CRITICAL RULES FOR CONTENT:
       };
       addMessage(assistantMessage, sessionId);
 
+      // Handle patches for the current artifact
+      if (initialArtifact) {
+        const patches = parsePatches(fullResponse);
+        if (patches.length > 0) {
+          const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, patches);
+          if (successCount > 0) {
+            const updatedArtifact: Artifact = {
+              ...initialArtifact,
+              id: generateId(),
+              content: patchedContent,
+              version: initialArtifact.version + 1,
+              timestamp: Date.now()
+            };
+            addArtifact(updatedArtifact, sessionId);
+          }
+        }
+      }
+
       const newArtifacts = parseArtifacts(fullResponse);
       newArtifacts.forEach(newArtifactData => {
         let files: any[] | undefined;
@@ -473,23 +491,6 @@ CRITICAL RULES FOR CONTENT:
         };
         addArtifact(newArtifact, sessionId);
       });
-
-      if (newArtifacts.length === 0 && initialArtifact) {
-        const patches = parsePatches(fullResponse);
-        if (patches.length > 0) {
-          const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, patches);
-          if (successCount > 0) {
-            const updatedArtifact: Artifact = {
-              ...initialArtifact,
-              id: generateId(),
-              content: patchedContent,
-              version: initialArtifact.version + 1,
-              timestamp: Date.now()
-            };
-            addArtifact(updatedArtifact, sessionId);
-          }
-        }
-      }
 
       if (messages.length === 1) {
         updateSession({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') }, sessionId);
