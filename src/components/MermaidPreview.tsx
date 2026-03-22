@@ -23,20 +23,26 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
   useEffect(() => {
     const renderDiagram = async () => {
       if (containerRef.current && content) {
+        // Basic check for valid mermaid content
+        const isPotentiallyValid = /^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|quadrantChart|xychart|mindmap|timeline|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|packetBeta|kanban|architecture|requirementDiagram)/i.test(content.trim().replace(/^```mermaid\n?/, ''));
+
+        if (!isPotentiallyValid && content.length < 20) {
+          if (containerRef.current) {
+            containerRef.current.innerHTML = '<div class="flex items-center justify-center p-8 text-zinc-400 text-xs animate-pulse">Initializing diagram...</div>';
+          }
+          return;
+        }
+
         try {
-          containerRef.current.innerHTML = '';
-          
           // Pre-process content to fix common syntax errors
           let processedContent = content.trim();
           
           // Strip markdown code block wrappers if present
           if (processedContent.startsWith('```')) {
             const lines = processedContent.split('\n');
-            // Remove first line if it starts with ```
             if (lines[0].startsWith('```')) {
               lines.shift();
             }
-            // Remove last line if it's ```
             if (lines.length > 0 && lines[lines.length - 1].trim() === '```') {
               lines.pop();
             }
@@ -46,8 +52,23 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
           // Wrap unquoted labels containing parentheses in double quotes
           processedContent = processedContent.replace(/\[([^"\]]*\([^"\]]*\)[^"\]]*)\]/g, '["$1"]');
           
+          // Try to parse first to avoid noisy errors during streaming
+          try {
+            await mermaid.parse(processedContent);
+          } catch (parseError) {
+            // If it's short or doesn't have a closing tag/structure, it's likely just streaming
+            if (content.length < 100 || !content.includes('\n')) {
+               if (containerRef.current && containerRef.current.innerHTML === '') {
+                 containerRef.current.innerHTML = '<div class="flex items-center justify-center p-8 text-zinc-400 text-xs">Rendering diagram...</div>';
+               }
+               return; 
+            }
+            throw parseError;
+          }
+
           const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
           const { svg } = await mermaid.render(id, processedContent);
+          
           if (containerRef.current) {
             // Remove fixed max-width and height from SVG to allow it to be scaled naturally
             const responsiveSvg = svg
@@ -59,11 +80,17 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
             const svgElement = containerRef.current.querySelector('svg');
             if (svgElement) {
               svgElement.style.display = 'block';
-              // We don't set width 100% here because we want the natural size 
-              // for ZoomableContainer to measure and scale
             }
           }
         } catch (error: any) {
+          // Only show error if it's not a common streaming-related syntax error or if content is long enough
+          const isStreamingError = error?.message?.includes('Parse error') || error?.message?.includes('Syntax error');
+          
+          if (isStreamingError && content.length < 200) {
+            // Keep previous content or show loading if it's likely just incomplete
+            return;
+          }
+
           console.error('Mermaid render error:', error);
           if (containerRef.current) {
             containerRef.current.innerHTML = `
