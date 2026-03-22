@@ -225,13 +225,17 @@ export async function* streamOllamaResponse(
 
     const decoder = new TextDecoder();
     let fullText = "";
+    let buffer = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      
+      // Keep the last partial line in the buffer
+      buffer = lines.pop() || "";
       
       for (const line of lines) {
         if (!line.trim()) continue;
@@ -241,8 +245,20 @@ export async function* streamOllamaResponse(
           fullText += text;
           yield { text, fullText, done: false };
         } catch (e) {
-          console.error('Error parsing Ollama JSON', e);
+          console.error('Error parsing Ollama JSON line:', line, e);
         }
+      }
+    }
+
+    // Process any remaining data in the buffer
+    if (buffer.trim()) {
+      try {
+        const json = JSON.parse(buffer);
+        const text = json.message?.content || "";
+        fullText += text;
+        yield { text, fullText, done: false };
+      } catch (e) {
+        // Final partial line might not be valid JSON if the stream was cut
       }
     }
 

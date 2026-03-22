@@ -353,10 +353,13 @@ Each tag MUST include a "description" attribute explaining what you are doing in
 - For skills: <skill_call name="Skill Name" description="Human-readable description of what this skill adds to the context" />
 - For MCP: <mcp_call name="MCP Name" description="Human-readable description of why you are calling this tool"><request>JSON_REQUEST</request><response>JSON_RESPONSE</response></mcp_call>
 
-CRITICAL: DO NOT write any code, scripts, or large blocks of data directly in the chat text. 
-ALL code must be wrapped in <artifact> tags or <patch> tags. 
-The chat text should only contain explanations, summaries, and conversational responses.
-Do NOT mention skill or MCP calls in the visible chat text; use the tags instead.
+CRITICAL RULES FOR CONTENT:
+1. DO NOT write any code, scripts, structured documents, architecture plans, or long specifications directly in the chat text.
+2. ALL structured content MUST be wrapped in <artifact> tags. This includes Markdown documents, specifications, and requirements.
+3. If you need to provide multiple files or diagrams, use ONE artifact of type="project" and provide a JSON array of files.
+4. The chat text should ONLY contain brief explanations, summaries, and conversational guidance.
+5. Do NOT mention skill or MCP calls in the visible chat text; use the tags instead.
+6. If you are generating a document, use <artifact type="markdown" title="Document Title">...</artifact>.
 `;
 
     if (isAutoSelect) {

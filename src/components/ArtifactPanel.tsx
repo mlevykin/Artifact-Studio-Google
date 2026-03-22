@@ -190,14 +190,14 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       (isStreaming && (streamingText.includes('<artifact') || streamingText.includes('<patch')));
     
     if (hasArtifactOrPatch) {
-      setView('code');
+      if (view !== 'code') setView('code');
     } else if (artifact && artifact.id === 'workspace-explorer') {
-      setView('code');
+      if (view !== 'code') setView('code');
     } else if (artifact && !isStreaming && artifact.id !== 'streaming') {
       // Switch back to preview when streaming ends and we have a real artifact
-      setView('preview');
+      if (view !== 'preview') setView('preview');
     }
-  }, [isStreaming, streamingText, artifact?.id]);
+  }, [isStreaming, streamingText, artifact?.id, view]);
 
   const handleFileSelect = async (path: string) => {
     onFileSelect(path);
