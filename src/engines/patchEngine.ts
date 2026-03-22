@@ -135,7 +135,7 @@ export function parseArtifacts(text: string): { type: string; title: string; con
  * Returns the LAST artifact found in the text (the one currently being typed).
  */
 export function parsePartialArtifact(text: string): { type: string; title: string; content: string; id?: string; isComplete: boolean } | null {
-  const artifactStartRegex = /<artifact\s+([^>]+)>/g;
+  const artifactStartRegex = /<artifact\s+([^>]*)(?:>|$)/g;
   let lastMatch = null;
   let match;
   
@@ -143,13 +143,12 @@ export function parsePartialArtifact(text: string): { type: string; title: strin
     lastMatch = match;
   }
   
-  if (lastMatch) {
-    const attrString = lastMatch[1];
-    const typeMatch = attrString.match(/type="([^"]+)"/);
-    const titleMatch = attrString.match(/title="([^"]+)"/);
-    const idMatch = attrString.match(/id="([^"]+)"/);
+    if (lastMatch) {
+      const attrString = lastMatch[1];
+      const typeMatch = attrString.match(/type="([^"]*)"?/);
+      const titleMatch = attrString.match(/title="([^"]*)"?/);
+      const idMatch = attrString.match(/id="([^"]*)"?/);
 
-    if (typeMatch && titleMatch) {
       const startIndex = lastMatch.index + lastMatch[0].length;
       const remaining = text.substring(startIndex);
       const endIndex = remaining.indexOf('</artifact>');
@@ -157,14 +156,13 @@ export function parsePartialArtifact(text: string): { type: string; title: strin
       const content = endIndex !== -1 ? remaining.substring(0, endIndex) : remaining;
       
       return {
-        type: typeMatch[1],
-        title: titleMatch[1],
+        type: typeMatch ? typeMatch[1] : '',
+        title: titleMatch ? titleMatch[1] : '',
         id: idMatch ? idMatch[1] : undefined,
         content: content,
         isComplete: endIndex !== -1
       };
     }
-  }
   
   return null;
 }

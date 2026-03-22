@@ -197,7 +197,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     fitToScreen();
   };
 
-  const fitToScreen = () => {
+  const fitToScreen = useCallback(() => {
     if (!contentRef.current || !containerRef.current) return;
     
     const container = containerRef.current.getBoundingClientRect();
@@ -208,8 +208,9 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     }
 
     // Since content is scaled, we need its unscaled size
-    const unscaledWidth = content.width / zoom;
-    const unscaledHeight = content.height / zoom;
+    const currentZoom = stateRef.current.zoom;
+    const unscaledWidth = content.width / currentZoom;
+    const unscaledHeight = content.height / currentZoom;
 
     const padding = isDocMode ? 128 : 64;
     const availableWidth = Math.max(container.width - padding, 100);
@@ -237,7 +238,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       // For diagrams, since we use flex centering, position {0,0} is the center
       setPosition({ x: 0, y: 0 });
     }
-  };
+  }, [fitMode, isDocMode]);
 
   // Automatically fit to screen when content size changes
   const lastFitSize = useRef({ width: 0, height: 0 });

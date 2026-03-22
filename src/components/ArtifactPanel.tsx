@@ -103,7 +103,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     if (!artifact) return 'text';
     const type = artifact.type;
     if (type === 'markdown') return 'markdown';
-    return type;
+    return type || 'text';
   };
   const pType = getPreviewType();
 
@@ -747,7 +747,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   contentId={`${artifact?.id}-${artifact?.version}`}
                   isStreaming={isStreaming}
                 >
-                  <div className="w-[800px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-8">
+                  <div className="w-[800px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-8 overflow-hidden">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
@@ -774,7 +774,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   )}
                   {pType === 'text' && (
                     <pre className="w-[800px] p-12 font-mono text-sm whitespace-pre-wrap bg-white shadow-lg rounded-xl">
-                      {pContent}
+                      {pContent || (isStreaming ? 'Generating content...' : '')}
                     </pre>
                   )}
                 </ZoomableContainer>
