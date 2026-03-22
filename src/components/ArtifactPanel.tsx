@@ -33,6 +33,7 @@ interface ArtifactPanelProps {
   currentIndex: number;
   onSave: (content: string, fileId?: string) => void;
   isStreaming?: boolean;
+  streamingText?: string;
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
   workspaceHandle?: any | null;
@@ -51,6 +52,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   currentIndex,
   onSave,
   isStreaming = false,
+  streamingText = '',
   onToggleSidebar,
   isSidebarOpen = true,
   workspaceHandle = null,
@@ -182,17 +184,20 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Switch to code view when streaming starts or if it's the default workspace artifact
+  // Switch to code view when streaming starts and an artifact/patch is detected
   React.useEffect(() => {
-    if (isStreaming) {
+    const hasArtifactOrPatch = artifact?.id === 'streaming' || 
+      (isStreaming && (streamingText.includes('<artifact') || streamingText.includes('<patch')));
+    
+    if (hasArtifactOrPatch) {
       setView('code');
     } else if (artifact && artifact.id === 'workspace-explorer') {
       setView('code');
-    } else if (artifact && artifact.id !== 'streaming') {
+    } else if (artifact && !isStreaming && artifact.id !== 'streaming') {
       // Switch back to preview when streaming ends and we have a real artifact
       setView('preview');
     }
-  }, [isStreaming, artifact?.id]);
+  }, [isStreaming, streamingText, artifact?.id]);
 
   const handleFileSelect = async (path: string) => {
     onFileSelect(path);
@@ -438,7 +443,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       if (ext === 'svg') return 'svg';
       return 'text';
     }
-    return artifact.type;
+    const type = artifact.type;
+    if (type === 'markdown') return 'markdown';
+    return type;
   };
   const pType = getPreviewType();
 

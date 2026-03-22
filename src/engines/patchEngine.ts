@@ -91,29 +91,18 @@ export function applyPatches(content: string, patches: Patch[]): { content: stri
 }
 
 /**
- * Parses a full artifact from LLM response
+ * Parses <artifact> blocks from LLM response
  */
 export function parseArtifact(text: string): { type: string; title: string; content: string } | null {
   const artifactRegex = /<artifact\s+type="(\w+)"\s+title="([^"]+)">([\s\S]*?)<\/artifact>/;
   const match = text.match(artifactRegex);
-  
   if (match) {
-    const content = match[3].trim();
-    
-    // If the content itself contains a patch, it's likely a hallucination where the LLM 
-    // wrapped a patch in artifact tags. We should return null so the patch engine can 
-    // handle it properly from the raw text.
-    if (content.includes('<patch>') && content.includes('<old>') && content.includes('<new>')) {
-      return null;
-    }
-
     return {
       type: match[1],
       title: match[2],
-      content
+      content: match[3].trim()
     };
   }
-  
   return null;
 }
 
@@ -122,6 +111,67 @@ export function parseArtifact(text: string): { type: string; title: string; cont
  */
 export function parseThought(text: string): string | null {
   const thoughtRegex = /<thought>([\s\S]*?)<\/thought>/;
+  const match = text.match(thoughtRegex);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Parses a full or partial artifact from LLM response for streaming
+ */
+export function parsePartialArtifact(text: string): { type: string; title: string; content: string; isComplete: boolean } | null {
+  const artifactStartRegex = /<artifact\s+type="(\w+)"\s+title="([^"]+)">/;
+  const startMatch = text.match(artifactStartRegex);
+  
+  if (startMatch) {
+    const startIndex = startMatch.index! + startMatch[0].length;
+    const remaining = text.substring(startIndex);
+    const endIndex = remaining.indexOf('</artifact>');
+    
+    const content = endIndex !== -1 ? remaining.substring(0, endIndex) : remaining;
+    
+    return {
+      type: startMatch[1],
+      title: startMatch[2],
+      content: content,
+      isComplete: endIndex !== -1
+    };
+  }
+  
+  return null;
+}
+
+/**
+ * Parses <patch> blocks from LLM response, including partial ones
+ */
+export function parsePartialPatches(text: string): { old: string; new: string; isComplete: boolean }[] {
+  const patches: { old: string; new: string; isComplete: boolean }[] = [];
+  const patchRegex = /<patch>([\s\S]*?)(?:<\/patch>|$)/g;
+  
+  let match;
+  while ((match = patchRegex.exec(text)) !== null) {
+    if (match[0] === '<patch>') continue; // Skip empty match at the very end
+    
+    const patchContent = match[1];
+    const oldMatch = patchContent.match(/<old>([\s\S]*?)(?:<\/old>|$)/);
+    const newMatch = patchContent.match(/<new>([\s\S]*?)(?:<\/new>|$)/);
+    
+    if (oldMatch || newMatch) {
+      patches.push({
+        old: oldMatch ? oldMatch[1].trim() : '',
+        new: newMatch ? newMatch[1].trim() : '',
+        isComplete: match[0].endsWith('</patch>')
+      });
+    }
+  }
+  
+  return patches;
+}
+
+/**
+ * Parses <thought> blocks from LLM response, including partial ones
+ */
+export function parsePartialThought(text: string): string | null {
+  const thoughtRegex = /<thought>([\s\S]*?)(?:<\/thought>|$)/;
   const match = text.match(thoughtRegex);
   return match ? match[1].trim() : null;
 }
@@ -176,25 +226,26 @@ export function parseMcpCalls(text: string): { name: string; description?: strin
 }
 
 /**
- * Strips <artifact>, <patch>, <thought>, <skill_call>, and <mcp_call> blocks from the text for display in chat
+ * Strips <artifact>, <patch>, <thought>, <skill_call>, and <mcp_call> blocks from the text for display in chat.
+ * Handles partial blocks during streaming.
  */
 export function stripArtifactsAndPatches(text: string): string {
   let cleaned = text;
   
-  // Strip artifacts
-  cleaned = cleaned.replace(/<artifact\s+type="(\w+)"\s+title="([^"]+)">([\s\S]*?)<\/artifact>/g, '');
+  // Strip artifacts (including partial)
+  cleaned = cleaned.replace(/<artifact\s+type="(\w+)"\s+title="([^"]+)">([\s\S]*?)(?:<\/artifact>|$)/g, '');
   
-  // Strip patches
-  cleaned = cleaned.replace(/<patch>[\s\S]*?<\/patch>/g, '');
+  // Strip patches (including partial)
+  cleaned = cleaned.replace(/<patch>([\s\S]*?)(?:<\/patch>|$)/g, '');
 
-  // Strip thoughts
-  cleaned = cleaned.replace(/<thought>[\s\S]*?<\/thought>/g, '');
+  // Strip thoughts (including partial)
+  cleaned = cleaned.replace(/<thought>([\s\S]*?)(?:<\/thought>|$)/g, '');
 
   // Strip skill calls
   cleaned = cleaned.replace(/<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*\/>/g, '');
 
-  // Strip mcp calls
-  cleaned = cleaned.replace(/<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>[\s\S]*?<\/mcp_call>/g, '');
+  // Strip mcp calls (including partial)
+  cleaned = cleaned.replace(/<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)/g, '');
   
   return cleaned.trim();
 }

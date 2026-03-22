@@ -18,7 +18,9 @@ import {
   stripArtifactsAndPatches, 
   parseThought,
   parseInvokedSkills,
-  parseMcpCalls
+  parseMcpCalls,
+  parsePartialArtifact,
+  parsePartialPatches
 } from './engines/patchEngine';
 import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig } from './types';
 import { generateId } from './utils';
@@ -403,9 +405,18 @@ Do NOT mention skill or MCP calls in the visible chat text; use the tags instead
         if (chunk.text) {
           fullResponse = chunk.fullText;
           setStreamingText(fullResponse);
-          const partialArtifact = parseArtifact(fullResponse);
+          
+          // Use partial parsers for streaming feedback
+          const partialArtifact = parsePartialArtifact(fullResponse);
           if (partialArtifact) {
             setStreamingArtifact(partialArtifact as any);
+          } else {
+            const partialPatches = parsePartialPatches(fullResponse);
+            if (partialPatches.length > 0) {
+              // If we are patching, we want to show the "Applying Patches" UI
+              // and potentially update the streaming artifact if we want to show the code being generated
+              // For now, we just rely on the UI overlays in App.tsx
+            }
           }
         }
       }
@@ -663,6 +674,7 @@ Do NOT mention skill or MCP calls in the visible chat text; use the tags instead
             selectedFilePath={selectedFilePath}
             onFileSelect={setSelectedFilePath}
             sessionId={currentSession?.id}
+            streamingText={streamingText}
           />
           
           <AnimatePresence>
