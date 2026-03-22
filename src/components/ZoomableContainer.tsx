@@ -211,7 +211,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     const unscaledWidth = content.width / zoom;
     const unscaledHeight = content.height / zoom;
 
-    const padding = 64;
+    const padding = isDocMode ? 128 : 64;
     const availableWidth = Math.max(container.width - padding, 100);
     const availableHeight = Math.max(container.height - padding, 100);
 
@@ -271,7 +271,12 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
             }
           }
         } else if (entry.target === containerRef.current) {
-          setContainerWidth(entry.contentRect.width);
+          const { width } = entry.contentRect;
+          setContainerWidth(width);
+          // Also trigger fit if container size changes significantly and we haven't interacted
+          if (!hasInteracted || !initialFitDone.current) {
+            shouldFit = true;
+          }
         }
       }
 
