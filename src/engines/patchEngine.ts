@@ -91,18 +91,52 @@ export function applyPatches(content: string, patches: Patch[]): { content: stri
 }
 
 /**
- * Parses <artifact> blocks from LLM response
+ * Parses all <artifact> blocks from LLM response
  */
-export function parseArtifact(text: string): { type: string; title: string; content: string } | null {
-  const artifactRegex = /<artifact\s+type="(\w+)"\s+title="([^"]+)">([\s\S]*?)<\/artifact>/;
-  const match = text.match(artifactRegex);
-  if (match) {
-    return {
+export function parseArtifacts(text: string): { type: string; title: string; content: string }[] {
+  const artifacts: { type: string; title: string; content: string }[] = [];
+  const artifactRegex = /<artifact\s+type="(\w+)"\s+title="([^"]+)">([\s\S]*?)<\/artifact>/g;
+  
+  let match;
+  while ((match = artifactRegex.exec(text)) !== null) {
+    artifacts.push({
       type: match[1],
       title: match[2],
       content: match[3].trim()
+    });
+  }
+  
+  return artifacts;
+}
+
+/**
+ * Parses a full or partial artifact from LLM response for streaming.
+ * Returns the LAST artifact found in the text (the one currently being typed).
+ */
+export function parsePartialArtifact(text: string): { type: string; title: string; content: string; isComplete: boolean } | null {
+  const artifactStartRegex = /<artifact\s+type="(\w+)"\s+title="([^"]+)">/g;
+  let lastMatch = null;
+  let match;
+  
+  while ((match = artifactStartRegex.exec(text)) !== null) {
+    lastMatch = match;
+  }
+  
+  if (lastMatch) {
+    const startIndex = lastMatch.index + lastMatch[0].length;
+    const remaining = text.substring(startIndex);
+    const endIndex = remaining.indexOf('</artifact>');
+    
+    const content = endIndex !== -1 ? remaining.substring(0, endIndex) : remaining;
+    
+    return {
+      type: lastMatch[1],
+      title: lastMatch[2],
+      content: content,
+      isComplete: endIndex !== -1
     };
   }
+  
   return null;
 }
 
@@ -113,31 +147,6 @@ export function parseThought(text: string): string | null {
   const thoughtRegex = /<thought>([\s\S]*?)<\/thought>/;
   const match = text.match(thoughtRegex);
   return match ? match[1].trim() : null;
-}
-
-/**
- * Parses a full or partial artifact from LLM response for streaming
- */
-export function parsePartialArtifact(text: string): { type: string; title: string; content: string; isComplete: boolean } | null {
-  const artifactStartRegex = /<artifact\s+type="(\w+)"\s+title="([^"]+)">/;
-  const startMatch = text.match(artifactStartRegex);
-  
-  if (startMatch) {
-    const startIndex = startMatch.index! + startMatch[0].length;
-    const remaining = text.substring(startIndex);
-    const endIndex = remaining.indexOf('</artifact>');
-    
-    const content = endIndex !== -1 ? remaining.substring(0, endIndex) : remaining;
-    
-    return {
-      type: startMatch[1],
-      title: startMatch[2],
-      content: content,
-      isComplete: endIndex !== -1
-    };
-  }
-  
-  return null;
 }
 
 /**

@@ -12,7 +12,7 @@ import { MCPPanel } from './components/MCPPanel';
 import { useSessions } from './hooks/useSession';
 import { streamResponse, fetchOllamaModels } from './engines/streamEngine';
 import { 
-  parseArtifact, 
+  parseArtifacts, 
   parsePatches, 
   applyPatches, 
   stripArtifactsAndPatches, 
@@ -438,8 +438,8 @@ Do NOT mention skill or MCP calls in the visible chat text; use the tags instead
       };
       addMessage(assistantMessage, sessionId);
 
-      const newArtifactData = parseArtifact(fullResponse);
-      if (newArtifactData) {
+      const newArtifacts = parseArtifacts(fullResponse);
+      newArtifacts.forEach(newArtifactData => {
         let files: any[] | undefined;
         if (newArtifactData.type === 'project') {
           try {
@@ -460,7 +460,9 @@ Do NOT mention skill or MCP calls in the visible chat text; use the tags instead
           timestamp: Date.now()
         };
         addArtifact(newArtifact, sessionId);
-      } else if (initialArtifact) {
+      });
+
+      if (newArtifacts.length === 0 && initialArtifact) {
         const patches = parsePatches(fullResponse);
         if (patches.length > 0) {
           const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, patches);
