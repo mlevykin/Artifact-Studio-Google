@@ -367,6 +367,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <ReactMarkdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
+                    table({ children }: any) {
+                      return (
+                        <div className="overflow-x-auto w-full mb-4 border border-zinc-200 rounded-lg">
+                          <table className="min-w-full">{children}</table>
+                        </div>
+                      );
+                    },
                     code({ node, inline, className, children, ...props }: any) {
                       const match = /language-(\w+)/.exec(className || '');
                       const isMermaid = match && match[1] === 'mermaid';
@@ -528,6 +535,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <ReactMarkdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
+                    table({ children }: any) {
+                      return (
+                        <div className="overflow-x-auto w-full mb-4 border border-zinc-200 rounded-lg">
+                          <table className="min-w-full">{children}</table>
+                        </div>
+                      );
+                    },
                     code({ node, inline, className, children, ...props }: any) {
                       const match = /language-(\w+)/.exec(className || '');
                       const isMermaid = match && match[1] === 'mermaid';

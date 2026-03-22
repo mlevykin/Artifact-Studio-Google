@@ -108,6 +108,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const pType = getPreviewType();
 
   const markdownComponents = useMemo(() => ({
+    table({ children }: any) {
+      return (
+        <div className="overflow-x-auto w-full mb-6 border border-zinc-200 rounded-lg">
+          <table className="min-w-full">{children}</table>
+        </div>
+      );
+    },
     code({ node, inline, className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || '');
       const isMermaid = match && match[1] === 'mermaid';
@@ -740,7 +747,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   contentId={`${artifact?.id}-${artifact?.version}`}
                   isStreaming={isStreaming}
                 >
-                  <div className="w-[800px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-8">
+                  <div className="w-[800px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-8 overflow-hidden">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
