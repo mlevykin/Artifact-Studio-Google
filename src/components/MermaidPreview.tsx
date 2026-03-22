@@ -27,8 +27,23 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
           containerRef.current.innerHTML = '';
           
           // Pre-process content to fix common syntax errors
+          let processedContent = content.trim();
+          
+          // Strip markdown code block wrappers if present
+          if (processedContent.startsWith('```')) {
+            const lines = processedContent.split('\n');
+            // Remove first line if it starts with ```
+            if (lines[0].startsWith('```')) {
+              lines.shift();
+            }
+            // Remove last line if it's ```
+            if (lines.length > 0 && lines[lines.length - 1].trim() === '```') {
+              lines.pop();
+            }
+            processedContent = lines.join('\n').trim();
+          }
+
           // Wrap unquoted labels containing parentheses in double quotes
-          let processedContent = content;
           processedContent = processedContent.replace(/\[([^"\]]*\([^"\]]*\)[^"\]]*)\]/g, '["$1"]');
           
           const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
