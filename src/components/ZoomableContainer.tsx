@@ -36,8 +36,20 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     stateRef.current = { zoom, position, containerWidth, contentWidth };
   }, [zoom, position, containerWidth, contentWidth]);
 
-  // Track interaction and content versions
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const hasInteractedRef = useRef(false);
+  const [hasInteracted, setHasInteractedState] = useState(false);
+  const setHasInteracted = (val: boolean) => {
+    hasInteractedRef.current = val;
+    setHasInteractedState(val);
+    if (val) {
+      initialFitDone.current = true; // If user interacts, we consider the "initial" state done
+      if (fitTimeoutRef.current) {
+        clearTimeout(fitTimeoutRef.current);
+        fitTimeoutRef.current = null;
+      }
+    }
+  };
+
   const initialFitDone = useRef(false);
   const lastContentId = useRef<string | number | undefined>(undefined);
 
@@ -198,7 +210,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   };
 
   const fitToScreen = useCallback((resetScroll = true) => {
-    if (!contentRef.current || !containerRef.current) return;
+    if (!contentRef.current || !containerRef.current || hasInteractedRef.current) return;
     
     const container = containerRef.current.getBoundingClientRect();
     const content = contentRef.current.getBoundingClientRect();
@@ -224,6 +236,9 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     
     // Limit extreme zoom-in
     newZoom = Math.min(newZoom, 10); 
+
+    // Avoid tiny updates that cause flickering
+    if (Math.abs(newZoom - currentZoom) < 0.01) return;
 
     setZoom(newZoom);
     
@@ -264,7 +279,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           setContentHeight(height);
           setContentWidth(width);
 
-          if ((isStreaming && !hasInteracted) || !initialFitDone.current) {
+          if (!hasInteractedRef.current || !initialFitDone.current) {
             if (Math.abs(width - lastFitSize.current.width) > 2 || 
                 Math.abs(height - lastFitSize.current.height) > 2) {
               lastFitSize.current = { width, height };
@@ -275,7 +290,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           const { width } = entry.contentRect;
           setContainerWidth(width);
           // Also trigger fit if container size changes significantly and we haven't interacted
-          if (!hasInteracted || !initialFitDone.current) {
+          if (!hasInteractedRef.current || !initialFitDone.current) {
             shouldFit = true;
           }
         }
