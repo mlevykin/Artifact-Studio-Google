@@ -5,9 +5,14 @@ import { cn } from '../utils';
 interface ZoomableContainerProps {
   children: React.ReactNode;
   className?: string;
+  fitMode?: 'both' | 'width';
 }
 
-export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, className }) => {
+export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ 
+  children, 
+  className,
+  fitMode = 'both'
+}) => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -133,14 +138,22 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
     const scaleY = availableHeight / unscaledHeight;
     
     // Calculate new zoom to fit the available space
-    let newZoom = Math.min(scaleX, scaleY);
+    let newZoom = fitMode === 'width' ? scaleX : Math.min(scaleX, scaleY);
     
     // Limit extreme zoom-in for very small diagrams to keep them readable but not pixelated
     // but still allow significant zoom
     newZoom = Math.min(newZoom, 10); 
 
     setZoom(newZoom);
-    setPosition({ x: 0, y: 0 });
+    
+    // If fitting to width, align to top
+    if (fitMode === 'width') {
+      const newScaledHeight = unscaledHeight * newZoom;
+      const yOffset = newScaledHeight > availableHeight ? (newScaledHeight - availableHeight) / 2 : 0;
+      setPosition({ x: 0, y: yOffset });
+    } else {
+      setPosition({ x: 0, y: 0 });
+    }
   };
 
   // Automatically fit to screen when content size changes
@@ -191,7 +204,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ children, 
           transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
         }}
       >
-        <div ref={contentRef} className="pointer-events-auto">
+        <div ref={contentRef} className={cn("pointer-events-auto", fitMode === 'width' && "w-full flex justify-center")}>
           {children}
         </div>
       </div>

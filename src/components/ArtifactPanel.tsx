@@ -710,8 +710,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   <HtmlPreview content={pContent} />
                 </div>
               ) : pType === 'markdown' ? (
-                <ZoomableContainer className="w-full h-full">
-                  <div className="w-[800px] min-h-[500px] bg-white p-12 md:p-16 shadow-lg rounded-xl">
+                <ZoomableContainer className="w-full h-full" fitMode="width">
+                  <div className="w-full max-w-4xl bg-white p-12 md:p-16 shadow-lg rounded-xl">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
