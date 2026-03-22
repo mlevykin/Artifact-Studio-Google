@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, Move, Maximize } from 'lucide-react';
 import { cn } from '../utils';
 
@@ -26,6 +26,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const [panMode, setPanMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const pendingScroll = useRef<{ x: number, y: number } | null>(null);
 
   const isDocMode = fitMode === 'width';
 
@@ -49,6 +50,14 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     }
   }, [contentId]);
 
+  useLayoutEffect(() => {
+    if (pendingScroll.current && containerRef.current) {
+      containerRef.current.scrollLeft = pendingScroll.current.x;
+      containerRef.current.scrollTop = pendingScroll.current.y;
+      pendingScroll.current = null;
+    }
+  });
+
   const handleWheel = useCallback((e: WheelEvent) => {
     setHasInteracted(true);
     // If fitMode is 'width', we want to allow normal scrolling unless Ctrl is pressed
@@ -69,19 +78,26 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         const rect = containerRef.current.getBoundingClientRect();
 
         if (isDocMode) {
-          // Document mode zoom: adjust scrollTop to keep focal point
+          // Document mode zoom: adjust scroll to keep focal point
+          const mouseX = e.clientX - rect.left;
           const mouseY = e.clientY - rect.top;
+          const scrollX = containerRef.current.scrollLeft;
           const scrollY = containerRef.current.scrollTop;
-          const relY = (scrollY + mouseY) / currentZoom;
+          
+          // Current left offset logic
+          const getLeft = (z: number) => Math.max(64, (containerWidth - contentWidth * z) / 2);
+          const currentLeft = getLeft(currentZoom);
+          const nextLeft = getLeft(newZoom);
+
+          const relX = (scrollX + mouseX - currentLeft) / currentZoom;
+          const relY = (scrollY + mouseY - 64) / currentZoom;
           
           setZoom(newZoom);
           
-          // Use requestAnimationFrame to ensure the new height is applied before scrolling
-          requestAnimationFrame(() => {
-            if (containerRef.current) {
-              containerRef.current.scrollTop = relY * newZoom - mouseY;
-            }
-          });
+          pendingScroll.current = {
+            x: relX * newZoom - mouseX + nextLeft,
+            y: relY * newZoom - mouseY + 64
+          };
         } else {
           // Diagram mode zoom: adjust position
           const mouseX = e.clientX - rect.left;
@@ -297,25 +313,26 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       >
         <div 
           className={cn(
-            "relative origin-top",
+            "relative",
             !isDocMode && "w-full h-full flex items-center justify-center pointer-events-none"
           )}
           style={{ 
             height: isDocMode ? (contentHeight * zoom + 128) : '100%',
             width: isDocMode ? Math.max(containerWidth, contentWidth * zoom + 128) : '100%',
             transform: isDocMode ? 'none' : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-            display: isDocMode ? 'flex' : 'block',
-            justifyContent: isDocMode ? 'center' : 'initial'
           }}
         >
           <div 
             className={cn(
-              "origin-top",
-              isDocMode ? "relative mt-8 pointer-events-auto" : "pointer-events-auto"
+              isDocMode ? "relative pointer-events-auto" : "pointer-events-auto"
             )}
             style={{ 
               transform: isDocMode ? `scale(${zoom})` : 'none',
-              width: isDocMode ? contentWidth : 'auto'
+              transformOrigin: 'top left',
+              width: isDocMode ? contentWidth : 'auto',
+              position: isDocMode ? 'absolute' : 'relative',
+              top: isDocMode ? 64 : 0,
+              left: isDocMode ? Math.max(64, (containerWidth - contentWidth * zoom) / 2) : 0
             }}
           >
             <div ref={contentRef} className={cn(isDocMode && "w-full flex justify-center")}>
