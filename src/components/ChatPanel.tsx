@@ -75,6 +75,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const activeSkills = skills.filter(s => activeSkillIds.includes(s.id));
+  const activeMcps = mcpConfigs.filter(m => activeMcpIds.includes(m.id));
   const [showOllamaSettings, setShowOllamaSettings] = useState(false);
   const [showSelection, setShowSelection] = useState(false);
   const [expandedPatches, setExpandedPatches] = useState<Record<string, boolean>>({});
@@ -592,17 +594,51 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         </AnimatePresence>
 
         <div className="relative flex items-end gap-2">
-          <div className="flex flex-col gap-2">
-            <button 
-              onClick={() => setShowSelection(!showSelection)}
-              className={cn(
-                "p-2 rounded-lg transition-all",
-                showSelection ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
-              )}
-              title="Select Skills & MCP"
-            >
-              <Plus size={20} className={cn(showSelection && "rotate-45 transition-transform")} />
-            </button>
+          <div className="flex flex-col gap-2 items-start">
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setShowSelection(!showSelection)}
+                className={cn(
+                  "p-2 rounded-lg transition-all",
+                  showSelection ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                )}
+                title="Select Skills & MCP"
+              >
+                <Plus size={20} className={cn(showSelection && "rotate-45 transition-transform")} />
+              </button>
+              
+              <div className="flex items-center gap-1 overflow-x-auto max-w-[150px] no-scrollbar py-0.5">
+                {autoSelectSkills ? (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 text-[9px] font-bold whitespace-nowrap">
+                    <Wand2 size={10} />
+                    AUTO
+                  </div>
+                ) : (
+                  <>
+                    {activeSkills.map(skill => (
+                      <div 
+                        key={skill.id}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 border border-emerald-100 text-[9px] font-bold whitespace-nowrap"
+                        title={skill.name}
+                      >
+                        <Book size={10} />
+                        {skill.name.length > 8 ? skill.name.substring(0, 8) + '...' : skill.name}
+                      </div>
+                    ))}
+                    {activeMcps.map(mcp => (
+                      <div 
+                        key={mcp.id}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-100 text-[9px] font-bold whitespace-nowrap"
+                        title={mcp.name}
+                      >
+                        <Server size={10} />
+                        {mcp.name.length > 8 ? mcp.name.substring(0, 8) + '...' : mcp.name}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
             <button 
               onClick={() => fileInputRef.current?.click()}
               className="p-2 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors"
