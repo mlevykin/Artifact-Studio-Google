@@ -172,31 +172,53 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
 
   // Automatically fit to screen when content size changes
   const lastFitSize = useRef({ width: 0, height: 0 });
+  const lastContainerSize = useRef({ width: 0, height: 0 });
+  const fitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const debouncedFit = useCallback(() => {
+    if (fitTimeoutRef.current) clearTimeout(fitTimeoutRef.current);
+    fitTimeoutRef.current = setTimeout(() => {
+      fitToScreen();
+    }, 50);
+  }, [fitToScreen]);
+
   useEffect(() => {
-    if (!contentRef.current) return;
+    if (!contentRef.current || !containerRef.current) return;
 
-    const observer = new ResizeObserver(() => {
-      if (!contentRef.current) return;
-      const rect = contentRef.current.getBoundingClientRect();
-      const unscaledWidth = Math.round(rect.width / zoom);
-      const unscaledHeight = Math.round(rect.height / zoom);
+    const observer = new ResizeObserver((entries) => {
+      let shouldFit = false;
 
-      // Only fit if the unscaled size has changed significantly
-      if (Math.abs(unscaledWidth - lastFitSize.current.width) > 2 || 
-          Math.abs(unscaledHeight - lastFitSize.current.height) > 2) {
-        lastFitSize.current = { width: unscaledWidth, height: unscaledHeight };
-        fitToScreen();
+      for (const entry of entries) {
+        if (entry.target === contentRef.current) {
+          const { width, height } = entry.contentRect;
+          if (Math.abs(width - lastFitSize.current.width) > 2 || 
+              Math.abs(height - lastFitSize.current.height) > 2) {
+            lastFitSize.current = { width, height };
+            shouldFit = true;
+          }
+        } else if (entry.target === containerRef.current) {
+          const { width, height } = entry.contentRect;
+          if (Math.abs(width - lastContainerSize.current.width) > 2 || 
+              Math.abs(height - lastContainerSize.current.height) > 2) {
+            lastContainerSize.current = { width, height };
+            shouldFit = true;
+          }
+        }
+      }
+
+      if (shouldFit) {
+        debouncedFit();
       }
     });
 
     observer.observe(contentRef.current);
-    
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
+    observer.observe(containerRef.current);
 
-    return () => observer.disconnect();
-  }, [zoom, children]);
+    return () => {
+      observer.disconnect();
+      if (fitTimeoutRef.current) clearTimeout(fitTimeoutRef.current);
+    };
+  }, [debouncedFit]);
 
   const zoomIn = () => setZoom(prev => Math.min(prev * 1.2, 50));
   const zoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.01));
