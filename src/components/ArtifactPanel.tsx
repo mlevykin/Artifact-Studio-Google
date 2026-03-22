@@ -15,6 +15,11 @@ import {
   FolderSync,
   RefreshCw
 } from 'lucide-react';
+import { 
+  parseArtifacts, 
+  parsePartialArtifact, 
+  parsePartialPatches 
+} from '../engines/patchEngine';
 import { Artifact, ProjectFile } from '../types';
 import { cn } from '../utils';
 import { MermaidPreview } from './MermaidPreview';
@@ -226,18 +231,32 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       setView('code');
     }
 
-    // Reset the streaming ref when streaming ends
+  // Reset the streaming ref when streaming ends
     if (!isStreaming) {
       lastStreamingIdRef.current = null;
     }
   }, [isStreaming, streamingText, artifact?.id]);
+
+  // Auto-switch to preview when streaming ends and we have a new artifact/version
+  const lastArtifactVersionRef = useRef<number>(0);
+  React.useEffect(() => {
+    if (!isStreaming && artifact && artifact.id !== 'workspace-explorer') {
+      const currentVersion = artifact.version;
+      if (currentVersion > lastArtifactVersionRef.current) {
+        // Only switch if we were in code view and it's not a workspace explorer
+        if (view === 'code') {
+          setView('preview');
+        }
+        lastArtifactVersionRef.current = currentVersion;
+      }
+    }
+  }, [isStreaming, artifact, view]);
 
   // Scroll to patch location during streaming
   const lastPatchCountRef = useRef(0);
   React.useEffect(() => {
     if (!isStreaming || !streamingText.includes('<patch')) return;
     
-    const { parsePartialPatches } = require('../engines/patchEngine');
     const patches = parsePartialPatches(streamingText);
     
     if (patches.length > lastPatchCountRef.current) {
@@ -691,8 +710,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   <HtmlPreview content={pContent} />
                 </div>
               ) : pType === 'markdown' ? (
-                <div className="w-full h-full overflow-auto bg-white p-8 md:p-12 lg:p-16">
-                  <div className="max-w-3xl mx-auto">
+                <ZoomableContainer className="w-full h-full">
+                  <div className="w-[800px] min-h-[500px] bg-white p-12 md:p-16 shadow-lg rounded-xl">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
@@ -724,7 +743,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                       </ReactMarkdown>
                     </div>
                   </div>
-                </div>
+                </ZoomableContainer>
               ) : (
                 <ZoomableContainer className="w-full h-full">
                   {pType === 'mermaid' && <MermaidPreview content={pContent} className="natural-size" />}
