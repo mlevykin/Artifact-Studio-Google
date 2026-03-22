@@ -234,10 +234,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       }
       setPosition({ x: 0, y: 0 });
     } else {
-      // Calculate offsets to center/align for diagrams
-      const xOffset = (container.width - unscaledWidth * newZoom) / 2;
-      const yOffset = (container.height - unscaledHeight * newZoom) / 2;
-      setPosition({ x: xOffset, y: yOffset });
+      // For diagrams, since we use flex centering, position {0,0} is the center
+      setPosition({ x: 0, y: 0 });
     }
   };
 
@@ -321,15 +319,16 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           style={{ 
             height: isDocMode ? (contentHeight * zoom + 128) : '100%',
             width: isDocMode ? Math.max(containerWidth, contentWidth * zoom + 128) : '100%',
-            transform: isDocMode ? 'none' : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
             minWidth: isDocMode ? '100%' : 'auto'
           }}
         >
           <div 
             className="pointer-events-auto"
             style={{ 
-              transform: isDocMode ? `scale(${zoom})` : 'none',
-              transformOrigin: 'top left',
+              transform: isDocMode 
+                ? `scale(${zoom})` 
+                : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+              transformOrigin: isDocMode ? 'top left' : 'center',
               width: isDocMode ? contentWidth : 'auto',
               position: isDocMode ? 'absolute' : 'relative',
               top: isDocMode ? 64 : 0,
