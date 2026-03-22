@@ -73,9 +73,34 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ '': true });
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const codeAreaRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevArtifactIdRef = useRef<string | null>(null);
 
   const isWorkspaceMode = artifact?.id === 'workspace-explorer';
+
+  const currentFile = artifact?.type === 'project' && selectedFileId 
+    ? artifact.files?.find(f => f.id === selectedFileId) 
+    : null;
+
+  const pContent = currentFile ? currentFile.content : (isWorkspaceMode ? editContent : artifact?.content || '');
+  
+  const getPreviewType = () => {
+    if (currentFile) return currentFile.type;
+    if (isWorkspaceMode && selectedFilePath) {
+      const ext = selectedFilePath.split('.').pop()?.toLowerCase();
+      if (ext === 'html') return 'html';
+      if (ext === 'md' || ext === 'markdown') return 'markdown';
+      if (ext === 'mmd' || ext === 'mermaid') return 'mermaid';
+      if (ext === 'svg') return 'svg';
+      return 'text';
+    }
+    if (!artifact) return 'text';
+    const type = artifact.type;
+    if (type === 'markdown') return 'markdown';
+    return type;
+  };
+  const pType = getPreviewType();
 
   // Expand parent folders when selected file changes
   useEffect(() => {
@@ -185,19 +210,60 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   }, []);
 
   // Switch to code view when streaming starts and an artifact/patch is detected
+  const lastStreamingIdRef = useRef<string | null>(null);
   React.useEffect(() => {
-    const hasArtifactOrPatch = artifact?.id === 'streaming' || 
-      (isStreaming && (streamingText.includes('<artifact') || streamingText.includes('<patch')));
+    const isStreamingNew = isStreaming && streamingText.length > 0;
+    const hasArtifactOrPatch = isStreamingNew && (streamingText.includes('<artifact') || streamingText.includes('<patch'));
     
-    if (hasArtifactOrPatch) {
+    // Only auto-switch to code if we just started streaming a new artifact/patch
+    if (hasArtifactOrPatch && lastStreamingIdRef.current !== artifact?.id) {
       if (view !== 'code') setView('code');
-    } else if (artifact && artifact.id === 'workspace-explorer') {
-      if (view !== 'code') setView('code');
-    } else if (artifact && !isStreaming && artifact.id !== 'streaming') {
-      // Switch back to preview when streaming ends and we have a real artifact
-      if (view !== 'preview') setView('preview');
+      lastStreamingIdRef.current = artifact?.id || 'streaming';
+    } 
+    
+    // Auto-switch to code for workspace explorer
+    if (artifact && artifact.id === 'workspace-explorer' && view !== 'code') {
+      setView('code');
     }
-  }, [isStreaming, streamingText, artifact?.id, view]);
+
+    // Reset the streaming ref when streaming ends
+    if (!isStreaming) {
+      lastStreamingIdRef.current = null;
+    }
+  }, [isStreaming, streamingText, artifact?.id]);
+
+  // Scroll to patch location during streaming
+  const lastPatchCountRef = useRef(0);
+  React.useEffect(() => {
+    if (!isStreaming || !streamingText.includes('<patch')) return;
+    
+    const { parsePartialPatches } = require('../engines/patchEngine');
+    const patches = parsePartialPatches(streamingText);
+    
+    if (patches.length > lastPatchCountRef.current) {
+      const latestPatch = patches[patches.length - 1];
+      if (latestPatch.old && (textareaRef.current || codeAreaRef.current)) {
+        const container = textareaRef.current || codeAreaRef.current;
+        const content = isEditing ? editContent : pContent;
+        const index = content.indexOf(latestPatch.old);
+        
+        if (index !== -1) {
+          // Approximate line height for scrolling
+          const linesBefore = content.substring(0, index).split('\n').length;
+          const lineHeight = 20; // Approximate
+          container?.scrollTo({
+            top: (linesBefore - 5) * lineHeight,
+            behavior: 'smooth'
+          });
+        }
+      }
+      lastPatchCountRef.current = patches.length;
+    }
+
+    if (!isStreaming) {
+      lastPatchCountRef.current = 0;
+    }
+  }, [isStreaming, streamingText, isEditing, editContent, pContent]);
 
   const handleFileSelect = async (path: string) => {
     onFileSelect(path);
@@ -427,27 +493,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       link.click();
     }
   };
-
-  const currentFile = artifact.type === 'project' && selectedFileId 
-    ? artifact.files?.find(f => f.id === selectedFileId) 
-    : null;
-
-  const pContent = currentFile ? currentFile.content : (isWorkspaceMode ? editContent : artifact.content);
-  const getPreviewType = () => {
-    if (currentFile) return currentFile.type;
-    if (isWorkspaceMode && selectedFilePath) {
-      const ext = selectedFilePath.split('.').pop()?.toLowerCase();
-      if (ext === 'html') return 'html';
-      if (ext === 'md' || ext === 'markdown') return 'markdown';
-      if (ext === 'mmd' || ext === 'mermaid') return 'mermaid';
-      if (ext === 'svg') return 'svg';
-      return 'text';
-    }
-    const type = artifact.type;
-    if (type === 'markdown') return 'markdown';
-    return type;
-  };
-  const pType = getPreviewType();
 
   return (
     <div ref={panelRef} className={cn("flex-1 flex flex-col h-full bg-white overflow-hidden", isFullScreen && "fixed inset-0 z-[100]")}>
@@ -682,7 +727,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 </div>
               ) : (
                 <ZoomableContainer className="w-full h-full">
-                  {pType === 'mermaid' && <MermaidPreview content={pContent} />}
+                  {pType === 'mermaid' && <MermaidPreview content={pContent} className="natural-size" />}
                   {pType === 'svg' && (
                     <div 
                       className="svg-preview-container bg-white shadow-sm rounded-lg overflow-hidden"
@@ -699,7 +744,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               )}
             </div>
           ) : (
-            <div className="w-full h-full bg-white overflow-auto">
+            <div ref={codeAreaRef} className="w-full h-full bg-white overflow-auto">
               {isWorkspaceMode && !selectedFilePath ? (
                 <div className="flex flex-col items-center justify-center h-full text-zinc-400 p-8 text-center">
                   <FolderSync size={48} className="mb-4 opacity-20" />
@@ -707,6 +752,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 </div>
               ) : isEditing ? (
                 <textarea
+                  ref={textareaRef}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                   className="w-full h-full p-6 font-mono text-sm text-zinc-800 leading-relaxed resize-none outline-none bg-zinc-50/50"

@@ -721,7 +721,14 @@ CRITICAL RULES FOR CONTENT:
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-zinc-800">Applying Patches...</div>
-                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Updating code</div>
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold flex items-center gap-2">
+                    Updating code
+                    {parsePartialPatches(streamingText).length > 0 && (
+                      <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full text-[8px]">
+                        {parsePartialPatches(streamingText).length} detected
+                      </span>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}
