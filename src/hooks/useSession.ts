@@ -21,7 +21,8 @@ export function useSessions() {
       artifacts: [],
       currentArtifactId: null,
       lastUpdated: Date.now(),
-      activeSkills: []
+      activeSkills: [],
+      selectedFilePath: null
     };
     setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);

@@ -72,6 +72,7 @@ export interface Session {
   activeSkills?: string[]; // IDs of enabled skills for this session
   activeMcpIds?: string[]; // IDs of enabled MCPs for this session
   autoSelectSkills?: boolean; // Whether AI should auto-select skills/MCPs
+  selectedFilePath?: string | null; // Currently selected file in the workspace
 }
 
 export interface Patch {

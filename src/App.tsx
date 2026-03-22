@@ -74,7 +74,6 @@ export default function App() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const [chatWidth, setChatWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
 
   const updateWorkspaceTree = async (handle: any) => {
     try {
@@ -96,7 +95,9 @@ export default function App() {
     await clearStoredDirectoryHandle();
     setWorkspaceHandle(null);
     setWorkspaceTree(null);
-    setSelectedFilePath(null);
+    if (currentSession) {
+      updateSession({ selectedFilePath: null });
+    }
   };
 
   // Initialize workspace
@@ -332,17 +333,24 @@ export default function App() {
     let sessionId = currentSession?.id;
     let initialMessages = currentSession?.messages || [];
     let initialArtifact = currentSession?.artifacts.find(a => a.id === currentSession.currentArtifactId) || null;
+    let isAutoSelect = currentSession?.autoSelectSkills;
+    let sessionActiveSkills = currentSession?.activeSkills || [];
+    let sessionActiveMcpIds = currentSession?.activeMcpIds || [];
+    let selectedFilePath = currentSession?.selectedFilePath;
     
     if (!sessionId) {
       const newSession = createSession();
       sessionId = newSession.id;
       initialMessages = [];
       initialArtifact = null;
+      isAutoSelect = false;
+      sessionActiveSkills = [];
+      sessionActiveMcpIds = [];
+      selectedFilePath = null;
     }
 
-    const isAutoSelect = currentSession?.autoSelectSkills;
-    const activeSkills = skills.filter(s => currentSession?.activeSkills?.includes(s.id));
-    const activeMCPs = mcpConfigs.filter(c => currentSession?.activeMcpIds?.includes(c.id));
+    const activeSkills = skills.filter(s => sessionActiveSkills.includes(s.id));
+    const activeMCPs = mcpConfigs.filter(c => sessionActiveMcpIds.includes(c.id));
 
     let skillsContext = '';
     let mcpContext = '';
@@ -360,6 +368,7 @@ CRITICAL RULES FOR CONTENT:
 4. The chat text should ONLY contain brief explanations, summaries, and conversational guidance.
 5. Do NOT mention skill or MCP calls in the visible chat text; use the tags instead.
 6. If you are generating a document, use <artifact type="markdown" title="Document Title">...</artifact>.
+7. In a new chat (no previous messages), assume you are starting from scratch unless the user provides context or attachments.
 `;
 
     if (isAutoSelect) {
@@ -676,8 +685,8 @@ CRITICAL RULES FOR CONTENT:
             workspaceTree={workspaceTree}
             onRefreshTree={() => updateWorkspaceTree(workspaceHandle)}
             onDisconnectWorkspace={handleDisconnectWorkspace}
-            selectedFilePath={selectedFilePath}
-            onFileSelect={setSelectedFilePath}
+            selectedFilePath={currentSession?.selectedFilePath || null}
+            onFileSelect={(path) => updateSession({ selectedFilePath: path })}
             sessionId={currentSession?.id}
             streamingText={streamingText}
           />
