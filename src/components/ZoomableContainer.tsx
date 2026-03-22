@@ -31,10 +31,10 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const isDocMode = fitMode === 'width';
 
   // Use refs to avoid re-attaching wheel listener too often
-  const stateRef = useRef({ zoom, position });
+  const stateRef = useRef({ zoom, position, containerWidth, contentWidth });
   useEffect(() => {
-    stateRef.current = { zoom, position };
-  }, [zoom, position]);
+    stateRef.current = { zoom, position, containerWidth, contentWidth };
+  }, [zoom, position, containerWidth, contentWidth]);
 
   // Track interaction and content versions
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -84,10 +84,12 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           const scrollX = containerRef.current.scrollLeft;
           const scrollY = containerRef.current.scrollTop;
           
+          const { containerWidth: cW, contentWidth: conW } = stateRef.current;
+          
           // Current left offset logic
-          const getLeft = (z: number) => Math.max(64, (containerWidth - contentWidth * z) / 2);
-          const currentLeft = getLeft(currentZoom);
-          const nextLeft = getLeft(newZoom);
+          const getLeft = (z: number, cw: number, conw: number) => Math.max(64, (cw - conw * z) / 2);
+          const currentLeft = getLeft(currentZoom, cW, conW);
+          const nextLeft = getLeft(newZoom, cW, conW);
 
           const relX = (scrollX + mouseX - currentLeft) / currentZoom;
           const relY = (scrollY + mouseY - 64) / currentZoom;
@@ -320,12 +322,11 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
             height: isDocMode ? (contentHeight * zoom + 128) : '100%',
             width: isDocMode ? Math.max(containerWidth, contentWidth * zoom + 128) : '100%',
             transform: isDocMode ? 'none' : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+            minWidth: isDocMode ? '100%' : 'auto'
           }}
         >
           <div 
-            className={cn(
-              isDocMode ? "relative pointer-events-auto" : "pointer-events-auto"
-            )}
+            className="pointer-events-auto"
             style={{ 
               transform: isDocMode ? `scale(${zoom})` : 'none',
               transformOrigin: 'top left',
@@ -335,7 +336,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
               left: isDocMode ? Math.max(64, (containerWidth - contentWidth * zoom) / 2) : 0
             }}
           >
-            <div ref={contentRef} className={cn(isDocMode && "w-full flex justify-center")}>
+            <div ref={contentRef} className={cn(isDocMode ? "w-fit" : "w-full flex justify-center")}>
               {children}
             </div>
           </div>
