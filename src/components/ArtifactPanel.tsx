@@ -744,7 +744,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 <ZoomableContainer 
                   className="w-full h-full" 
                   fitMode="width"
-                  contentId={`${artifact?.id}-${artifact?.version}`}
+                  contentId={artifact?.id}
                   isStreaming={isStreaming}
                 >
                   <div className="w-[800px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-8 overflow-hidden">
@@ -761,7 +761,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               ) : (
                 <ZoomableContainer 
                   className="w-full h-full"
-                  contentId={`${artifact?.id}-${artifact?.version}`}
+                  contentId={artifact?.id}
                   isStreaming={isStreaming}
                 >
                   {pType === 'mermaid' && <MermaidPreview content={pContent} className="natural-size" />}

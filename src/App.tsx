@@ -24,6 +24,7 @@ import {
 } from './engines/patchEngine';
 import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig } from './types';
 import { generateId } from './utils';
+import { MCPService } from './services/mcpService';
 import { motion, AnimatePresence } from 'motion/react';
 import { Layers, Diff, FolderOpen, AlertCircle, Loader2 } from 'lucide-react';
 import { 
@@ -359,7 +360,8 @@ export default function App() {
 IMPORTANT: When you use a skill or an MCP server, you MUST report it at the beginning of your response using these tags.
 Each tag MUST include a "description" attribute explaining what you are doing in a human-readable way.
 - For skills: <skill_call name="Skill Name" description="Human-readable description of what this skill adds to the context" />
-- For MCP: <mcp_call name="MCP Name" description="Human-readable description of why you are calling this tool"><request>JSON_REQUEST</request><response>JSON_RESPONSE</response></mcp_call>
+- For MCP: <mcp_call name="MCP Name" description="Human-readable description of why you are calling this tool"><request>JSON_REQUEST</request></mcp_call>
+Wait for the system to provide the <response> tag before continuing your task if the tool output is required.
 
 CRITICAL RULES FOR CONTENT:
 1. DO NOT write any code, scripts, structured documents, architecture plans, or long specifications directly in the chat text.
@@ -400,125 +402,153 @@ CRITICAL RULES FOR CONTENT:
     setStreamingText('');
     setStreamingArtifact(null);
 
-    const messages = [...initialMessages, userMessage];
+    let currentMessages = [...initialMessages, userMessage];
+    let currentPrompt = fullPrompt;
+    let turnCount = 0;
+    const maxTurns = 3;
 
     try {
-      let fullResponse = '';
-      const stream = streamResponse(
-        provider,
-        messages,
-        ollamaConfig,
-        initialArtifact,
-        (controller) => { abortControllerRef.current = controller; },
-        fullPrompt
-      );
+      while (turnCount < maxTurns) {
+        let fullResponse = '';
+        const stream = streamResponse(
+          provider,
+          currentMessages,
+          ollamaConfig,
+          initialArtifact,
+          (controller) => { abortControllerRef.current = controller; },
+          currentPrompt
+        );
 
-      for await (const chunk of stream) {
-        if (chunk.text) {
-          fullResponse = chunk.fullText;
-          setStreamingText(fullResponse);
-          
-          // Use partial parsers for streaming feedback
-          const partialArtifact = parsePartialArtifact(fullResponse);
-          if (partialArtifact) {
-            setStreamingArtifact(partialArtifact as any);
-          } else {
-            const partialPatches = parsePartialPatches(fullResponse);
-            if (partialPatches.length > 0) {
-              // If we are patching, we want to show the "Applying Patches" UI
-              // and potentially update the streaming artifact if we want to show the code being generated
-              // For now, we just rely on the UI overlays in App.tsx
+        for await (const chunk of stream) {
+          if (chunk.text) {
+            fullResponse = chunk.fullText;
+            setStreamingText(fullResponse);
+            
+            const partialArtifact = parsePartialArtifact(fullResponse);
+            if (partialArtifact) {
+              setStreamingArtifact(partialArtifact as any);
             }
           }
         }
-      }
 
-      const patches = parsePatches(fullResponse);
-      const thought = parseThought(fullResponse);
-      const invokedSkills = parseInvokedSkills(fullResponse);
-      const mcpCalls = parseMcpCalls(fullResponse);
+        const patches = parsePatches(fullResponse);
+        const thought = parseThought(fullResponse);
+        const invokedSkills = parseInvokedSkills(fullResponse);
+        const mcpCalls = parseMcpCalls(fullResponse);
 
-      const assistantMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        content: stripArtifactsAndPatches(fullResponse),
-        thought: thought || undefined,
-        timestamp: Date.now(),
-        patches: patches.length > 0 ? patches : undefined,
-        invokedSkills: invokedSkills.length > 0 ? invokedSkills : undefined,
-        mcpCalls: mcpCalls.length > 0 ? mcpCalls : undefined
-      };
-      addMessage(assistantMessage, sessionId);
+        // Execute MCP calls if any
+        const executedMcpCalls = [];
+        if (mcpCalls.length > 0) {
+          for (const call of mcpCalls) {
+            if (call.response) {
+              executedMcpCalls.push(call);
+              continue;
+            }
 
-      const updatedArtifactIds = new Set<string>();
-
-      // Handle patches for the current artifact
-      if (initialArtifact && patches.length > 0) {
-        const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, patches);
-        if (successCount > 0) {
-          const updatedArtifact: Artifact = {
-            ...initialArtifact,
-            id: generateId(),
-            content: patchedContent,
-            version: initialArtifact.version + 1,
-            timestamp: Date.now()
-          };
-          addArtifact(updatedArtifact, sessionId);
-          updatedArtifactIds.add(initialArtifact.id);
-        }
-      }
-
-      const newArtifacts = parseArtifacts(fullResponse);
-      newArtifacts.forEach(newArtifactData => {
-        // Find if this artifact already exists in the session (by ID or Title+Type)
-        const currentSessionObj = sessions.find(s => s.id === sessionId);
-        const existingArtifact = currentSessionObj?.artifacts.find(a => 
-          (newArtifactData.id && a.id === newArtifactData.id) || 
-          (!newArtifactData.id && a.title === newArtifactData.title && a.type === newArtifactData.type)
-        );
-
-        // If we already updated this artifact via patches, skip the full block to avoid double-versioning
-        if (existingArtifact && updatedArtifactIds.has(existingArtifact.id)) {
-          return;
-        }
-
-        let files: any[] | undefined;
-        if (newArtifactData.type === 'project') {
-          try {
-            files = JSON.parse(newArtifactData.content);
-            files = files.map(f => ({ ...f, id: generateId() }));
-          } catch (e) {
-            console.error('Failed to parse project artifact JSON', e);
+            const mcpConfig = mcpConfigs.find(c => c.name === call.name || c.id === call.name);
+            if (mcpConfig && mcpConfig.enabled) {
+              try {
+                const { tool, arguments: args } = call.request;
+                const result = await MCPService.callTool(mcpConfig, tool, args);
+                executedMcpCalls.push({ ...call, response: result });
+              } catch (error: any) {
+                executedMcpCalls.push({ ...call, response: { error: error.message } });
+              }
+            } else {
+              executedMcpCalls.push({ ...call, response: { error: `MCP Server "${call.name}" not found or disabled.` } });
+            }
           }
         }
 
-        if (existingArtifact) {
-          // Update existing artifact (new version)
-          const updatedArtifact: Artifact = {
-            ...existingArtifact,
-            id: generateId(),
-            content: newArtifactData.content,
-            files,
-            version: existingArtifact.version + 1,
-            timestamp: Date.now()
-          };
-          addArtifact(updatedArtifact, sessionId);
-        } else {
-          // Create new artifact
-          const newArtifact: Artifact = {
-            id: generateId(),
-            type: newArtifactData.type as any,
-            title: newArtifactData.title,
-            content: newArtifactData.content,
-            files,
-            version: 1,
-            timestamp: Date.now()
-          };
-          addArtifact(newArtifact, sessionId);
-        }
-      });
+        const assistantMessage: Message = {
+          id: generateId(),
+          role: 'assistant',
+          content: stripArtifactsAndPatches(fullResponse),
+          thought: thought || undefined,
+          timestamp: Date.now(),
+          patches: patches.length > 0 ? patches : undefined,
+          invokedSkills: invokedSkills.length > 0 ? invokedSkills : undefined,
+          mcpCalls: executedMcpCalls.length > 0 ? executedMcpCalls : undefined
+        };
 
-      if (messages.length === 1) {
+        addMessage(assistantMessage, sessionId);
+        currentMessages.push(assistantMessage);
+
+        // Handle patches for the current artifact within this turn
+        if (initialArtifact && patches.length > 0) {
+          const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, patches);
+          if (successCount > 0) {
+            const updatedArtifact: Artifact = {
+              ...initialArtifact,
+              id: generateId(),
+              content: patchedContent,
+              version: initialArtifact.version + 1,
+              timestamp: Date.now()
+            };
+            addArtifact(updatedArtifact, sessionId);
+            // Update initialArtifact for next potential turn's patches
+            initialArtifact = updatedArtifact;
+          }
+        }
+
+        // Handle new artifacts within this turn
+        const newArtifacts = parseArtifacts(fullResponse);
+        newArtifacts.forEach(newArtifactData => {
+          // Find if this artifact already exists in the session (by ID or Title+Type)
+          const currentSessionObj = sessions.find(s => s.id === sessionId);
+          const existingArtifact = currentSessionObj?.artifacts.find(a => 
+            (newArtifactData.id && a.id === newArtifactData.id) || 
+            (!newArtifactData.id && a.title === newArtifactData.title && a.type === newArtifactData.type)
+          );
+
+          let files: any[] | undefined;
+          if (newArtifactData.type === 'project') {
+            try {
+              files = JSON.parse(newArtifactData.content);
+              files = files.map(f => ({ ...f, id: generateId() }));
+            } catch (e) {
+              console.error('Failed to parse project artifact JSON', e);
+            }
+          }
+
+          if (existingArtifact) {
+            // Update existing artifact (new version)
+            const updatedArtifact: Artifact = {
+              ...existingArtifact,
+              id: generateId(),
+              content: newArtifactData.content,
+              files,
+              version: existingArtifact.version + 1,
+              timestamp: Date.now()
+            };
+            addArtifact(updatedArtifact, sessionId);
+          } else {
+            // Create new artifact
+            const newArtifact: Artifact = {
+              id: generateId(),
+              type: newArtifactData.type as any,
+              title: newArtifactData.title,
+              content: newArtifactData.content,
+              files,
+              version: 1,
+              timestamp: Date.now()
+            };
+            addArtifact(newArtifact, sessionId);
+          }
+        });
+
+        const needsNextTurn = mcpCalls.some(c => !c.response);
+        if (needsNextTurn) {
+          currentPrompt = `MCP CALL RESULTS:\n${executedMcpCalls.map(c => `<mcp_call name="${c.name}"><request>${JSON.stringify(c.request)}</request><response>${JSON.stringify(c.response)}</response></mcp_call>`).join('\n')}\n\nPlease continue based on these results.`;
+          turnCount++;
+          setStreamingText('');
+          setStreamingArtifact(null);
+        } else {
+          break;
+        }
+      }
+
+      if (initialMessages.length === 0) {
         updateSession({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') }, sessionId);
       }
 

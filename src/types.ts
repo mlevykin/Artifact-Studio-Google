@@ -32,6 +32,25 @@ export interface MCPConfig {
   name: string;
   url: string;
   enabled: boolean;
+  authType?: 'none' | 'apiKey' | 'oauth2';
+  apiKey?: string;
+  oauthConfig?: {
+    clientId: string;
+    clientSecret: string;
+    authUrl: string;
+    tokenUrl: string;
+    scope: string;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: number;
+  };
+  status?: 'connected' | 'error' | 'disconnected';
+  error?: string;
+  tools?: {
+    name: string;
+    description?: string;
+    inputSchema?: any;
+  }[];
 }
 
 export interface Attachment {

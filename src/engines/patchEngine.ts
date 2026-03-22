@@ -233,27 +233,62 @@ export function parseInvokedSkills(text: string): { name: string; description?: 
 /**
  * Parses <mcp_call> blocks from LLM response
  */
-export function parseMcpCalls(text: string): { name: string; description?: string; request: any; response: any }[] {
-  const calls: { name: string; description?: string; request: any; response: any }[] = [];
-  const mcpRegex = /<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>\s*<request>([\s\S]*?)<\/request>\s*<response>([\s\S]*?)<\/response>\s*<\/mcp_call>/g;
+export function parseMcpCalls(text: string): { name: string; description?: string; request: any; response?: any }[] {
+  const calls: { name: string; description?: string; request: any; response?: any }[] = [];
+  // Match both complete calls with response and calls with just request
+  const mcpRegex = /<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>\s*<request>([\s\S]*?)<\/request>(?:\s*<response>([\s\S]*?)<\/response>)?\s*<\/mcp_call>/g;
   
   let match;
   while ((match = mcpRegex.exec(text)) !== null) {
+    const name = match[1];
+    const description = match[2];
+    const requestRaw = match[3].trim();
+    const responseRaw = match[4] ? match[4].trim() : undefined;
+    
+    let request = requestRaw;
+    let response = responseRaw;
+
     try {
-      calls.push({
-        name: match[1],
-        description: match[2],
-        request: JSON.parse(match[3].trim()),
-        response: JSON.parse(match[4].trim())
-      });
+      request = JSON.parse(requestRaw);
     } catch (e) {
-      console.error('Failed to parse MCP call JSON', e);
-      // Fallback to raw text if JSON parsing fails
+      // Fallback to raw text
+    }
+
+    if (responseRaw) {
+      try {
+        response = JSON.parse(responseRaw);
+      } catch (e) {
+        // Fallback to raw text
+      }
+    }
+
+    calls.push({ name, description, request, response });
+  }
+  
+  return calls;
+}
+
+/**
+ * Parses <mcp_call> blocks from LLM response, including partial ones for streaming
+ */
+export function parsePartialMcpCalls(text: string): { name: string; description?: string; request: string; isComplete: boolean }[] {
+  const calls: { name: string; description?: string; request: string; isComplete: boolean }[] = [];
+  const mcpRegex = /<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)/g;
+  
+  let match;
+  while ((match = mcpRegex.exec(text)) !== null) {
+    const name = match[1];
+    const description = match[2];
+    const content = match[3];
+    
+    const requestMatch = content.match(/<request>([\s\S]*?)(?:<\/request>|$)/);
+    
+    if (requestMatch) {
       calls.push({
-        name: match[1],
-        description: match[2],
-        request: match[3].trim(),
-        response: match[4].trim()
+        name,
+        description,
+        request: requestMatch[1].trim(),
+        isComplete: match[0].endsWith('</mcp_call>')
       });
     }
   }
