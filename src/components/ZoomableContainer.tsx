@@ -26,7 +26,19 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     stateRef.current = { zoom, position };
   }, [zoom, position]);
 
+  // Track interaction and content versions
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const lastChildrenId = useRef<string | number | null>(null);
+  const initialFitDone = useRef(false);
+
+  // Reset initial fit state when children change (new version)
+  useEffect(() => {
+    initialFitDone.current = false;
+    setHasInteracted(false);
+  }, [children]);
+
   const handleWheel = useCallback((e: WheelEvent) => {
+    setHasInteracted(true);
     // If fitMode is 'width', we want to allow normal scrolling unless Ctrl is pressed
     const isZoomAction = e.ctrlKey || e.metaKey || fitMode === 'both';
     
@@ -79,6 +91,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   }, [handleWheel]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    setHasInteracted(true);
     // Pan with middle button (1)
     if (e.button === 1) {
       setIsDragging(true);
@@ -127,6 +140,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   }, [isDragging]);
 
   const resetZoom = () => {
+    setHasInteracted(false);
     fitToScreen();
   };
 
@@ -179,6 +193,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     if (fitTimeoutRef.current) clearTimeout(fitTimeoutRef.current);
     fitTimeoutRef.current = setTimeout(() => {
       fitToScreen();
+      initialFitDone.current = true;
     }, 50);
   }, [fitToScreen]);
 
@@ -191,19 +206,17 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       for (const entry of entries) {
         if (entry.target === contentRef.current) {
           const { width, height } = entry.contentRect;
-          if (Math.abs(width - lastFitSize.current.width) > 2 || 
-              Math.abs(height - lastFitSize.current.height) > 2) {
-            lastFitSize.current = { width, height };
-            shouldFit = true;
-          }
-        } else if (entry.target === containerRef.current) {
-          const { width, height } = entry.contentRect;
-          if (Math.abs(width - lastContainerSize.current.width) > 2 || 
-              Math.abs(height - lastContainerSize.current.height) > 2) {
-            lastContainerSize.current = { width, height };
-            shouldFit = true;
+          // During streaming (initialFitDone is false), we always want to fit
+          // After initial fit, we only fit if user hasn't interacted
+          if (!initialFitDone.current || !hasInteracted) {
+            if (Math.abs(width - lastFitSize.current.width) > 2 || 
+                Math.abs(height - lastFitSize.current.height) > 2) {
+              lastFitSize.current = { width, height };
+              shouldFit = true;
+            }
           }
         }
+        // We REMOVED the containerRef check here to prevent zoom resets on window/frame resize
       }
 
       if (shouldFit) {
@@ -218,10 +231,17 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       observer.disconnect();
       if (fitTimeoutRef.current) clearTimeout(fitTimeoutRef.current);
     };
-  }, [debouncedFit]);
+  }, [debouncedFit, hasInteracted]);
 
-  const zoomIn = () => setZoom(prev => Math.min(prev * 1.2, 50));
-  const zoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.01));
+  const zoomIn = () => {
+    setHasInteracted(true);
+    setZoom(prev => Math.min(prev * 1.2, 50));
+  };
+  
+  const zoomOut = () => {
+    setHasInteracted(true);
+    setZoom(prev => Math.max(prev / 1.2, 0.01));
+  };
 
   return (
     <div 
@@ -277,7 +297,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         </button>
         <div className="w-px h-4 bg-zinc-200 mx-1" />
         <button 
-          onClick={fitToScreen}
+          onClick={resetZoom}
           className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-600 transition-colors"
           title="Fit to Screen"
         >
