@@ -279,43 +279,44 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   };
 
   return (
-    <div 
-      ref={containerRef}
-      className={cn(
-        "relative w-full h-full transition-colors duration-200",
-        isDocMode ? "overflow-auto" : "overflow-hidden bg-zinc-50",
-        isDragging && "select-none",
-        className
-      )}
-      onMouseDown={handleMouseDown}
-      style={{ cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto') }}
-    >
+    <div className={cn("relative w-full h-full overflow-hidden", className)}>
       <div 
+        ref={containerRef}
         className={cn(
-          "relative origin-top",
-          !isDocMode && "w-full h-full flex items-center justify-center pointer-events-none"
+          "w-full h-full transition-colors duration-200",
+          isDocMode ? "overflow-auto" : "overflow-hidden bg-zinc-50",
+          isDragging && "select-none"
         )}
-        style={{ 
-          height: isDocMode ? (contentHeight * zoom + 128) : '100%',
-          transform: isDocMode ? 'none' : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-        }}
+        onMouseDown={handleMouseDown}
+        style={{ cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto') }}
       >
         <div 
           className={cn(
-            "origin-top",
-            isDocMode ? "absolute top-8 left-1/2 pointer-events-auto" : "pointer-events-auto"
+            "relative origin-top",
+            !isDocMode && "w-full h-full flex items-center justify-center pointer-events-none"
           )}
           style={{ 
-            transform: isDocMode ? `translateX(-50%) scale(${zoom})` : 'none',
+            height: isDocMode ? (contentHeight * zoom + 128) : '100%',
+            transform: isDocMode ? 'none' : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
           }}
         >
-          <div ref={contentRef} className={cn(isDocMode && "w-full flex justify-center")}>
-            {children}
+          <div 
+            className={cn(
+              "origin-top",
+              isDocMode ? "absolute top-8 left-1/2 pointer-events-auto" : "pointer-events-auto"
+            )}
+            style={{ 
+              transform: isDocMode ? `translateX(-50%) scale(${zoom})` : 'none',
+            }}
+          >
+            <div ref={contentRef} className={cn(isDocMode && "w-full flex justify-center")}>
+              {children}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Controls */}
+      {/* Controls - Now outside the scrolling container but inside the relative wrapper */}
       <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-white/80 backdrop-blur border border-zinc-200 p-1 rounded-xl shadow-lg z-20">
         <button 
           onClick={() => setPanMode(!panMode)}
@@ -355,7 +356,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         </button>
       </div>
 
-      <div className="absolute bottom-4 left-4 text-[9px] text-zinc-400 font-medium bg-white/50 backdrop-blur px-2 py-1 rounded-md pointer-events-none">
+      <div className="absolute bottom-4 left-4 text-[9px] text-zinc-400 font-medium bg-white/50 backdrop-blur px-2 py-1 rounded-md pointer-events-none z-20">
         {panMode ? 'Left Click to Pan' : (
           fitMode === 'width' 
             ? 'Scroll to Move • Ctrl + Scroll to Zoom • Middle Click to Pan' 
