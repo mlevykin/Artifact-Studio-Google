@@ -21,6 +21,7 @@ import {
 import { Message, Attachment, Skill, MCPConfig } from '../types';
 import { cn, generateId } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { MermaidPreview } from './MermaidPreview';
 import { 
   stripArtifactsAndPatches, 
   parseThought, 
@@ -361,7 +362,34 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 "prose prose-sm max-w-none break-words",
                 m.role === 'user' ? "text-white prose-invert" : "text-zinc-800"
               )}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({ node, inline, className, children, ...props }: any) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      const isMermaid = match && match[1] === 'mermaid';
+                      
+                      if (!inline && isMermaid) {
+                        return (
+                          <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                            <MermaidPreview 
+                              content={String(children).replace(/\n$/, '')} 
+                              className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                  }}
+                >
+                  {m.content}
+                </ReactMarkdown>
               </div>
               
               {m.patches && m.patches.length > 0 && (
@@ -495,7 +523,32 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               </div>
 
               <div className="prose prose-sm max-w-none break-words text-zinc-800 mt-3">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({ node, inline, className, children, ...props }: any) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      const isMermaid = match && match[1] === 'mermaid';
+                      
+                      if (!inline && isMermaid) {
+                        return (
+                          <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                            <MermaidPreview 
+                              content={String(children).replace(/\n$/, '')} 
+                              className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                  }}
+                >
                   {stripArtifactsAndPatches(streamingText)}
                 </ReactMarkdown>
               </div>

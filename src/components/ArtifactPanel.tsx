@@ -649,7 +649,34 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 <div className="w-full h-full overflow-auto bg-white p-8 md:p-12 lg:p-16">
                   <div className="max-w-3xl mx-auto">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{pContent}</ReactMarkdown>
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ node, inline, className, children, ...props }: any) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            const isMermaid = match && match[1] === 'mermaid';
+                            
+                            if (!inline && isMermaid) {
+                              return (
+                                <div className="my-6 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                                  <MermaidPreview 
+                                    content={String(children).replace(/\n$/, '')} 
+                                    className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
+                                  />
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+                        }}
+                      >
+                        {pContent}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 </div>
