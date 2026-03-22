@@ -20,6 +20,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [contentHeight, setContentHeight] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [panMode, setPanMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -243,6 +245,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         if (entry.target === contentRef.current) {
           const { width, height } = entry.contentRect;
           setContentHeight(height);
+          setContentWidth(width);
 
           if (isStreaming || !initialFitDone.current) {
             if (Math.abs(width - lastFitSize.current.width) > 2 || 
@@ -251,6 +254,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
               shouldFit = true;
             }
           }
+        } else if (entry.target === containerRef.current) {
+          setContainerWidth(entry.contentRect.width);
         }
       }
 
@@ -297,16 +302,20 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           )}
           style={{ 
             height: isDocMode ? (contentHeight * zoom + 128) : '100%',
+            width: isDocMode ? Math.max(containerWidth, contentWidth * zoom + 128) : '100%',
             transform: isDocMode ? 'none' : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+            display: isDocMode ? 'flex' : 'block',
+            justifyContent: isDocMode ? 'center' : 'initial'
           }}
         >
           <div 
             className={cn(
               "origin-top",
-              isDocMode ? "absolute top-8 left-1/2 pointer-events-auto" : "pointer-events-auto"
+              isDocMode ? "relative mt-8 pointer-events-auto" : "pointer-events-auto"
             )}
             style={{ 
-              transform: isDocMode ? `translateX(-50%) scale(${zoom})` : 'none',
+              transform: isDocMode ? `scale(${zoom})` : 'none',
+              width: isDocMode ? contentWidth : 'auto'
             }}
           >
             <div ref={contentRef} className={cn(isDocMode && "w-full flex justify-center")}>
