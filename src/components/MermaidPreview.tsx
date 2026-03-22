@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import mermaid from 'mermaid';
 import { cn } from '../utils';
 
@@ -8,8 +8,12 @@ interface MermaidPreviewProps {
   className?: string;
 }
 
+// Global cache to prevent flickering on remounts/resizes
+const mermaidRenderCache = new Map<string, string>();
+
 export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme = 'default', className }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isInitialRender = useRef(true);
 
   useEffect(() => {
     mermaid.initialize({
@@ -20,35 +24,51 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
     });
   }, [theme]);
 
+  useLayoutEffect(() => {
+    if (containerRef.current && content) {
+      const processedContent = content.trim().replace(/^```mermaid\n?/, '').replace(/\n?```$/, '');
+      const cacheKey = `${theme}-${processedContent}`;
+      if (mermaidRenderCache.has(cacheKey)) {
+        containerRef.current.innerHTML = mermaidRenderCache.get(cacheKey)!;
+      }
+    }
+  }, [content, theme]);
+
   useEffect(() => {
     const renderDiagram = async () => {
       if (containerRef.current && content) {
-        // Basic check for valid mermaid content
-        const isPotentiallyValid = /^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|quadrantChart|xychart|mindmap|timeline|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|packetBeta|kanban|architecture|requirementDiagram)/i.test(content.trim().replace(/^```mermaid\n?/, ''));
+        let processedContent = content.trim();
+        
+        // Strip markdown code block wrappers if present
+        if (processedContent.startsWith('```')) {
+          const lines = processedContent.split('\n');
+          if (lines[0].startsWith('```')) {
+            lines.shift();
+          }
+          if (lines.length > 0 && lines[lines.length - 1].trim() === '```') {
+            lines.pop();
+          }
+          processedContent = lines.join('\n').trim();
+        }
 
-        if (!isPotentiallyValid && content.length < 20) {
-          if (containerRef.current) {
+        const cacheKey = `${theme}-${processedContent}`;
+        
+        // If we have it in cache, we already injected it in useLayoutEffect
+        if (mermaidRenderCache.has(cacheKey)) {
+          return;
+        }
+
+        // Basic check for valid mermaid content
+        const isPotentiallyValid = /^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|quadrantChart|xychart|mindmap|timeline|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|packetBeta|kanban|architecture|requirementDiagram)/i.test(processedContent);
+
+        if (!isPotentiallyValid && processedContent.length < 20) {
+          if (containerRef.current && containerRef.current.innerHTML === '') {
             containerRef.current.innerHTML = '<div class="flex items-center justify-center p-8 text-zinc-400 text-xs animate-pulse">Initializing diagram...</div>';
           }
           return;
         }
 
         try {
-          // Pre-process content to fix common syntax errors
-          let processedContent = content.trim();
-          
-          // Strip markdown code block wrappers if present
-          if (processedContent.startsWith('```')) {
-            const lines = processedContent.split('\n');
-            if (lines[0].startsWith('```')) {
-              lines.shift();
-            }
-            if (lines.length > 0 && lines[lines.length - 1].trim() === '```') {
-              lines.pop();
-            }
-            processedContent = lines.join('\n').trim();
-          }
-
           // Wrap unquoted labels containing parentheses in double quotes
           processedContent = processedContent.replace(/\[([^"\]]*\([^"\]]*\)[^"\]]*)\]/g, '["$1"]');
           
@@ -56,7 +76,6 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
           try {
             await mermaid.parse(processedContent);
           } catch (parseError) {
-            // If it's short or doesn't have a closing tag/structure, it's likely just streaming
             if (content.length < 100 || !content.includes('\n')) {
                if (containerRef.current && containerRef.current.innerHTML === '') {
                  containerRef.current.innerHTML = '<div class="flex items-center justify-center p-8 text-zinc-400 text-xs">Rendering diagram...</div>';
@@ -70,11 +89,11 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
           const { svg } = await mermaid.render(id, processedContent);
           
           if (containerRef.current) {
-            // Remove fixed max-width and height from SVG to allow it to be scaled naturally
             const responsiveSvg = svg
               .replace(/max-width: [^;]+;/, '')
               .replace(/style="[^"]*max-width:[^"]*"/, '');
             
+            mermaidRenderCache.set(cacheKey, responsiveSvg);
             containerRef.current.innerHTML = responsiveSvg;
             
             const svgElement = containerRef.current.querySelector('svg');
@@ -83,13 +102,8 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
             }
           }
         } catch (error: any) {
-          // Only show error if it's not a common streaming-related syntax error or if content is long enough
           const isStreamingError = error?.message?.includes('Parse error') || error?.message?.includes('Syntax error');
-          
-          if (isStreamingError && content.length < 200) {
-            // Keep previous content or show loading if it's likely just incomplete
-            return;
-          }
+          if (isStreamingError && content.length < 200) return;
 
           console.error('Mermaid render error:', error);
           if (containerRef.current) {
@@ -105,7 +119,8 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
     };
 
     renderDiagram();
-  }, [content]);
+    isInitialRender.current = false;
+  }, [content, theme]);
 
   return (
     <div 

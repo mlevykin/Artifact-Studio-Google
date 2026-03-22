@@ -176,18 +176,20 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     let newZoom = fitMode === 'width' ? scaleX : Math.min(scaleX, scaleY);
     
     // Limit extreme zoom-in for very small diagrams to keep them readable but not pixelated
-    // but still allow significant zoom
     newZoom = Math.min(newZoom, 10); 
 
     setZoom(newZoom);
     
-    // If fitting to width, align to top
+    // Calculate offsets to center/align
+    const xOffset = (container.width - unscaledWidth * newZoom) / 2;
+    
     if (fitMode === 'width') {
-      const newScaledHeight = unscaledHeight * newZoom;
-      const yOffset = newScaledHeight > availableHeight ? (newScaledHeight - availableHeight) / 2 : 0;
-      setPosition({ x: 0, y: yOffset });
+      // For width mode (documents), align to top with padding
+      setPosition({ x: xOffset, y: padding / 2 });
     } else {
-      setPosition({ x: 0, y: 0 });
+      // For both mode (diagrams), center both ways
+      const yOffset = (container.height - unscaledHeight * newZoom) / 2;
+      setPosition({ x: xOffset, y: yOffset });
     }
   };
 

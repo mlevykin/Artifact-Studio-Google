@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Code, 
   Eye, 
@@ -106,6 +106,30 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     return type;
   };
   const pType = getPreviewType();
+
+  const markdownComponents = useMemo(() => ({
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      const isMermaid = match && match[1] === 'mermaid';
+      
+      if (!inline && isMermaid) {
+        return (
+          <div className="my-6 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+            <MermaidPreview 
+              content={String(children).replace(/\n$/, '')} 
+              className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
+            />
+          </div>
+        );
+      }
+      
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    }
+  }), []);
 
   // Expand parent folders when selected file changes
   useEffect(() => {
@@ -716,33 +740,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   contentId={`${artifact?.id}-${artifact?.version}`}
                   isStreaming={isStreaming}
                 >
-                  <div className="w-full max-w-4xl bg-white p-12 md:p-16 shadow-lg rounded-xl">
+                  <div className="w-[800px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-8">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
-                        components={{
-                          code({ node, inline, className, children, ...props }: any) {
-                            const match = /language-(\w+)/.exec(className || '');
-                            const isMermaid = match && match[1] === 'mermaid';
-                            
-                            if (!inline && isMermaid) {
-                              return (
-                                <div className="my-6 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-                                  <MermaidPreview 
-                                    content={String(children).replace(/\n$/, '')} 
-                                    className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
-                                  />
-                                </div>
-                              );
-                            }
-                            
-                            return (
-                              <code className={className} {...props}>
-                                {children}
-                              </code>
-                            );
-                          }
-                        }}
+                        components={markdownComponents}
                       >
                         {pContent}
                       </ReactMarkdown>
