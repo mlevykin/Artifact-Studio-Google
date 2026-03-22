@@ -27,34 +27,48 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   }, [zoom, position]);
 
   const handleWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault();
+    // If fitMode is 'width', we want to allow normal scrolling unless Ctrl is pressed
+    const isZoomAction = e.ctrlKey || e.metaKey || fitMode === 'both';
     
-    // Standardize delta
-    const delta = -e.deltaY;
-    const factor = Math.pow(1.1, delta / 100);
-    const { zoom: currentZoom, position: currentPos } = stateRef.current;
-    
-    // Expanded zoom range
-    const newZoom = Math.min(Math.max(currentZoom * factor, 0.001), 100);
-    
-    if (newZoom !== currentZoom && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+    if (isZoomAction) {
+      e.preventDefault();
+      
+      // Standardize delta
+      const delta = -e.deltaY;
+      const factor = Math.pow(1.1, delta / 100);
+      const { zoom: currentZoom, position: currentPos } = stateRef.current;
+      
+      // Expanded zoom range
+      const newZoom = Math.min(Math.max(currentZoom * factor, 0.001), 100);
+      
+      if (newZoom !== currentZoom && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
 
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
 
-      const relX = (mouseX - centerX - currentPos.x) / currentZoom;
-      const relY = (mouseY - centerY - currentPos.y) / currentZoom;
+        const relX = (mouseX - centerX - currentPos.x) / currentZoom;
+        const relY = (mouseY - centerY - currentPos.y) / currentZoom;
 
-      const newX = mouseX - centerX - relX * newZoom;
-      const newY = mouseY - centerY - relY * newZoom;
+        const newX = mouseX - centerX - relX * newZoom;
+        const newY = mouseY - centerY - relY * newZoom;
 
-      setZoom(newZoom);
-      setPosition({ x: newX, y: newY });
+        setZoom(newZoom);
+        setPosition({ x: newX, y: newY });
+      }
+    } else {
+      // Normal scrolling: update position based on wheel delta
+      // We only do this if we're in a mode that supports vertical scrolling
+      if (fitMode === 'width') {
+        setPosition(prev => ({
+          ...prev,
+          y: prev.y - e.deltaY
+        }));
+      }
     }
-  }, []);
+  }, [fitMode]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -250,7 +264,11 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       </div>
 
       <div className="absolute bottom-4 left-4 text-[9px] text-zinc-400 font-medium bg-white/50 backdrop-blur px-2 py-1 rounded-md pointer-events-none">
-        {panMode ? 'Left Click to Pan' : 'Middle Click to Pan • Scroll to Zoom'}
+        {panMode ? 'Left Click to Pan' : (
+          fitMode === 'width' 
+            ? 'Scroll to Move • Ctrl + Scroll to Zoom • Middle Click to Pan' 
+            : 'Scroll to Zoom • Middle Click to Pan'
+        )}
       </div>
     </div>
   );
