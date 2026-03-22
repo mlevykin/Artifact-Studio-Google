@@ -6,6 +6,9 @@
 }
 
 @layer base {
+  html, body {
+    @apply h-full overflow-hidden;
+  }
   body {
     @apply bg-zinc-50 text-zinc-900 antialiased;
   }

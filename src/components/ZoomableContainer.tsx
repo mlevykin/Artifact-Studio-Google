@@ -6,12 +6,16 @@ interface ZoomableContainerProps {
   children: React.ReactNode;
   className?: string;
   fitMode?: 'both' | 'width';
+  contentId?: string | number;
+  isStreaming?: boolean;
 }
 
 export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({ 
   children, 
   className,
-  fitMode = 'both'
+  fitMode = 'both',
+  contentId,
+  isStreaming = false
 }) => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -28,14 +32,17 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
 
   // Track interaction and content versions
   const [hasInteracted, setHasInteracted] = useState(false);
-  const lastChildrenId = useRef<string | number | null>(null);
   const initialFitDone = useRef(false);
+  const lastContentId = useRef<string | number | undefined>(undefined);
 
-  // Reset initial fit state when children change (new version)
+  // Reset initial fit state when contentId changes (new version)
   useEffect(() => {
-    initialFitDone.current = false;
-    setHasInteracted(false);
-  }, [children]);
+    if (contentId !== lastContentId.current) {
+      initialFitDone.current = false;
+      setHasInteracted(false);
+      lastContentId.current = contentId;
+    }
+  }, [contentId]);
 
   const handleWheel = useCallback((e: WheelEvent) => {
     setHasInteracted(true);
@@ -206,9 +213,11 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       for (const entry of entries) {
         if (entry.target === contentRef.current) {
           const { width, height } = entry.contentRect;
-          // During streaming (initialFitDone is false), we always want to fit
-          // After initial fit, we only fit if user hasn't interacted
-          if (!initialFitDone.current || !hasInteracted) {
+          // During streaming, we always want to fit to keep content visible
+          // Otherwise, only fit once initially. 
+          // After initial fit, we STOP fitting automatically even if user hasn't interacted,
+          // to prevent zoom resets on window/frame resize.
+          if (isStreaming || !initialFitDone.current) {
             if (Math.abs(width - lastFitSize.current.width) > 2 || 
                 Math.abs(height - lastFitSize.current.height) > 2) {
               lastFitSize.current = { width, height };
@@ -216,7 +225,6 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
             }
           }
         }
-        // We REMOVED the containerRef check here to prevent zoom resets on window/frame resize
       }
 
       if (shouldFit) {

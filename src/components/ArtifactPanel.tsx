@@ -710,7 +710,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   <HtmlPreview content={pContent} />
                 </div>
               ) : pType === 'markdown' ? (
-                <ZoomableContainer className="w-full h-full" fitMode="width">
+                <ZoomableContainer 
+                  className="w-full h-full" 
+                  fitMode="width"
+                  contentId={`${artifact?.id}-${artifact?.version}`}
+                  isStreaming={isStreaming}
+                >
                   <div className="w-full max-w-4xl bg-white p-12 md:p-16 shadow-lg rounded-xl">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
                       <ReactMarkdown 
@@ -745,7 +750,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   </div>
                 </ZoomableContainer>
               ) : (
-                <ZoomableContainer className="w-full h-full">
+                <ZoomableContainer 
+                  className="w-full h-full"
+                  contentId={`${artifact?.id}-${artifact?.version}`}
+                  isStreaming={isStreaming}
+                >
                   {pType === 'mermaid' && <MermaidPreview content={pContent} className="natural-size" />}
                   {pType === 'svg' && (
                     <div 
