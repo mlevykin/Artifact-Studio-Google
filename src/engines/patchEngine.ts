@@ -315,6 +315,41 @@ export function parsePartialMcpCalls(text: string): { name: string; description?
 }
 
 /**
+ * Truncates text after the first tool call (mcp or skill) to prevent hallucinations from being displayed.
+ */
+export function truncateAfterToolCall(text: string): string {
+  const mcpMatch = text.match(/<mcp_call[\s\S]*?<\/mcp_call>/);
+  const skillMatch = text.match(/<skill_call[\s\S]*?(?:\/>|<\/skill_call>)/);
+
+  const mcpIndex = mcpMatch ? mcpMatch.index! + mcpMatch[0].length : Infinity;
+  const skillIndex = skillMatch ? skillMatch.index! + skillMatch[0].length : Infinity;
+
+  const firstToolEnd = Math.min(mcpIndex, skillIndex);
+
+  if (firstToolEnd !== Infinity) {
+    return text.substring(0, firstToolEnd);
+  }
+
+  // If a tool call has started but not finished, we should also truncate after it starts
+  const mcpStart = text.indexOf('<mcp_call');
+  const skillStart = text.indexOf('<skill_call');
+  const firstToolStart = Math.min(
+    mcpStart === -1 ? Infinity : mcpStart,
+    skillStart === -1 ? Infinity : skillStart
+  );
+
+  if (firstToolStart !== Infinity) {
+    // We want to show the tool call tag itself so it can be parsed, 
+    // but nothing after it if it's not complete yet.
+    // However, if it's not complete, we can't easily find the "end" of the tag.
+    // For now, if it's incomplete, we just return the whole thing and let the parser handle it.
+    return text;
+  }
+
+  return text;
+}
+
+/**
  * Strips <artifact>, <patch>, <thought>, <skill_call>, and <mcp_call> blocks from the text for display in chat.
  * Handles partial blocks during streaming.
  */
@@ -335,8 +370,8 @@ export function stripArtifactsAndPatches(text: string): string {
     .filter(line => !line.toLowerCase().startsWith('thought ') && !line.toLowerCase().startsWith('thought:'))
     .join('\n');
 
-  // Strip skill calls
-  cleaned = cleaned.replace(/<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*\/>/g, '');
+  // Strip skill calls (handle both self-closing and paired tags)
+  cleaned = cleaned.replace(/<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>)/g, '');
 
   // Strip mcp calls (including partial)
   cleaned = cleaned.replace(/<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)/g, '');

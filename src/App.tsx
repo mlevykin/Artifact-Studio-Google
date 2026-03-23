@@ -20,7 +20,8 @@ import {
   parseInvokedSkills,
   parseMcpCalls,
   parsePartialArtifact,
-  parsePartialPatches
+  parsePartialPatches,
+  truncateAfterToolCall
 } from './engines/patchEngine';
 import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig } from './types';
 import { generateId } from './utils';
@@ -433,7 +434,8 @@ ${activeMCPs.map(c => {
         for await (const chunk of stream) {
           if (chunk.text) {
             fullResponse = chunk.fullText;
-            setStreamingText(fullResponse);
+            const displayResponse = truncateAfterToolCall(fullResponse);
+            setStreamingText(displayResponse);
             
             const partialArtifact = parsePartialArtifact(fullResponse);
             if (partialArtifact) {
@@ -485,7 +487,7 @@ ${activeMCPs.map(c => {
         const assistantMessage: Message = {
           id: generateId(),
           role: 'assistant',
-          content: stripArtifactsAndPatches(fullResponse),
+          content: stripArtifactsAndPatches(truncateAfterToolCall(fullResponse)),
           thought: thought || undefined,
           timestamp: Date.now(),
           patches: patches.length > 0 ? patches : undefined,
