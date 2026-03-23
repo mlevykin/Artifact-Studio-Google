@@ -481,12 +481,12 @@ ${activeMCPs.map(c => {
           }
         }
 
-        const steps = parseMessageSteps(fullResponse, executedMcpCalls);
+        const steps = parseMessageSteps(truncatedResponse, executedMcpCalls);
 
         const assistantMessage: Message = {
           id: generateId(),
           role: 'assistant',
-          content: stripArtifactsAndPatches(truncateAfterToolCall(fullResponse)),
+          content: stripArtifactsAndPatches(truncatedResponse),
           thought: thought || undefined,
           timestamp: Date.now(),
           patches: patches.length > 0 ? patches : undefined,
