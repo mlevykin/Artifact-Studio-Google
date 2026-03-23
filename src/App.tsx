@@ -378,7 +378,7 @@ CRITICAL RULES FOR CONTENT:
     if (isAutoSelect) {
       skillsContext = `AUTO-SELECT SKILLS ENABLED: You have access to all skills. Choose the most relevant one if needed. Available skills: ${skills.map(s => s.name).join(', ')}\n${reportingInstruction}`;
       mcpContext = `AUTO-SELECT MCP ENABLED: You have access to all MCP servers.
-IMPORTANT: If the user asks for "available tools", "list tools", or "what can you do", you MUST use the <mcp_call> tag with {"method": "list_tools"} for transparency, even if you see the tools below.
+IMPORTANT: You MUST ONLY use the MCP servers and tools explicitly listed below. DO NOT try to guess server names or tools. If a server or tool is not in the list below, it DOES NOT EXIST.
 Available MCPs and their tools:
 ${mcpConfigs.map(c => {
   const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (use list_tools to see tools)';
@@ -390,7 +390,7 @@ ${mcpConfigs.map(c => {
         : '';
       mcpContext = activeMCPs.length > 0 
         ? `ACTIVE MCP SERVERS AND THEIR TOOLS:
-IMPORTANT: If the user asks for "available tools", "list tools", or "what can you do", you MUST use the <mcp_call> tag with {"method": "list_tools"} for transparency, even if you see the tools below.
+IMPORTANT: You MUST ONLY use the MCP servers and tools explicitly listed below. DO NOT try to guess server names or tools. If a server or tool is not in the list below, it DOES NOT EXIST.
 ${activeMCPs.map(c => {
   const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (use list_tools to see tools)';
   return `Server: ${c.name}\nTools:\n${toolsList}`;
@@ -478,7 +478,8 @@ ${activeMCPs.map(c => {
                 needsNextTurn = true;
               }
             } else {
-              executedMcpCalls.push({ ...call, response: { error: `MCP Server "${call.name}" not found or disabled.` } });
+              const availableServers = isAutoSelect ? mcpConfigs.map(c => c.name).join(', ') : activeMCPs.map(c => c.name).join(', ');
+              executedMcpCalls.push({ ...call, response: { error: `MCP Server "${call.name}" not found or disabled. AVAILABLE SERVERS: ${availableServers}` } });
               needsNextTurn = true;
             }
           }
