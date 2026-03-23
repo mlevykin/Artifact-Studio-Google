@@ -318,16 +318,23 @@ export function parsePartialMcpCalls(text: string): { name: string; description?
  * Truncates text after the first tool call (mcp or skill) to prevent hallucinations from being displayed.
  */
 export function truncateAfterToolCall(text: string): string {
-  const mcpMatch = text.match(/<mcp_call[\s\S]*?<\/mcp_call>/);
-  const skillMatch = text.match(/<skill_call[\s\S]*?(?:\/>|<\/skill_call>)/);
+  const mcpMatches = Array.from(text.matchAll(/<mcp_call[\s\S]*?<\/mcp_call>/g));
+  const skillMatches = Array.from(text.matchAll(/<skill_call[\s\S]*?(?:\/>|<\/skill_call>)/g));
 
-  const mcpIndex = mcpMatch ? mcpMatch.index! + mcpMatch[0].length : Infinity;
-  const skillIndex = skillMatch ? skillMatch.index! + skillMatch[0].length : Infinity;
+  let lastToolEnd = -1;
 
-  const firstToolEnd = Math.min(mcpIndex, skillIndex);
+  for (const match of mcpMatches) {
+    const end = match.index! + match[0].length;
+    if (end > lastToolEnd) lastToolEnd = end;
+  }
 
-  if (firstToolEnd !== Infinity) {
-    return text.substring(0, firstToolEnd);
+  for (const match of skillMatches) {
+    const end = match.index! + match[0].length;
+    if (end > lastToolEnd) lastToolEnd = end;
+  }
+
+  if (lastToolEnd !== -1) {
+    return text.substring(0, lastToolEnd);
   }
 
   // If a tool call has started but not finished, we should also truncate after it starts
@@ -341,8 +348,6 @@ export function truncateAfterToolCall(text: string): string {
   if (firstToolStart !== Infinity) {
     // We want to show the tool call tag itself so it can be parsed, 
     // but nothing after it if it's not complete yet.
-    // However, if it's not complete, we can't easily find the "end" of the tag.
-    // For now, if it's incomplete, we just return the whole thing and let the parser handle it.
     return text;
   }
 

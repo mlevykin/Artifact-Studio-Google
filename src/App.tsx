@@ -438,17 +438,18 @@ ${activeMCPs.map(c => {
             const displayResponse = truncateAfterToolCall(fullResponse);
             setStreamingText(displayResponse);
             
-            const partialArtifact = parsePartialArtifact(fullResponse);
+            const partialArtifact = parsePartialArtifact(displayResponse);
             if (partialArtifact) {
               setStreamingArtifact(partialArtifact as any);
             }
           }
         }
 
-        const patches = parsePatches(fullResponse);
-        const thought = parseThought(fullResponse);
-        const invokedSkills = parseInvokedSkills(fullResponse);
-        const mcpCalls = parseMcpCalls(fullResponse);
+        const truncatedResponse = truncateAfterToolCall(fullResponse);
+        const patches = parsePatches(truncatedResponse);
+        const thought = parseThought(truncatedResponse);
+        const invokedSkills = parseInvokedSkills(truncatedResponse);
+        const mcpCalls = parseMcpCalls(truncatedResponse);
 
         // Execute MCP calls if any
         const executedMcpCalls = [];
@@ -515,7 +516,7 @@ ${activeMCPs.map(c => {
         }
 
         // Handle new artifacts within this turn
-        const newArtifacts = parseArtifacts(fullResponse);
+        const newArtifacts = parseArtifacts(truncatedResponse);
         newArtifacts.forEach(newArtifactData => {
           // Find if this artifact already exists in the session (by ID or Title+Type)
           const currentSessionObj = sessions.find(s => s.id === sessionId);
