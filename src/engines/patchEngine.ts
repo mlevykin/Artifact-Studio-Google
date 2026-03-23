@@ -356,7 +356,7 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): any[] {
   const steps: any[] = [];
   
   // Regex to find tags and their positions, including unclosed tags during streaming
-  const tagsRegex = /(<thought>[\s\S]*?(?:<\/thought>|$)|<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>|>)|<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)|<artifact[\s\S]*?(?:<\/artifact>|$)|<patch[\s\S]*?(?:<\/patch>|$))/g;
+  const tagsRegex = /(<thought>[\s\S]*?(?:<\/thought>|$)|<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>|>)|<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)|<artifact[\s\S]*?(?:<\/artifact>|$)|<patch[\s\S]*?(?:<\/patch>|$)|<response>[\s\S]*?(?:<\/response>|$))/g;
   
   let lastIndex = 0;
   let match;
@@ -398,8 +398,8 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): any[] {
         request: mcpCall?.request, 
         response: mcpCall?.response 
       });
-    } else if (fullMatch.startsWith('<artifact') || fullMatch.startsWith('<patch')) {
-      // Skip these for chat display, as they are handled elsewhere (Artifact panel)
+    } else if (fullMatch.startsWith('<artifact') || fullMatch.startsWith('<patch') || fullMatch.startsWith('<response')) {
+      // Skip these for chat display, as they are handled elsewhere or are technical noise
       // We don't push anything to steps for these, effectively stripping them from the chat view
     }
     
