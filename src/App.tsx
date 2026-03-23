@@ -21,7 +21,8 @@ import {
   parseMcpCalls,
   parsePartialArtifact,
   parsePartialPatches,
-  truncateAfterToolCall
+  truncateAfterToolCall,
+  parseMessageSteps
 } from './engines/patchEngine';
 import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig } from './types';
 import { generateId } from './utils';
@@ -484,6 +485,8 @@ ${activeMCPs.map(c => {
           }
         }
 
+        const steps = parseMessageSteps(fullResponse, executedMcpCalls);
+
         const assistantMessage: Message = {
           id: generateId(),
           role: 'assistant',
@@ -492,7 +495,8 @@ ${activeMCPs.map(c => {
           timestamp: Date.now(),
           patches: patches.length > 0 ? patches : undefined,
           invokedSkills: invokedSkills.length > 0 ? invokedSkills : undefined,
-          mcpCalls: executedMcpCalls.length > 0 ? executedMcpCalls : undefined
+          mcpCalls: executedMcpCalls.length > 0 ? executedMcpCalls : undefined,
+          steps: steps.length > 0 ? steps : undefined
         };
 
         addMessage(assistantMessage, sessionId);

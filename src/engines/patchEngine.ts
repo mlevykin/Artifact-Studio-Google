@@ -350,6 +350,81 @@ export function truncateAfterToolCall(text: string): string {
 }
 
 /**
+ * Parses the message into a sequence of steps (text, thought, skill, mcp) to preserve visual order.
+ */
+export function parseMessageSteps(text: string, mcpCalls?: any[]): any[] {
+  const steps: any[] = [];
+  
+  // Regex to find tags and their positions
+  const tagsRegex = /(<thought>[\s\S]*?<\/thought>|<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>)|<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>[\s\S]*?<\/mcp_call>)/g;
+  
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = tagsRegex.exec(text)) !== null) {
+    // Text before tag
+    const textBefore = text.substring(lastIndex, match.index);
+    if (textBefore.trim()) {
+      // Check for fallback thoughts in textBefore
+      const lines = textBefore.split('\n');
+      let currentText = '';
+      for (const line of lines) {
+        if (line.toLowerCase().startsWith('thought ') || line.toLowerCase().startsWith('thought:')) {
+          if (currentText.trim()) steps.push({ type: 'text', content: currentText.trim() });
+          steps.push({ type: 'thought', content: line.replace(/^thought:?\s*/i, '').trim() });
+          currentText = '';
+        } else {
+          currentText += line + '\n';
+        }
+      }
+      if (currentText.trim()) steps.push({ type: 'text', content: currentText.trim() });
+    }
+    
+    // The tag itself
+    const fullMatch = match[0];
+    if (fullMatch.startsWith('<thought>')) {
+      steps.push({ type: 'thought', content: fullMatch.replace(/<\/?thought>/g, '').trim() });
+    } else if (fullMatch.startsWith('<skill_call')) {
+      steps.push({ type: 'skill', name: match[2], description: match[3] });
+    } else if (fullMatch.startsWith('<mcp_call')) {
+      const name = match[4];
+      const description = match[5];
+      // Find the corresponding executed MCP call to get request/response
+      const mcpCall = mcpCalls?.find(c => c.name === name && (description ? c.description === description : true));
+      steps.push({ 
+        type: 'mcp', 
+        name, 
+        description, 
+        request: mcpCall?.request, 
+        response: mcpCall?.response 
+      });
+    }
+    
+    lastIndex = tagsRegex.lastIndex;
+  }
+  
+  // Remaining text
+  const remainingText = text.substring(lastIndex);
+  if (remainingText.trim()) {
+    // Check for fallback thoughts in remainingText
+    const lines = remainingText.split('\n');
+    let currentText = '';
+    for (const line of lines) {
+      if (line.toLowerCase().startsWith('thought ') || line.toLowerCase().startsWith('thought:')) {
+        if (currentText.trim()) steps.push({ type: 'text', content: currentText.trim() });
+        steps.push({ type: 'thought', content: line.replace(/^thought:?\s*/i, '').trim() });
+        currentText = '';
+      } else {
+        currentText += line + '\n';
+      }
+    }
+    if (currentText.trim()) steps.push({ type: 'text', content: currentText.trim() });
+  }
+  
+  return steps;
+}
+
+/**
  * Strips <artifact>, <patch>, <thought>, <skill_call>, and <mcp_call> blocks from the text for display in chat.
  * Handles partial blocks during streaming.
  */
@@ -370,8 +445,8 @@ export function stripArtifactsAndPatches(text: string): string {
     .filter(line => !line.toLowerCase().startsWith('thought ') && !line.toLowerCase().startsWith('thought:'))
     .join('\n');
 
-  // Strip skill calls (handle both self-closing and paired tags)
-  cleaned = cleaned.replace(/<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>)/g, '');
+  // Strip skill calls (handle both self-closing and paired tags, and unclosed ones)
+  cleaned = cleaned.replace(/<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>|>)/g, '');
 
   // Strip mcp calls (including partial)
   cleaned = cleaned.replace(/<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)/g, '');

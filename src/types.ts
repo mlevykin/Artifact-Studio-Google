@@ -61,6 +61,15 @@ export interface Attachment {
   mimeType: string;
 }
 
+export interface MessageStep {
+  type: 'thought' | 'skill' | 'mcp' | 'text';
+  content?: string;
+  name?: string;
+  description?: string;
+  request?: any;
+  response?: any;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -80,6 +89,7 @@ export interface Message {
     request: any;
     response: any;
   }[];
+  steps?: MessageStep[]; // For ordered rendering of thoughts, skills, and text
 }
 
 export interface Session {

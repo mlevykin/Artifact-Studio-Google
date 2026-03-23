@@ -251,186 +251,372 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   : "bg-white border border-zinc-200 text-zinc-800 rounded-tl-none"
               )}
             >
-              {m.role === 'assistant' && (
+              {m.role === 'assistant' && m.steps ? (
                 <div className="flex flex-col gap-3">
-                  {m.thought && (
-                    <div className="pb-3 border-b border-zinc-100">
-                      <button 
-                        onClick={() => toggleThought(m.id)}
-                        className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
-                      >
-                        <Sparkles size={12} />
-                        THOUGHT PROCESS
-                        {expandedThoughts[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                      </button>
-                      
-                      <AnimatePresence>
-                        {expandedThoughts[m.id] && (
-                          <motion.div 
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap"
+                  {m.steps.map((step, stepIdx) => {
+                    if (step.type === 'thought') {
+                      return (
+                        <div key={`step-${stepIdx}`} className="pb-3 border-b border-zinc-100 last:border-0">
+                          <button 
+                            onClick={() => toggleThought(`${m.id}-${stepIdx}`)}
+                            className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
                           >
-                            {m.thought}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
+                            <Sparkles size={12} />
+                            THOUGHT PROCESS
+                            {expandedThoughts[`${m.id}-${stepIdx}`] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                          </button>
+                          
+                          <AnimatePresence>
+                            {expandedThoughts[`${m.id}-${stepIdx}`] && (
+                              <motion.div 
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap"
+                              >
+                                {step.content}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    }
 
-                  {(m.invokedSkills?.length || 0) + (m.mcpCalls?.length || 0) > 0 && (
-                    <div className="flex flex-col gap-3 relative pl-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-100">
-                      {m.invokedSkills?.map((skill, i) => (
-                        <div key={`skill-${i}`} className="relative">
+                    if (step.type === 'skill') {
+                      return (
+                        <div key={`step-${stepIdx}`} className="relative pl-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-100">
                           <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-white" />
                           <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-2 shadow-sm">
                             <button 
-                              onClick={() => toggleInvokedSkills(m.id)}
+                              onClick={() => toggleInvokedSkills(`${m.id}-${stepIdx}`)}
                               className="flex items-center gap-2 text-[10px] font-bold text-emerald-700"
                             >
                               <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
-                                {i + 1}
+                                {stepIdx + 1}
                               </div>
-                              Добавляю в контекст skill: {skill.name}
-                              {expandedSkills[m.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                              Добавляю в контекст skill: {step.name}
+                              {expandedSkills[`${m.id}-${stepIdx}`] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                             </button>
                             <AnimatePresence>
-                              {expandedSkills[m.id] && skill.description && (
+                              {expandedSkills[`${m.id}-${stepIdx}`] && step.description && (
                                 <motion.div 
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: 'auto', opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
                                   className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-emerald-200 overflow-hidden"
                                 >
-                                  {skill.description}
+                                  {step.description}
                                 </motion.div>
                               )}
                             </AnimatePresence>
                           </div>
                         </div>
-                      ))}
-
-                      {m.mcpCalls?.map((call, i) => {
-                        const stepNum = (m.invokedSkills?.length || 0) + i + 1;
-                        const isError = call.response?.error || (call.response?.isError);
-                        
-                        return (
-                          <div key={`mcp-${i}`} className="relative">
-                            <div className={cn(
-                              "absolute -left-[18px] top-2 w-2 h-2 rounded-full ring-4 ring-white",
-                              isError ? "bg-red-500" : "bg-amber-500"
-                            )} />
-                            <div className={cn(
-                              "border rounded-xl p-2 shadow-sm transition-colors",
-                              isError ? "bg-red-50/50 border-red-100" : "bg-amber-50/50 border-amber-100"
-                            )}>
-                              <button 
-                                onClick={() => toggleMcpCalls(m.id)}
-                                className={cn(
-                                  "flex items-center gap-2 text-[10px] font-bold w-full text-left",
-                                  isError ? "text-red-700" : "text-amber-700"
-                                )}
-                              >
-                                <div className={cn(
-                                  "w-4 h-4 rounded-full text-white flex items-center justify-center text-[8px] shrink-0",
-                                  isError ? "bg-red-500" : "bg-amber-500"
-                                )}>
-                                  {stepNum}
-                                </div>
-                                <span className="truncate flex-1">MCP TOOL: {call.name}</span>
-                                {isError && <span className="text-[8px] bg-red-100 text-red-600 px-1 rounded uppercase tracking-tighter">Error</span>}
-                                {expandedMcpCalls[m.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                              </button>
-                              <AnimatePresence>
-                                {expandedMcpCalls[m.id] && (
-                                  <motion.div 
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="mt-2 space-y-2 overflow-hidden pl-6 border-l border-amber-200"
-                                  >
-                                    {call.description && (
-                                      <div className="text-[10px] text-zinc-500 italic">{call.description}</div>
-                                    )}
-                                    <div className="space-y-1">
-                                      <div className="text-[8px] uppercase tracking-widest text-zinc-400 flex items-center justify-between">
-                                        Request
-                                      </div>
-                                      <pre className="p-1.5 bg-white text-[9px] font-mono text-zinc-600 overflow-x-auto rounded-lg border border-zinc-100 max-h-32">
-                                        {JSON.stringify(call.request, null, 2)}
-                                      </pre>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <div className="text-[8px] uppercase tracking-widest text-zinc-400 flex items-center justify-between">
-                                        Response
-                                        <button 
-                                          onClick={() => navigator.clipboard.writeText(JSON.stringify(call.response, null, 2))}
-                                          className="hover:text-amber-600 transition-colors"
-                                          title="Copy Response"
-                                        >
-                                          Copy
-                                        </button>
-                                      </div>
-                                      <pre className={cn(
-                                        "p-1.5 text-[9px] font-mono overflow-x-auto rounded-lg border max-h-64",
-                                        isError ? "bg-red-50 text-red-600 border-red-100" : "bg-white text-zinc-600 border-zinc-100"
-                                      )}>
-                                        {JSON.stringify(call.response, null, 2)}
-                                      </pre>
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className={cn(
-                "prose prose-sm max-w-none break-words",
-                m.role === 'user' ? "text-white prose-invert" : "text-zinc-800"
-              )}>
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    table({ children }: any) {
-                      return (
-                        <div className="overflow-x-auto w-full mb-4 border border-zinc-200 rounded-lg">
-                          <table className="min-w-full">{children}</table>
-                        </div>
-                      );
-                    },
-                    code({ node, inline, className, children, ...props }: any) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const isMermaid = match && match[1] === 'mermaid';
-                      
-                      if (!inline && isMermaid) {
-                        return (
-                          <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-                            <MermaidPreview 
-                              content={String(children).replace(/\n$/, '')} 
-                              className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
-                            />
-                          </div>
-                        );
-                      }
-                      
-                      return (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
                       );
                     }
-                  }}
-                >
-                  {m.content}
-                </ReactMarkdown>
-              </div>
+
+                    if (step.type === 'mcp') {
+                      const isError = step.response?.error || (step.response?.isError);
+                      return (
+                        <div key={`step-${stepIdx}`} className="relative pl-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-100">
+                          <div className={cn(
+                            "absolute -left-[18px] top-2 w-2 h-2 rounded-full ring-4 ring-white",
+                            isError ? "bg-red-500" : "bg-amber-500"
+                          )} />
+                          <div className={cn(
+                            "border rounded-xl p-2 shadow-sm transition-colors",
+                            isError ? "bg-red-50/50 border-red-100" : "bg-amber-50/50 border-amber-100"
+                          )}>
+                            <button 
+                              onClick={() => toggleMcpCalls(`${m.id}-${stepIdx}`)}
+                              className={cn(
+                                "flex items-center gap-2 text-[10px] font-bold w-full text-left",
+                                isError ? "text-red-700" : "text-amber-700"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-4 h-4 rounded-full text-white flex items-center justify-center text-[8px] shrink-0",
+                                isError ? "bg-red-500" : "bg-amber-500"
+                              )}>
+                                {stepIdx + 1}
+                              </div>
+                              <span className="truncate flex-1">MCP TOOL: {step.name}</span>
+                              {isError && <span className="text-[8px] bg-red-100 text-red-600 px-1 rounded uppercase tracking-tighter">Error</span>}
+                              {expandedMcpCalls[`${m.id}-${stepIdx}`] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                            </button>
+                            <AnimatePresence>
+                              {expandedMcpCalls[`${m.id}-${stepIdx}`] && (
+                                <motion.div 
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="mt-2 space-y-2 overflow-hidden pl-6 border-l border-amber-200"
+                                >
+                                  {step.description && (
+                                    <div className="text-[10px] text-zinc-500 italic">{step.description}</div>
+                                  )}
+                                  <div className="space-y-1">
+                                    <div className="text-[8px] uppercase tracking-widest text-zinc-400 flex items-center justify-between">
+                                      Request
+                                    </div>
+                                    <pre className="p-1.5 bg-white text-[9px] font-mono text-zinc-600 overflow-x-auto rounded-lg border border-zinc-100 max-h-32">
+                                      {JSON.stringify(step.request, null, 2)}
+                                    </pre>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="text-[8px] uppercase tracking-widest text-zinc-400 flex items-center justify-between">
+                                      Response
+                                      <button 
+                                        onClick={() => navigator.clipboard.writeText(JSON.stringify(step.response, null, 2))}
+                                        className="hover:text-amber-600 transition-colors"
+                                        title="Copy Response"
+                                      >
+                                        Copy
+                                      </button>
+                                    </div>
+                                    <pre className={cn(
+                                      "p-1.5 text-[9px] font-mono overflow-x-auto rounded-lg border max-h-64",
+                                      isError ? "bg-red-50 text-red-600 border-red-100" : "bg-white text-zinc-600 border-zinc-100"
+                                    )}>
+                                      {JSON.stringify(step.response, null, 2)}
+                                    </pre>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (step.type === 'text') {
+                      return (
+                        <div key={`step-${stepIdx}`} className="prose prose-sm max-w-none break-words text-zinc-800">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              table({ children }: any) {
+                                return (
+                                  <div className="overflow-x-auto w-full mb-4 border border-zinc-200 rounded-lg">
+                                    <table className="min-w-full">{children}</table>
+                                  </div>
+                                );
+                              },
+                              code({ node, inline, className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || '');
+                                const isMermaid = match && match[1] === 'mermaid';
+                                
+                                if (!inline && isMermaid) {
+                                  return (
+                                    <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                                      <MermaidPreview 
+                                        content={String(children).replace(/\n$/, '')} 
+                                        className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
+                                      />
+                                    </div>
+                                  );
+                                }
+                                
+                                return (
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              }
+                            }}
+                          >
+                            {step.content}
+                          </ReactMarkdown>
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })}
+                </div>
+              ) : (
+                <>
+                  {m.role === 'assistant' && (
+                    <div className="flex flex-col gap-3">
+                      {m.thought && (
+                        <div className="pb-3 border-b border-zinc-100">
+                          <button 
+                            onClick={() => toggleThought(m.id)}
+                            className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
+                          >
+                            <Sparkles size={12} />
+                            THOUGHT PROCESS
+                            {expandedThoughts[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                          </button>
+                          
+                          <AnimatePresence>
+                            {expandedThoughts[m.id] && (
+                              <motion.div 
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap"
+                              >
+                                {m.thought}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
+
+                      {(m.invokedSkills?.length || 0) + (m.mcpCalls?.length || 0) > 0 && (
+                        <div className="flex flex-col gap-3 relative pl-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-100">
+                          {m.invokedSkills?.map((skill, i) => (
+                            <div key={`skill-${i}`} className="relative">
+                              <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-white" />
+                              <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-2 shadow-sm">
+                                <button 
+                                  onClick={() => toggleInvokedSkills(m.id)}
+                                  className="flex items-center gap-2 text-[10px] font-bold text-emerald-700"
+                                >
+                                  <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
+                                    {i + 1}
+                                  </div>
+                                  Добавляю в контекст skill: {skill.name}
+                                  {expandedSkills[m.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                </button>
+                                <AnimatePresence>
+                                  {expandedSkills[m.id] && skill.description && (
+                                    <motion.div 
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-emerald-200 overflow-hidden"
+                                    >
+                                      {skill.description}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            </div>
+                          ))}
+
+                          {m.mcpCalls?.map((call, i) => {
+                            const stepNum = (m.invokedSkills?.length || 0) + i + 1;
+                            const isError = call.response?.error || (call.response?.isError);
+                            
+                            return (
+                              <div key={`mcp-${i}`} className="relative">
+                                <div className={cn(
+                                  "absolute -left-[18px] top-2 w-2 h-2 rounded-full ring-4 ring-white",
+                                  isError ? "bg-red-500" : "bg-amber-500"
+                                )} />
+                                <div className={cn(
+                                  "border rounded-xl p-2 shadow-sm transition-colors",
+                                  isError ? "bg-red-50/50 border-red-100" : "bg-amber-50/50 border-amber-100"
+                                )}>
+                                  <button 
+                                    onClick={() => toggleMcpCalls(m.id)}
+                                    className={cn(
+                                      "flex items-center gap-2 text-[10px] font-bold w-full text-left",
+                                      isError ? "text-red-700" : "text-amber-700"
+                                    )}
+                                  >
+                                    <div className={cn(
+                                      "w-4 h-4 rounded-full text-white flex items-center justify-center text-[8px] shrink-0",
+                                      isError ? "bg-red-500" : "bg-amber-500"
+                                    )}>
+                                      {stepNum}
+                                    </div>
+                                    <span className="truncate flex-1">MCP TOOL: {call.name}</span>
+                                    {isError && <span className="text-[8px] bg-red-100 text-red-600 px-1 rounded uppercase tracking-tighter">Error</span>}
+                                    {expandedMcpCalls[m.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                  </button>
+                                  <AnimatePresence>
+                                    {expandedMcpCalls[m.id] && (
+                                      <motion.div 
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="mt-2 space-y-2 overflow-hidden pl-6 border-l border-amber-200"
+                                      >
+                                        {call.description && (
+                                          <div className="text-[10px] text-zinc-500 italic">{call.description}</div>
+                                        )}
+                                        <div className="space-y-1">
+                                          <div className="text-[8px] uppercase tracking-widest text-zinc-400 flex items-center justify-between">
+                                            Request
+                                          </div>
+                                          <pre className="p-1.5 bg-white text-[9px] font-mono text-zinc-600 overflow-x-auto rounded-lg border border-zinc-100 max-h-32">
+                                            {JSON.stringify(call.request, null, 2)}
+                                          </pre>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <div className="text-[8px] uppercase tracking-widest text-zinc-400 flex items-center justify-between">
+                                            Response
+                                            <button 
+                                              onClick={() => navigator.clipboard.writeText(JSON.stringify(call.response, null, 2))}
+                                              className="hover:text-amber-600 transition-colors"
+                                              title="Copy Response"
+                                            >
+                                              Copy
+                                            </button>
+                                          </div>
+                                          <pre className={cn(
+                                            "p-1.5 text-[9px] font-mono overflow-x-auto rounded-lg border max-h-64",
+                                            isError ? "bg-red-50 text-red-600 border-red-100" : "bg-white text-zinc-600 border-zinc-100"
+                                          )}>
+                                            {JSON.stringify(call.response, null, 2)}
+                                          </pre>
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className={cn(
+                    "prose prose-sm max-w-none break-words",
+                    m.role === 'user' ? "text-white prose-invert" : "text-zinc-800"
+                  )}>
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        table({ children }: any) {
+                          return (
+                            <div className="overflow-x-auto w-full mb-4 border border-zinc-200 rounded-lg">
+                              <table className="min-w-full">{children}</table>
+                            </div>
+                          );
+                        },
+                        code({ node, inline, className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          const isMermaid = match && match[1] === 'mermaid';
+                          
+                          if (!inline && isMermaid) {
+                            return (
+                              <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                                <MermaidPreview 
+                                  content={String(children).replace(/\n$/, '')} 
+                                  className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
+                                />
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        }
+                      }}
+                    >
+                      {m.content}
+                    </ReactMarkdown>
+                  </div>
+                </>
+              )}
               
               {m.patches && m.patches.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-zinc-100">
