@@ -50,7 +50,6 @@ When you use a skill or an MCP server, you MUST report it at the beginning of yo
 Wait for the system to provide the <response> tag before continuing your task if the tool output is required.
 EVEN IF you have information about tools in your context, you MUST use the <mcp_call> tag to indicate you are interacting with the server for transparency.
 DO NOT use any other tags (like <steps>, <action>, etc.) to report your actions. ONLY use the tags specified above.
-`;
 
 ARTIFACTS vs. CONVERSATION:
 - ONLY generate an artifact if the user's request explicitly or implicitly requires a substantial piece of content.

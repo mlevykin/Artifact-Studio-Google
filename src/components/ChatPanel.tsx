@@ -26,7 +26,8 @@ import {
   stripArtifactsAndPatches, 
   parseThought, 
   parseInvokedSkills, 
-  parseMcpCalls 
+  parseMcpCalls,
+  parseMessageSteps
 } from '../engines/patchEngine';
 
 import ReactMarkdown from 'react-markdown';
