@@ -690,100 +690,107 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <div className="mr-auto items-start max-w-[85%] flex flex-col">
             <div className="p-3 rounded-2xl text-sm bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm w-full">
               <div className="flex flex-col gap-3">
-                {parseThought(streamingText) && (
-                  <div className="pb-3 border-b border-zinc-100">
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-500">
-                      <Sparkles size={12} />
-                      THOUGHT PROCESS
-                    </div>
-                    <div className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap">
-                      {parseThought(streamingText)}
-                    </div>
-                  </div>
-                )}
+                {parseMessageSteps(streamingText).map((step, stepIdx) => {
+                  if (step.type === 'thought') {
+                    return (
+                      <div key={`stream-step-${stepIdx}`} className="pb-3 border-b border-zinc-100 last:border-0">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-500">
+                          <Sparkles size={12} />
+                          THOUGHT PROCESS
+                        </div>
+                        <div className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap">
+                          {step.content}
+                        </div>
+                      </div>
+                    );
+                  }
 
-                {(parseInvokedSkills(streamingText).length > 0 || parseMcpCalls(streamingText).length > 0) && (
-                  <div className="flex flex-col gap-3 relative pl-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-100">
-                    {parseInvokedSkills(streamingText).map((skill, i) => (
-                      <div key={`stream-skill-${i}`} className="relative">
+                  if (step.type === 'skill') {
+                    return (
+                      <div key={`stream-step-${stepIdx}`} className="relative pl-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-100">
                         <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-white" />
                         <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-2 shadow-sm">
                           <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-700">
                             <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
-                              {i + 1}
+                              {stepIdx + 1}
                             </div>
-                            Добавляю в контекст skill: {skill.name}
+                            Добавляю в контекст skill: {step.name}
                           </div>
-                          {skill.description && (
+                          {step.description && (
                             <div className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-emerald-200">
-                              {skill.description}
+                              {step.description}
                             </div>
                           )}
                         </div>
                       </div>
-                    ))}
+                    );
+                  }
 
-                    {parseMcpCalls(streamingText).map((call, i) => {
-                      const stepNum = parseInvokedSkills(streamingText).length + i + 1;
-                      return (
-                        <div key={`stream-mcp-${i}`} className="relative">
-                          <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-amber-500 ring-4 ring-white" />
-                          <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 shadow-sm">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-amber-700">
-                              <div className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[8px]">
-                                {stepNum}
-                              </div>
-                              MCP TOOL: {call.name}
+                  if (step.type === 'mcp') {
+                    return (
+                      <div key={`stream-step-${stepIdx}`} className="relative pl-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-100">
+                        <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-amber-500 ring-4 ring-white" />
+                        <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 shadow-sm">
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-amber-700">
+                            <div className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[8px]">
+                              {stepIdx + 1}
                             </div>
-                            {call.description && (
-                              <div className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-amber-200">
-                                {call.description}
-                              </div>
-                            )}
+                            MCP TOOL: {step.name}
                           </div>
+                          {step.description && (
+                            <div className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-amber-200">
+                              {step.description}
+                            </div>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                      </div>
+                    );
+                  }
 
-              <div className="prose prose-sm max-w-none break-words text-zinc-800 mt-3">
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    table({ children }: any) {
-                      return (
-                        <div className="overflow-x-auto w-full mb-4 border border-zinc-200 rounded-lg">
-                          <table className="min-w-full">{children}</table>
-                        </div>
-                      );
-                    },
-                    code({ node, inline, className, children, ...props }: any) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const isMermaid = match && match[1] === 'mermaid';
-                      
-                      if (!inline && isMermaid) {
-                        return (
-                          <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-                            <MermaidPreview 
-                              content={String(children).replace(/\n$/, '')} 
-                              className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
-                            />
-                          </div>
-                        );
-                      }
-                      
-                      return (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    }
-                  }}
-                >
-                  {stripArtifactsAndPatches(streamingText)}
-                </ReactMarkdown>
+                  if (step.type === 'text') {
+                    return (
+                      <div key={`stream-step-${stepIdx}`} className="prose prose-sm max-w-none break-words text-zinc-800">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            table({ children }: any) {
+                              return (
+                                <div className="overflow-x-auto w-full mb-4 border border-zinc-200 rounded-lg">
+                                  <table className="min-w-full">{children}</table>
+                                </div>
+                              );
+                            },
+                            code({ node, inline, className, children, ...props }: any) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              const isMermaid = match && match[1] === 'mermaid';
+                              
+                              if (!inline && isMermaid) {
+                                return (
+                                  <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                                    <MermaidPreview 
+                                      content={String(children).replace(/\n$/, '')} 
+                                      className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
+                                    />
+                                  </div>
+                                );
+                              }
+                              
+                              return (
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              );
+                            }
+                          }}
+                        >
+                          {step.content}
+                        </ReactMarkdown>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })}
               </div>
             </div>
           </div>

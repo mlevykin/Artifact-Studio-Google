@@ -456,11 +456,6 @@ ${activeMCPs.map(c => {
         
         if (mcpCalls.length > 0) {
           for (const call of mcpCalls) {
-            if (call.response) {
-              executedMcpCalls.push(call);
-              continue;
-            }
-
             const mcpConfig = mcpConfigs.find(c => c.name === call.name || c.id === call.name);
             if (mcpConfig && mcpConfig.enabled) {
               try {
@@ -567,7 +562,7 @@ ${activeMCPs.map(c => {
 
         if (needsNextTurn) {
           const resultsPrompt = executedMcpCalls.map(c => 
-            `MCP CALL RESULT (${c.name}):\nRequest: ${JSON.stringify(c.request, null, 2)}\nResponse: ${JSON.stringify(c.response, null, 2)}`
+            `<response>\n${JSON.stringify(c.response, null, 2)}\n</response>`
           ).join('\n\n');
           
           // Add the results as a new user message for the next turn

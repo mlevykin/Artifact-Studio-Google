@@ -389,14 +389,25 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): any[] {
     } else if (fullMatch.startsWith('<mcp_call')) {
       const name = match[4];
       const description = match[5];
-      // Find the corresponding executed MCP call to get request/response
-      const mcpCall = mcpCalls?.find(c => c.name === name && (description ? c.description === description : true));
+      const content = match[6] || '';
+      
+      // Check for thought inside mcp_call
+      const internalThoughtMatch = content.match(/<thought>([\s\S]*?)(?:<\/thought>|$)/);
+      if (internalThoughtMatch) {
+        steps.push({ type: 'thought', content: internalThoughtMatch[1].trim() });
+      }
+      
+      // Find the corresponding executed MCP call
+      const mcpCall = mcpCalls?.find(c => c.name === name && content.includes(c.request?.method || ''));
+      
       steps.push({ 
         type: 'mcp', 
         name, 
         description, 
+        content: content.replace(/<thought>[\s\S]*?(?:<\/thought>|$)/, '').trim(),
         request: mcpCall?.request, 
-        response: mcpCall?.response 
+        response: mcpCall?.response,
+        isError: mcpCall?.response?.error ? true : false
       });
     } else if (fullMatch.startsWith('<artifact') || fullMatch.startsWith('<patch') || fullMatch.startsWith('<response')) {
       // Skip these for chat display, as they are handled elsewhere or are technical noise
