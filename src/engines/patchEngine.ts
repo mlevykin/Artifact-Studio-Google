@@ -355,8 +355,8 @@ export function truncateAfterToolCall(text: string): string {
 export function parseMessageSteps(text: string, mcpCalls?: any[]): any[] {
   const steps: any[] = [];
   
-  // Regex to find tags and their positions
-  const tagsRegex = /(<thought>[\s\S]*?<\/thought>|<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>)|<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>[\s\S]*?<\/mcp_call>)/g;
+  // Regex to find tags and their positions, including unclosed tags during streaming
+  const tagsRegex = /(<thought>[\s\S]*?(?:<\/thought>|$)|<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>|>)|<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)|<artifact[\s\S]*?(?:<\/artifact>|$)|<patch[\s\S]*?(?:<\/patch>|$))/g;
   
   let lastIndex = 0;
   let match;
@@ -398,6 +398,9 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): any[] {
         request: mcpCall?.request, 
         response: mcpCall?.response 
       });
+    } else if (fullMatch.startsWith('<artifact') || fullMatch.startsWith('<patch')) {
+      // Skip these for chat display, as they are handled elsewhere (Artifact panel)
+      // We don't push anything to steps for these, effectively stripping them from the chat view
     }
     
     lastIndex = tagsRegex.lastIndex;
@@ -432,10 +435,10 @@ export function stripArtifactsAndPatches(text: string): string {
   let cleaned = text;
   
   // Strip artifacts (including partial)
-  cleaned = cleaned.replace(/<artifact\s+([^>]+)>([\s\S]*?)(?:<\/artifact>|$)/g, '');
+  cleaned = cleaned.replace(/<artifact[\s\S]*?(?:<\/artifact>|$)/g, '');
   
   // Strip patches (including partial)
-  cleaned = cleaned.replace(/<patch>([\s\S]*?)(?:<\/patch>|$)/g, '');
+  cleaned = cleaned.replace(/<patch[\s\S]*?(?:<\/patch>|$)/g, '');
 
   // Strip thoughts (including partial)
   cleaned = cleaned.replace(/<thought>([\s\S]*?)(?:<\/thought>|$)/g, '');
