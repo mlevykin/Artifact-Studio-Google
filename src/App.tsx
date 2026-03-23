@@ -375,19 +375,17 @@ CRITICAL RULES FOR CONTENT:
 
     if (isAutoSelect) {
       skillsContext = `AUTO-SELECT SKILLS ENABLED: You have access to all skills. Choose the most relevant one if needed. Available skills: ${skills.map(s => s.name).join(', ')}\n${reportingInstruction}`;
-      mcpContext = `AUTO-SELECT MCP ENABLED: You have access to all MCP servers. Call them if needed. Available MCPs and their tools:\n${mcpConfigs.map(c => {
-        const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (test connection to see tools)';
-        return `Server: ${c.name}\nURL: ${c.url}\nTools:\n${toolsList}`;
-      }).join('\n\n')}`;
+      mcpContext = `AUTO-SELECT MCP ENABLED: You have access to all MCP servers.
+IMPORTANT: If the user asks for available tools or you need to check them, use: <mcp_call name="Server Name" description="Listing tools"><request>{"method": "list_tools"}</request></mcp_call>
+Available MCPs: ${mcpConfigs.map(c => c.name).join(', ')}`;
     } else {
       skillsContext = activeSkills.length > 0 
         ? activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${reportingInstruction}`
         : '';
       mcpContext = activeMCPs.length > 0 
-        ? `ACTIVE MCP SERVERS AND THEIR TOOLS:\n${activeMCPs.map(c => {
-            const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (test connection to see tools)';
-            return `Server: ${c.name}\nURL: ${c.url}\nTools:\n${toolsList}`;
-          }).join('\n\n')}` 
+        ? `ACTIVE MCP SERVERS:
+IMPORTANT: If the user asks for available tools or you need to check them, use: <mcp_call name="Server Name" description="Listing tools"><request>{"method": "list_tools"}</request></mcp_call>
+Available servers: ${activeMCPs.map(c => c.name).join(', ')}` 
         : '';
     }
 
@@ -456,9 +454,15 @@ CRITICAL RULES FOR CONTENT:
             const mcpConfig = mcpConfigs.find(c => c.name === call.name || c.id === call.name);
             if (mcpConfig && mcpConfig.enabled) {
               try {
-                const { tool, arguments: args } = call.request;
-                const result = await MCPService.callTool(mcpConfig, tool || call.request.name, args || call.request.args || {});
-                executedMcpCalls.push({ ...call, response: result });
+                // Handle virtual "list_tools" call
+                if (call.request?.method === 'list_tools') {
+                  const tools = mcpConfig.tools || [];
+                  executedMcpCalls.push({ ...call, response: { tools, status: 'success' } });
+                } else {
+                  const { tool, arguments: args } = call.request;
+                  const result = await MCPService.callTool(mcpConfig, tool || call.request.name, args || call.request.args || {});
+                  executedMcpCalls.push({ ...call, response: result });
+                }
                 needsNextTurn = true;
               } catch (error: any) {
                 executedMcpCalls.push({ ...call, response: { error: error.message } });
@@ -561,6 +565,7 @@ CRITICAL RULES FOR CONTENT:
             timestamp: Date.now()
           };
           
+          addMessage(resultsMessage, sessionId);
           currentMessages.push(resultsMessage);
           currentPrompt = ''; // We use the message history now
           turnCount++;
