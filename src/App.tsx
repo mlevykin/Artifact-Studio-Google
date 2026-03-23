@@ -376,16 +376,23 @@ CRITICAL RULES FOR CONTENT:
     if (isAutoSelect) {
       skillsContext = `AUTO-SELECT SKILLS ENABLED: You have access to all skills. Choose the most relevant one if needed. Available skills: ${skills.map(s => s.name).join(', ')}\n${reportingInstruction}`;
       mcpContext = `AUTO-SELECT MCP ENABLED: You have access to all MCP servers.
-IMPORTANT: If the user asks for available tools or you need to check them, use: <mcp_call name="Server Name" description="Listing tools"><request>{"method": "list_tools"}</request></mcp_call>
-Available MCPs: ${mcpConfigs.map(c => c.name).join(', ')}`;
+IMPORTANT: You MUST use the <mcp_call> tag for any tool interaction.
+Available MCPs and their tools:
+${mcpConfigs.map(c => {
+  const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (use list_tools to see tools)';
+  return `Server: ${c.name}\nTools:\n${toolsList}`;
+}).join('\n\n')}`;
     } else {
       skillsContext = activeSkills.length > 0 
         ? activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${reportingInstruction}`
         : '';
       mcpContext = activeMCPs.length > 0 
-        ? `ACTIVE MCP SERVERS:
-IMPORTANT: If the user asks for available tools or you need to check them, use: <mcp_call name="Server Name" description="Listing tools"><request>{"method": "list_tools"}</request></mcp_call>
-Available servers: ${activeMCPs.map(c => c.name).join(', ')}` 
+        ? `ACTIVE MCP SERVERS AND THEIR TOOLS:
+IMPORTANT: You MUST use the <mcp_call> tag for any tool interaction.
+${activeMCPs.map(c => {
+  const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (use list_tools to see tools)';
+  return `Server: ${c.name}\nTools:\n${toolsList}`;
+}).join('\n\n')}` 
         : '';
     }
 
