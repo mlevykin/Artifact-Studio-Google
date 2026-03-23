@@ -75,7 +75,20 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
           // Try to parse first to avoid noisy errors during streaming
           try {
             await mermaid.parse(processedContent);
-          } catch (parseError) {
+          } catch (parseError: any) {
+            // Check for common unsupported types
+            if (processedContent.toLowerCase().includes('usecasediagram')) {
+              if (containerRef.current) {
+                containerRef.current.innerHTML = `
+                  <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-200 text-xs">
+                    <p class="font-bold mb-1">Mermaid Render Error</p>
+                    <p>'useCaseDiagram' is not supported by Mermaid. Please use 'graph TD' or 'flowchart TD' instead.</p>
+                  </div>
+                `;
+              }
+              return;
+            }
+
             if (content.length < 100 || !content.includes('\n')) {
                if (containerRef.current && containerRef.current.innerHTML === '') {
                  containerRef.current.innerHTML = '<div class="flex items-center justify-center p-8 text-zinc-400 text-xs">Rendering diagram...</div>';

@@ -90,6 +90,8 @@ Guidelines:
 - Be concise in your conversational response.
 - ALWAYS use Markdown for formatting.
 - For Mermaid, use v11 syntax and wrap node labels in double quotes.
+- SUPPORTED MERMAID DIAGRAMS: graph, flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, journey, gantt, pie, quadrantChart, xychart-beta, mindmap, timeline, zenuml, sankey-beta, packet-beta, kanban, architecture, gitGraph, requirementDiagram, C4Context.
+- CRITICAL: Mermaid does NOT support 'useCaseDiagram'. Use 'graph TD' or 'flowchart TD' with custom shapes for use cases instead.
 `;
 
 export async function* streamGeminiResponse(
