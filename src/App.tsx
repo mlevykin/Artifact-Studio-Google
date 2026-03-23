@@ -361,9 +361,8 @@ export default function App() {
     const reportingInstruction = `
 IMPORTANT: When you use a skill or an MCP server, you MUST report it at the beginning of your response using these tags.
 Each tag MUST include a "description" attribute explaining what you are doing in a human-readable way.
-- For skills: <skill_call name="Skill Name" description="Human-readable description of what this skill adds to the context" />
-- For MCP: <mcp_call name="MCP Name" description="Human-readable description of why you are calling this tool"><request>JSON_REQUEST</request></mcp_call>
-Wait for the system to provide the <response> tag before continuing your task if the tool output is required.
+- For skills: <skill_call name="Skill Name" description="Human-readable description of what this skill adds to the context" />. You do NOT need to wait for a response for skills as their content is already in your context. You MUST continue your response immediately after the tag.
+- For MCP: <mcp_call name="MCP Name" description="Human-readable description of why you are calling this tool"><request>JSON_REQUEST</request></mcp_call>. Wait for the system to provide the <response> tag before continuing your task if the tool output is required.
 
 CRITICAL RULES FOR CONTENT:
 1. DO NOT write any code, scripts, structured documents, architecture plans, or long specifications directly in the chat text.
@@ -577,6 +576,14 @@ ${activeMCPs.map(c => {
             const newActiveSkills = [...new Set([...sessionActiveSkills, ...invokedSkills.map(s => s.id)])];
             updateSession({ activeSkills: newActiveSkills }, sessionId);
             sessionActiveSkills = newActiveSkills;
+          }
+
+          // If ONLY skills were invoked (no MCP calls), we don't need a next turn 
+          // because the model already continued its response in the same turn
+          if (executedMcpCalls.length === 0 && invokedSkills.length > 0) {
+            // We still need to update the history with the assistant message
+            // but we don't 'continue' the loop
+            break;
           }
 
           const resultsPrompt = executedMcpCalls.length > 0 

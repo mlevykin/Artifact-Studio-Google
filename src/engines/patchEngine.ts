@@ -319,7 +319,6 @@ export function parsePartialMcpCalls(text: string): { name: string; description?
  */
 export function truncateAfterToolCall(text: string): string {
   const mcpMatches = Array.from(text.matchAll(/<mcp_call[\s\S]*?<\/mcp_call>/g));
-  const skillMatches = Array.from(text.matchAll(/<skill_call[\s\S]*?(?:\/>|<\/skill_call>)/g));
 
   let lastToolEnd = -1;
 
@@ -328,26 +327,17 @@ export function truncateAfterToolCall(text: string): string {
     if (end > lastToolEnd) lastToolEnd = end;
   }
 
-  for (const match of skillMatches) {
-    const end = match.index! + match[0].length;
-    if (end > lastToolEnd) lastToolEnd = end;
-  }
-
   if (lastToolEnd !== -1) {
     return text.substring(0, lastToolEnd);
   }
 
-  // If a tool call has started but not finished, we should also truncate after it starts
+  // If an MCP call has started but not finished, we should also truncate after it starts
   const mcpStart = text.indexOf('<mcp_call');
-  const skillStart = text.indexOf('<skill_call');
-  const firstToolStart = Math.min(
-    mcpStart === -1 ? Infinity : mcpStart,
-    skillStart === -1 ? Infinity : skillStart
-  );
 
-  if (firstToolStart !== Infinity) {
+  if (mcpStart !== -1) {
     // We want to show the tool call tag itself so it can be parsed, 
     // but nothing after it if it's not complete yet.
+    // For skills, we allow the model to continue in the same turn.
     return text;
   }
 
