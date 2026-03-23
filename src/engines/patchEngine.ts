@@ -318,5 +318,8 @@ export function stripArtifactsAndPatches(text: string): string {
   // Strip mcp calls (including partial)
   cleaned = cleaned.replace(/<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)/g, '');
   
+  // Strip response tags
+  cleaned = cleaned.replace(/<response>([\s\S]*?)(?:<\/response>|$)/g, '');
+
   return cleaned.trim();
 }

@@ -69,6 +69,7 @@ export interface Message {
   timestamp: number;
   patches?: Patch[];
   thought?: string; // For reasoning/planning
+  isSystemGenerated?: boolean; // If true, hide from chat UI but keep in context
   invokedSkills?: {
     name: string;
     description?: string;

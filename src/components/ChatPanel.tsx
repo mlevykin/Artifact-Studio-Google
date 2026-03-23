@@ -233,7 +233,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         )}
         
-        {messages.map((m) => (
+        {messages.filter(m => !m.isSystemGenerated).map((m) => (
           <div 
             key={m.id} 
             className={cn(

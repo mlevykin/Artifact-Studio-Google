@@ -562,6 +562,7 @@ Available servers: ${activeMCPs.map(c => c.name).join(', ')}`
             id: generateId(),
             role: 'user',
             content: resultsPrompt,
+            isSystemGenerated: true,
             timestamp: Date.now()
           };
           
