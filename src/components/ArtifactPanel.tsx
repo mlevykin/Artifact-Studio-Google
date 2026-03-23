@@ -171,7 +171,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const handleSyncToDisk = async (silent: boolean = false) => {
     try {
       if (!workspaceHandle) {
-        if (!silent) alert('Пожалуйста, сначала выберите рабочую папку.');
+        if (!silent) alert('Please select a workspace folder first.');
         return;
       }
 
@@ -180,7 +180,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         : await requestPermission(workspaceHandle);
         
       if (!hasPermission) {
-        if (!silent) alert('Не удалось получить разрешение на запись в папку.');
+        if (!silent) alert('Failed to get write permission for the folder.');
         return;
       }
 
@@ -216,7 +216,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       console.error('Sync failed:', error);
       setIsSyncing(false);
       if (!silent) {
-        alert(error instanceof Error ? error.message : 'Ошибка при синхронизации с диском.');
+        alert(error instanceof Error ? error.message : 'Error syncing with disk.');
       }
     }
   };

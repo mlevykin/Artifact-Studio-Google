@@ -25,7 +25,7 @@ export async function clearStoredDirectoryHandle() {
 
 export async function selectLocalDirectory(): Promise<any | null> {
   if (!isFileSystemApiSupported()) {
-    throw new Error('Ваш браузер не поддерживает File System Access API. Пожалуйста, используйте Chrome или Edge.');
+    throw new Error('Your browser doesn\'t support the File System Access API. Please use Chrome or Edge.');
   }
   
   try {
@@ -40,7 +40,7 @@ export async function selectLocalDirectory(): Promise<any | null> {
   } catch (error) {
     if ((error as Error).name === 'AbortError') return null;
     if ((error as Error).name === 'SecurityError') {
-      throw new Error('Доступ к файловой системе заблокирован политикой безопасности (возможно, из-за запуска в iframe). Попробуйте открыть приложение в новой вкладке.');
+      throw new Error('File system access is blocked by security policy (possibly due to running in an iframe). Try opening the app in a new tab.');
     }
     console.error('Failed to select directory:', error);
     throw error;

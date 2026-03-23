@@ -295,7 +295,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                               <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
                                 {stepIdx + 1}
                               </div>
-                              Добавляю в контекст skill: {step.name}
+                              Adding skill to context: {step.name}
                               {expandedSkills[`${m.id}-${stepIdx}`] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                             </button>
                             <AnimatePresence>
@@ -477,7 +477,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                   <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
                                     {i + 1}
                                   </div>
-                                  Добавляю в контекст skill: {skill.name}
+                                  Adding skill to context: {skill.name}
                                   {expandedSkills[m.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                                 </button>
                                 <AnimatePresence>
@@ -721,7 +721,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                               <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">
                                 {stepIdx + 1}
                               </div>
-                              Добавляю в контекст skill: {step.name}
+                              Adding skill to context: {step.name}
                             </div>
                             {step.description && (
                               <div className="mt-1 text-[10px] text-zinc-500 italic pl-6 border-l border-emerald-200">
