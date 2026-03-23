@@ -418,10 +418,12 @@ ${activeMCPs.map(c => {
     let currentMessages = [...initialMessages, userMessage];
     let currentPrompt = fullPrompt;
     let turnCount = 0;
-    const maxTurns = 3;
+    const maxTurns = 10;
 
     try {
       while (turnCount < maxTurns) {
+        setStreamingText('');
+        setStreamingArtifact(null);
         let fullResponse = '';
         const stream = streamResponse(
           provider,
@@ -456,6 +458,7 @@ ${activeMCPs.map(c => {
         let needsNextTurn = false;
         
         if (mcpCalls.length > 0) {
+          setStreamingText(''); // Clear to show "Thinking" during tool execution
           for (const call of mcpCalls) {
             const mcpConfig = mcpConfigs.find(c => c.name === call.name || c.id === call.name);
             if (mcpConfig && mcpConfig.enabled) {
@@ -579,8 +582,6 @@ ${activeMCPs.map(c => {
           currentMessages.push(resultsMessage);
           currentPrompt = ''; // We use the message history now
           turnCount++;
-          setStreamingText('');
-          setStreamingArtifact(null);
           continue;
         } else {
           break;
