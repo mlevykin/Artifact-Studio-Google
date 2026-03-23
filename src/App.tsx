@@ -457,31 +457,37 @@ ${activeMCPs.map(c => {
         const executedMcpCalls = [];
         let needsNextTurn = false;
         
-        if (mcpCalls.length > 0) {
-          setStreamingText(''); // Clear to show "Thinking" during tool execution
-          for (const call of mcpCalls) {
-            const mcpConfig = mcpConfigs.find(c => c.name === call.name || c.id === call.name);
-            if (mcpConfig && mcpConfig.enabled) {
-              try {
-                // Handle virtual "list_tools" call
-                if (call.request?.method === 'list_tools') {
-                  const tools = mcpConfig.tools || [];
-                  executedMcpCalls.push({ ...call, response: { tools, status: 'success' } });
-                } else {
-                  const { tool, arguments: args } = call.request;
-                  const result = await MCPService.callTool(mcpConfig, tool || call.request.name, args || call.request.args || {});
-                  executedMcpCalls.push({ ...call, response: result });
+        if (mcpCalls.length > 0 || invokedSkills.length > 0) {
+          setStreamingText(''); // Clear to show "Thinking" during tool/skill processing
+          if (mcpCalls.length > 0) {
+            for (const call of mcpCalls) {
+              const mcpConfig = mcpConfigs.find(c => c.name === call.name || c.id === call.name);
+              if (mcpConfig && mcpConfig.enabled) {
+                try {
+                  // Handle virtual "list_tools" call
+                  if (call.request?.method === 'list_tools') {
+                    const tools = mcpConfig.tools || [];
+                    executedMcpCalls.push({ ...call, response: { tools, status: 'success' } });
+                  } else {
+                    const { tool, arguments: args } = call.request;
+                    const result = await MCPService.callTool(mcpConfig, tool || call.request.name, args || call.request.args || {});
+                    executedMcpCalls.push({ ...call, response: result });
+                  }
+                  needsNextTurn = true;
+                } catch (error: any) {
+                  executedMcpCalls.push({ ...call, response: { error: error.message } });
+                  needsNextTurn = true;
                 }
-                needsNextTurn = true;
-              } catch (error: any) {
-                executedMcpCalls.push({ ...call, response: { error: error.message } });
+              } else {
+                const availableServers = isAutoSelect ? mcpConfigs.map(c => c.name).join(', ') : activeMCPs.map(c => c.name).join(', ');
+                executedMcpCalls.push({ ...call, response: { error: `MCP Server "${call.name}" not found or disabled. AVAILABLE SERVERS: ${availableServers}` } });
                 needsNextTurn = true;
               }
-            } else {
-              const availableServers = isAutoSelect ? mcpConfigs.map(c => c.name).join(', ') : activeMCPs.map(c => c.name).join(', ');
-              executedMcpCalls.push({ ...call, response: { error: `MCP Server "${call.name}" not found or disabled. AVAILABLE SERVERS: ${availableServers}` } });
-              needsNextTurn = true;
             }
+          }
+          
+          if (invokedSkills.length > 0) {
+            needsNextTurn = true;
           }
         }
 
@@ -566,9 +572,18 @@ ${activeMCPs.map(c => {
         });
 
         if (needsNextTurn) {
-          const resultsPrompt = executedMcpCalls.map(c => 
-            `<response>\n${JSON.stringify(c.response, null, 2)}\n</response>`
-          ).join('\n\n');
+          // Update active skills in session if any were invoked
+          if (invokedSkills.length > 0) {
+            const newActiveSkills = [...new Set([...sessionActiveSkills, ...invokedSkills.map(s => s.id)])];
+            updateSession({ activeSkills: newActiveSkills }, sessionId);
+            sessionActiveSkills = newActiveSkills;
+          }
+
+          const resultsPrompt = executedMcpCalls.length > 0 
+            ? executedMcpCalls.map(c => 
+                `<response>\n${JSON.stringify(c.response, null, 2)}\n</response>`
+              ).join('\n\n')
+            : "The requested skills have been added to your context. Please continue your task and generate the requested output (e.g., artifacts, code, or documentation).";
           
           // Add the results as a new user message for the next turn
           const resultsMessage: Message = {
@@ -581,7 +596,20 @@ ${activeMCPs.map(c => {
           
           addMessage(resultsMessage, sessionId);
           currentMessages.push(resultsMessage);
-          currentPrompt = ''; // We use the message history now
+
+          // Re-calculate context for the next turn to include newly activated skills
+          const updatedActiveSkills = skills.filter(s => sessionActiveSkills.includes(s.id));
+          const updatedActiveMCPs = mcpConfigs.filter(c => sessionActiveMcpIds.includes(c.id));
+          
+          const nextSkillsContext = updatedActiveSkills.length > 0 
+            ? updatedActiveSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${reportingInstruction}`
+            : '';
+          const nextMcpContext = isAutoSelect 
+            ? `AUTO-SELECT MCP ENABLED: You have access to all MCP servers.\nIMPORTANT: You MUST ONLY use the MCP servers and tools explicitly listed below.\nAvailable MCPs:\n${mcpConfigs.map(c => `Server: ${c.name}`).join('\n')}`
+            : (updatedActiveMCPs.length > 0 ? `ACTIVE MCP SERVERS:\n${updatedActiveMCPs.map(c => `Server: ${c.name}`).join('\n')}` : '');
+
+          currentPrompt = `${nextSkillsContext}\n\n${nextMcpContext}\n\n${resultsPrompt}`;
+          
           turnCount++;
           continue;
         } else {
