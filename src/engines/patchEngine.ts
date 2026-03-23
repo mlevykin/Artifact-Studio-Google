@@ -173,7 +173,16 @@ export function parsePartialArtifact(text: string): { type: string; title: strin
 export function parseThought(text: string): string | null {
   const thoughtRegex = /<thought>([\s\S]*?)<\/thought>/;
   const match = text.match(thoughtRegex);
-  return match ? match[1].trim() : null;
+  if (match) return match[1].trim();
+  
+  // Fallback for cases where model doesn't use tags but starts with "thought" or "Thought:"
+  const lines = text.split('\n');
+  const thoughtLines = lines.filter(l => l.toLowerCase().startsWith('thought ') || l.toLowerCase().startsWith('thought:'));
+  if (thoughtLines.length > 0) {
+    return thoughtLines.map(l => l.replace(/^thought:?\s*/i, '')).join('\n').trim();
+  }
+  
+  return null;
 }
 
 /**
@@ -209,7 +218,16 @@ export function parsePartialPatches(text: string): { old: string; new: string; i
 export function parsePartialThought(text: string): string | null {
   const thoughtRegex = /<thought>([\s\S]*?)(?:<\/thought>|$)/;
   const match = text.match(thoughtRegex);
-  return match ? match[1].trim() : null;
+  if (match) return match[1].trim();
+
+  // Fallback for partial thought without tags
+  const lines = text.split('\n');
+  const thoughtLines = lines.filter(l => l.toLowerCase().startsWith('thought ') || l.toLowerCase().startsWith('thought:'));
+  if (thoughtLines.length > 0) {
+    return thoughtLines.map(l => l.replace(/^thought:?\s*/i, '')).join('\n').trim();
+  }
+
+  return null;
 }
 
 /**
@@ -311,6 +329,11 @@ export function stripArtifactsAndPatches(text: string): string {
 
   // Strip thoughts (including partial)
   cleaned = cleaned.replace(/<thought>([\s\S]*?)(?:<\/thought>|$)/g, '');
+
+  // Strip fallback thoughts (lines starting with thought: or thought )
+  cleaned = cleaned.split('\n')
+    .filter(line => !line.toLowerCase().startsWith('thought ') && !line.toLowerCase().startsWith('thought:'))
+    .join('\n');
 
   // Strip skill calls
   cleaned = cleaned.replace(/<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*\/>/g, '');
