@@ -36,18 +36,25 @@ export class MCPService {
         url.searchParams.set('token', config.oauthConfig.accessToken);
       }
 
-      const transport = new SSEClientTransport(url);
+      // Use proxy to avoid CORS, except for local connections
+      const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      let finalUrl: URL;
+      
+      if (isLocal) {
+        finalUrl = url;
+      } else {
+        const protocol = url.protocol.replace(':', '');
+        finalUrl = new URL(`${window.location.origin}/proxy/${protocol}/${url.host}${url.pathname}${url.search}`);
+      }
+      
+      const transport = new SSEClientTransport(finalUrl);
       const client = new Client(
         {
           name: "Artifact Studio Client",
           version: "1.0.0",
         },
         {
-          capabilities: {
-            tools: {},
-            resources: {},
-            prompts: {}
-          },
+          capabilities: {},
         }
       );
 
@@ -107,7 +114,18 @@ export class MCPService {
   static async exchangeCodeForTokens(config: MCPConfig, code: string, redirectUri: string): Promise<any> {
     if (!config.oauthConfig?.tokenUrl) throw new Error('Token URL not configured');
 
-    const response = await fetch(config.oauthConfig.tokenUrl, {
+    const url = new URL(config.oauthConfig.tokenUrl);
+    const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    let finalUrl: string;
+
+    if (isLocal) {
+      finalUrl = url.toString();
+    } else {
+      const protocol = url.protocol.replace(':', '');
+      finalUrl = `${window.location.origin}/proxy/${protocol}/${url.host}${url.pathname}${url.search}`;
+    }
+
+    const response = await fetch(finalUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'

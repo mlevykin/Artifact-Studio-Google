@@ -243,10 +243,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           >
             <div 
               className={cn(
-                "p-3 rounded-2xl text-sm",
+                "p-3 rounded-2xl text-sm shadow-sm",
                 m.role === 'user' 
-                  ? "bg-zinc-800 text-white rounded-tr-none shadow-md" 
-                  : "bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm"
+                  ? (m.content.startsWith('MCP CALL RESULT') 
+                      ? "bg-zinc-100 border border-zinc-200 text-zinc-600 rounded-tr-none font-mono text-[10px]" 
+                      : "bg-zinc-800 text-white rounded-tr-none shadow-md")
+                  : "bg-white border border-zinc-200 text-zinc-800 rounded-tl-none"
               )}
             >
               {m.role === 'assistant' && (
@@ -311,18 +313,33 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
                       {m.mcpCalls?.map((call, i) => {
                         const stepNum = (m.invokedSkills?.length || 0) + i + 1;
+                        const isError = call.response?.error || (call.response?.isError);
+                        
                         return (
                           <div key={`mcp-${i}`} className="relative">
-                            <div className="absolute -left-[18px] top-2 w-2 h-2 rounded-full bg-amber-500 ring-4 ring-white" />
-                            <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 shadow-sm">
+                            <div className={cn(
+                              "absolute -left-[18px] top-2 w-2 h-2 rounded-full ring-4 ring-white",
+                              isError ? "bg-red-500" : "bg-amber-500"
+                            )} />
+                            <div className={cn(
+                              "border rounded-xl p-2 shadow-sm transition-colors",
+                              isError ? "bg-red-50/50 border-red-100" : "bg-amber-50/50 border-amber-100"
+                            )}>
                               <button 
                                 onClick={() => toggleMcpCalls(m.id)}
-                                className="flex items-center gap-2 text-[10px] font-bold text-amber-700"
+                                className={cn(
+                                  "flex items-center gap-2 text-[10px] font-bold w-full text-left",
+                                  isError ? "text-red-700" : "text-amber-700"
+                                )}
                               >
-                                <div className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[8px]">
+                                <div className={cn(
+                                  "w-4 h-4 rounded-full text-white flex items-center justify-center text-[8px] shrink-0",
+                                  isError ? "bg-red-500" : "bg-amber-500"
+                                )}>
                                   {stepNum}
                                 </div>
-                                MCP TOOL: {call.name}
+                                <span className="truncate flex-1">MCP TOOL: {call.name}</span>
+                                {isError && <span className="text-[8px] bg-red-100 text-red-600 px-1 rounded uppercase tracking-tighter">Error</span>}
                                 {expandedMcpCalls[m.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                               </button>
                               <AnimatePresence>
@@ -337,14 +354,28 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                       <div className="text-[10px] text-zinc-500 italic">{call.description}</div>
                                     )}
                                     <div className="space-y-1">
-                                      <div className="text-[8px] uppercase tracking-widest text-zinc-400">Request</div>
-                                      <pre className="p-1.5 bg-white text-[9px] font-mono text-zinc-600 overflow-x-auto rounded-lg border border-zinc-100">
+                                      <div className="text-[8px] uppercase tracking-widest text-zinc-400 flex items-center justify-between">
+                                        Request
+                                      </div>
+                                      <pre className="p-1.5 bg-white text-[9px] font-mono text-zinc-600 overflow-x-auto rounded-lg border border-zinc-100 max-h-32">
                                         {JSON.stringify(call.request, null, 2)}
                                       </pre>
                                     </div>
                                     <div className="space-y-1">
-                                      <div className="text-[8px] uppercase tracking-widest text-zinc-400">Response</div>
-                                      <pre className="p-1.5 bg-white text-[9px] font-mono text-zinc-600 overflow-x-auto rounded-lg border border-zinc-100">
+                                      <div className="text-[8px] uppercase tracking-widest text-zinc-400 flex items-center justify-between">
+                                        Response
+                                        <button 
+                                          onClick={() => navigator.clipboard.writeText(JSON.stringify(call.response, null, 2))}
+                                          className="hover:text-amber-600 transition-colors"
+                                          title="Copy Response"
+                                        >
+                                          Copy
+                                        </button>
+                                      </div>
+                                      <pre className={cn(
+                                        "p-1.5 text-[9px] font-mono overflow-x-auto rounded-lg border max-h-64",
+                                        isError ? "bg-red-50 text-red-600 border-red-100" : "bg-white text-zinc-600 border-zinc-100"
+                                      )}>
                                         {JSON.stringify(call.response, null, 2)}
                                       </pre>
                                     </div>
