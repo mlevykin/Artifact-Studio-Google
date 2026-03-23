@@ -747,7 +747,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   contentId={artifact?.id}
                   isStreaming={isStreaming}
                 >
-                  <div className="w-[800px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-8 overflow-hidden">
+                  <div className="w-[940px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-8 overflow-hidden">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}

@@ -573,7 +573,7 @@ ${activeMCPs.map(c => {
         if (needsNextTurn) {
           // Update active skills in session if any were invoked
           if (invokedSkills.length > 0) {
-            const newActiveSkills = [...new Set([...sessionActiveSkills, ...invokedSkills.map(s => s.id)])];
+            const newActiveSkills = [...new Set([...sessionActiveSkills, ...invokedSkills.map(s => s.name)])];
             updateSession({ activeSkills: newActiveSkills }, sessionId);
             sessionActiveSkills = newActiveSkills;
           }
