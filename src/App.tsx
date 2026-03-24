@@ -58,6 +58,8 @@ export default function App() {
     deleteSession,
     addMessage,
     addArtifact,
+    updateMessage,
+    removeMessage,
     setSessions
   } = useSessions();
 
@@ -350,23 +352,52 @@ export default function App() {
           ? { ...m, verificationReport: { ...m.verificationReport!, status: 'applied' as const } } 
           : m
       );
-      updateSession({ messages: updatedMessages });
+      updateSession({ messages: updatedMessages }, currentSession.id);
       
       // Trigger re-verification
       const activeTesters = skills.filter(s => currentSession?.testerSkillIds?.includes(s.id));
       if (activeTesters.length > 0) {
-        const report = await verifyArtifact(updatedArtifact, activeTesters, geminiApiKey, geminiModel);
-        if (report) {
-          const verificationMessage: Message = {
-            id: generateId(),
-            role: 'system',
-            content: `Re-verification report from ${report.testerName}`,
-            timestamp: Date.now(),
-            verificationReport: report
-          };
-          addMessage(verificationMessage, currentSession.id);
+        const progressMessageId = generateId();
+        const progressMessage: Message = {
+          id: progressMessageId,
+          role: 'system',
+          content: `🔍 Re-verifying fixes by ${activeTesters.map(t => t.name).join(', ')}...`,
+          timestamp: Date.now(),
+          isSystemGenerated: true
+        };
+        addMessage(progressMessage, currentSession.id);
+
+        try {
+          const report = await verifyArtifact(updatedArtifact, activeTesters, geminiApiKey, geminiModel);
+          
+          // Remove the progress message and add the report
+          removeMessage(progressMessageId, currentSession.id);
+          
+          if (report) {
+            const verificationMessage: Message = {
+              id: generateId(),
+              role: 'system',
+              content: `Re-verification report from ${report.testerName}`,
+              timestamp: Date.now(),
+              verificationReport: report
+            };
+            addMessage(verificationMessage, currentSession.id);
+          }
+        } catch (error) {
+          console.error('Re-verification failed:', error);
+          removeMessage(progressMessageId, currentSession.id);
         }
       }
+    } else {
+      // Add a system message if patches failed to apply
+      const errorMessage: Message = {
+        id: generateId(),
+        role: 'system',
+        content: `⚠️ Failed to apply suggested patches. This can happen if the artifact content has changed or if the patches are not specific enough.`,
+        timestamp: Date.now(),
+        isSystemGenerated: true
+      };
+      addMessage(errorMessage, currentSession.id);
     }
   };
 
@@ -771,16 +802,37 @@ ${activeMCPs.map(c => {
       // Trigger verification if there are active testers and an artifact exists
       const activeTesters = skills.filter(s => currentSession?.testerSkillIds?.includes(s.id));
       if (activeTesters.length > 0 && initialArtifact) {
-        const report = await verifyArtifact(initialArtifact, activeTesters, geminiApiKey, geminiModel);
-        if (report) {
-          const verificationMessage: Message = {
-            id: generateId(),
-            role: 'system',
-            content: `Verification report from ${report.testerName}`,
-            timestamp: Date.now(),
-            verificationReport: report
-          };
-          addMessage(verificationMessage, sessionId);
+        // Add a temporary "Verification in progress" message
+        const progressMessageId = generateId();
+        const progressMessage: Message = {
+          id: progressMessageId,
+          role: 'system',
+          content: `🔍 Verification in progress by ${activeTesters.map(t => t.name).join(', ')}...`,
+          timestamp: Date.now(),
+          isSystemGenerated: true
+        };
+        addMessage(progressMessage, sessionId);
+
+        try {
+          const report = await verifyArtifact(initialArtifact, activeTesters, geminiApiKey, geminiModel);
+          
+          // Remove the progress message and add the report
+          removeMessage(progressMessageId, sessionId);
+          
+          if (report) {
+            const verificationMessage: Message = {
+              id: generateId(),
+              role: 'system',
+              content: `Verification report from ${report.testerName}`,
+              timestamp: Date.now(),
+              verificationReport: report
+            };
+            addMessage(verificationMessage, sessionId);
+          }
+        } catch (error) {
+          console.error('Verification failed:', error);
+          // Remove progress message on error
+          removeMessage(progressMessageId, sessionId);
         }
       }
 

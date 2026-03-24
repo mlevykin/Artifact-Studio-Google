@@ -1058,18 +1058,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             disabled={autoSelectSkills}
                             className={cn(
                               "w-full flex items-center gap-2.5 p-2 rounded-xl transition-all text-left group",
-                              activeSkillIds.includes(skill.id) ? "bg-emerald-50" : "hover:bg-zinc-50",
+                              activeSkillIds.includes(skill.id) 
+                                ? (testerSkillIds.includes(skill.id) ? "bg-blue-50" : "bg-emerald-50") 
+                                : "hover:bg-zinc-50",
                               autoSelectSkills && "opacity-50 cursor-not-allowed"
                             )}
                           >
                             {activeSkillIds.includes(skill.id) ? (
-                              <CheckCircle2 size={14} className="text-emerald-500" />
+                              testerSkillIds.includes(skill.id) 
+                                ? <CheckCircle2 size={14} className="text-blue-500" />
+                                : <CheckCircle2 size={14} className="text-emerald-500" />
                             ) : (
                               <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
-                                <div className={cn("text-[11px] font-medium truncate", activeSkillIds.includes(skill.id) ? "text-emerald-700" : "text-zinc-700")}>
+                                <div className={cn(
+                                  "text-[11px] font-medium truncate", 
+                                  activeSkillIds.includes(skill.id) 
+                                    ? (testerSkillIds.includes(skill.id) ? "text-blue-700" : "text-emerald-700") 
+                                    : "text-zinc-700"
+                                )}>
                                   {skill.name}
                                 </div>
                                 {testerSkillIds.includes(skill.id) && (

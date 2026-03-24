@@ -67,6 +67,26 @@ export function useSessions() {
     ));
   };
 
+  const updateMessage = (messageId: string, updates: Partial<Message>, sessionId?: string) => {
+    const targetId = sessionId || currentSessionRef.current;
+    if (!targetId) return;
+    setSessions(prev => prev.map(s => 
+      s.id === targetId 
+        ? { ...s, messages: s.messages.map(m => m.id === messageId ? { ...m, ...updates } : m), lastUpdated: Date.now() } 
+        : s
+    ));
+  };
+
+  const removeMessage = (messageId: string, sessionId?: string) => {
+    const targetId = sessionId || currentSessionRef.current;
+    if (!targetId) return;
+    setSessions(prev => prev.map(s => 
+      s.id === targetId 
+        ? { ...s, messages: s.messages.filter(m => m.id !== messageId), lastUpdated: Date.now() } 
+        : s
+    ));
+  };
+
   return {
     sessions,
     currentSession,
@@ -77,6 +97,8 @@ export function useSessions() {
     deleteSession,
     addMessage,
     addArtifact,
+    updateMessage,
+    removeMessage,
     setSessions
   };
 }

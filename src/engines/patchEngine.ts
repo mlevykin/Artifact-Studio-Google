@@ -13,12 +13,14 @@ function normalize(str: string): string {
 export function fuzzyReplace(content: string, patch: Patch): string | null {
   const { old: oldText, new: newText } = patch;
   
+  if (!oldText.trim()) return content;
+
   // 1. Try exact match first
   if (content.includes(oldText)) {
     return content.replace(oldText, newText);
   }
 
-  // 2. Try normalized match
+  // 2. Try normalized match (ignoring whitespace differences)
   const normalizedContent = normalize(content);
   const normalizedOld = normalize(oldText);
 
@@ -33,6 +35,13 @@ export function fuzzyReplace(content: string, patch: Patch): string | null {
       let linesConsumed = 0;
       let oldLinesMatched = 0;
 
+      // Skip leading empty lines in content
+      while (i + linesConsumed < lines.length && lines[i + linesConsumed].trim() === '') {
+        linesConsumed++;
+      }
+
+      const startLineIdx = i + linesConsumed;
+
       while (oldLinesMatched < oldLines.length && (i + linesConsumed) < lines.length) {
         const currentLine = lines[i + linesConsumed].trim();
         const targetLine = oldLines[oldLinesMatched];
@@ -42,7 +51,11 @@ export function fuzzyReplace(content: string, patch: Patch): string | null {
           continue;
         }
 
-        if (currentLine.includes(targetLine)) {
+        // Use a more fuzzy line match: ignore all whitespace within lines
+        const cleanCurrent = currentLine.replace(/\s+/g, '');
+        const cleanTarget = targetLine.replace(/\s+/g, '');
+
+        if (cleanCurrent.includes(cleanTarget) || cleanTarget.includes(cleanCurrent)) {
           linesConsumed++;
           oldLinesMatched++;
         } else {
@@ -53,9 +66,8 @@ export function fuzzyReplace(content: string, patch: Patch): string | null {
 
       if (match && oldLinesMatched === oldLines.length) {
         const newLines = [...lines];
-        const indentation = lines[i].match(/^\s*/)?.[0] || '';
+        const indentation = lines[startLineIdx]?.match(/^\s*/)?.[0] || '';
         
-        // Calculate the common indentation of the new text to avoid double-indenting
         const newTextLines = newText.split('\n');
         const minNewIndentation = newTextLines
           .filter(l => l.trim().length > 0)
@@ -74,6 +86,11 @@ export function fuzzyReplace(content: string, patch: Patch): string | null {
         return newLines.join('\n');
       }
     }
+  }
+
+  // 3. Last resort: if it's a single line or very short, try to find it anywhere
+  if (oldText.trim().length < 50 && content.includes(oldText.trim())) {
+    return content.replace(oldText.trim(), newText);
   }
 
   return null;
