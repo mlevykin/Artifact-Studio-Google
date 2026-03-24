@@ -87,8 +87,8 @@ export default function App() {
       includeChatHistory: true,
       includeAttachmentsHistory: true,
       includeArtifactContext: true,
-      includeSkills: false,
-      includeMcp: false,
+      includeSkills: true,
+      includeMcp: true,
       includeCurrentFile: false
     };
   });
@@ -420,7 +420,7 @@ export default function App() {
     }
 
     const activeSkills = skills.filter(s => sessionActiveSkills.includes(s.id));
-    const activeMCPs = mcpConfigs.filter(c => sessionActiveMcpIds.includes(c.id));
+    const activeMCPs = mcpConfigs.filter(c => c.enabled && sessionActiveMcpIds.includes(c.id));
 
     let skillsContext = '';
     let mcpContext = '';
@@ -453,7 +453,7 @@ CRITICAL RULES FOR CONTENT:
       mcpContext = `AUTO-SELECT MCP ENABLED: You have access to all MCP servers.
 IMPORTANT: You MUST ONLY use the MCP servers and tools explicitly listed below. DO NOT try to guess server names or tools. If a server or tool is not in the list below, it DOES NOT EXIST.
 Available MCPs and their tools:
-${mcpConfigs.map(c => {
+${mcpConfigs.filter(c => c.enabled).map(c => {
   const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (use list_tools to see tools)';
   return `Server: ${c.name}\nTools:\n${toolsList}`;
 }).join('\n\n')}`;
@@ -820,6 +820,9 @@ ${activeMCPs.map(c => {
             onAddConfig={handleAddMCP}
             onUpdateConfig={handleUpdateMCP}
             onDeleteConfig={handleDeleteMCP}
+            activeMcpIds={currentSession?.activeMcpIds || []}
+            onToggleMcp={handleToggleMcp}
+            autoSelectSkills={currentSession?.autoSelectSkills || false}
           />
         )}
       </Sidebar>

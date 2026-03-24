@@ -1038,10 +1038,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">MCP Servers</h3>
                     </div>
                     <div className="max-h-64 overflow-y-auto p-1.5">
-                      {mcpConfigs.length === 0 ? (
-                        <div className="px-2 py-3 text-[10px] text-zinc-400 italic">No MCP servers configured</div>
+                      {mcpConfigs.filter(m => m.enabled).length === 0 ? (
+                        <div className="px-2 py-3 text-[10px] text-zinc-400 italic">No enabled MCP servers</div>
                       ) : (
-                        mcpConfigs.map(mcp => (
+                        mcpConfigs.filter(m => m.enabled).map(mcp => (
                           <button 
                             key={mcp.id}
                             onClick={() => onToggleMcp(mcp.id)}

@@ -28,13 +28,19 @@ interface MCPPanelProps {
   onUpdateConfig: (config: MCPConfig) => void;
   onAddConfig: (config: MCPConfig) => void;
   onDeleteConfig: (id: string) => void;
+  activeMcpIds: string[];
+  onToggleMcp: (id: string) => void;
+  autoSelectSkills: boolean;
 }
 
 export const MCPPanel: React.FC<MCPPanelProps> = ({
   configs,
   onUpdateConfig,
   onAddConfig,
-  onDeleteConfig
+  onDeleteConfig,
+  activeMcpIds,
+  onToggleMcp,
+  autoSelectSkills
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -214,13 +220,26 @@ export const MCPPanel: React.FC<MCPPanelProps> = ({
                   <RefreshCw size={14} className={isTesting === config.id ? "animate-spin" : ""} />
                 </button>
                 <button 
+                  onClick={() => onToggleMcp(config.id)}
+                  disabled={autoSelectSkills || !config.enabled}
+                  className={cn(
+                    "p-1 transition-colors",
+                    activeMcpIds.includes(config.id) ? "text-amber-500" : "text-zinc-500 hover:text-zinc-300",
+                    (autoSelectSkills || !config.enabled) && "opacity-50 cursor-not-allowed"
+                  )}
+                  title={autoSelectSkills ? "Auto-select is enabled" : (!config.enabled ? "Server is globally disabled" : (activeMcpIds.includes(config.id) ? "Disable for this chat" : "Enable for this chat"))}
+                >
+                  {activeMcpIds.includes(config.id) ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                </button>
+                <button 
                   onClick={() => onUpdateConfig({ ...config, enabled: !config.enabled })}
                   className={cn(
                     "p-1 transition-colors",
                     config.enabled ? "text-indigo-400" : "text-zinc-500 hover:text-zinc-300"
                   )}
+                  title={config.enabled ? "Globally Enabled" : "Globally Disabled"}
                 >
-                  {config.enabled ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                  {config.enabled ? <Check size={14} /> : <X size={14} />}
                 </button>
                 <button 
                   onClick={() => startEditing(config)}
