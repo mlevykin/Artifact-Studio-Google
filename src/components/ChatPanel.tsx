@@ -502,7 +502,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                       </button>
                                     </div>
                                     <pre className={cn(
-                                      "p-1.5 text-[9px] font-mono overflow-x-auto rounded-lg border max-h-64",
+                                      "p-1.5 text-[9px] font-mono whitespace-pre-wrap break-words rounded-lg border max-h-64",
                                       isError ? "bg-red-50 text-red-600 border-red-100" : "bg-white text-zinc-600 border-zinc-100"
                                     )}>
                                       {JSON.stringify(step.response, null, 2)}
@@ -545,7 +545,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                 }
                                 
                                 return (
-                                  <code className={className} {...props}>
+                                  <code className={cn(className, "whitespace-pre-wrap break-words")} {...props}>
                                     {children}
                                   </code>
                                 );
@@ -910,7 +910,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                 }
                                 
                                 return (
-                                  <code className={className} {...props}>
+                                  <code className={cn(className, "whitespace-pre-wrap break-words")} {...props}>
                                     {children}
                                   </code>
                                 );

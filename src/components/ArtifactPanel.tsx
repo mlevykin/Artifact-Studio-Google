@@ -131,7 +131,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       }
       
       return (
-        <code className={className} {...props}>
+        <code className={cn(className, "whitespace-pre-wrap break-words")} {...props}>
           {children}
         </code>
       );
@@ -796,7 +796,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   spellCheck={false}
                 />
               ) : (
-                <pre className="p-6 font-mono text-sm text-zinc-800 leading-relaxed">
+                <pre className="p-6 font-mono text-sm text-zinc-800 leading-relaxed whitespace-pre-wrap break-words">
                   <code>{editContent}</code>
                 </pre>
               )}
