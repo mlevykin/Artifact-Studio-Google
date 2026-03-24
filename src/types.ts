@@ -115,6 +115,13 @@ export interface OllamaConfig {
   selectedModel: string;
 }
 
+export interface ContextSettings {
+  includeSystemPrompt: boolean;
+  includeChatHistory: boolean;
+  includeAttachmentsHistory: boolean;
+  includeArtifactContext: boolean;
+}
+
 export interface Settings {
   provider: 'gemini' | 'ollama';
   ollama: OllamaConfig;

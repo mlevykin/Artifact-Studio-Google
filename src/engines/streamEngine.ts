@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { Message, Attachment, Artifact, OllamaConfig } from "../types";
+import { Message, Attachment, Artifact, OllamaConfig, ContextSettings } from "../types";
 
 const SYSTEM_PROMPT = `You are a world-class engineer and product designer.
 You power Google AI Studio Build, turning natural language into production-ready web applications.
@@ -101,20 +101,36 @@ export async function* streamGeminiResponse(
   overrideLastMessageContent?: string,
   webSearchEnabled?: boolean,
   geminiApiKey?: string,
-  modelName?: string
+  modelName?: string,
+  contextSettings?: ContextSettings
 ) {
   const currentArtifactContent = initialArtifact?.content;
   const ai = new GoogleGenAI({ apiKey: geminiApiKey || process.env.GEMINI_API_KEY || "" });
   const controller = new AbortController();
   if (onAbort) onAbort(controller);
 
-  const formattedMessages = messages.map((m, index) => {
+  // Default context settings if not provided
+  const settings = contextSettings || {
+    includeSystemPrompt: true,
+    includeChatHistory: true,
+    includeAttachmentsHistory: true,
+    includeArtifactContext: true
+  };
+
+  // Filter messages based on settings
+  let processedMessages = [...messages];
+  if (!settings.includeChatHistory && processedMessages.length > 1) {
+    // Keep only the last message if chat history is disabled
+    processedMessages = [processedMessages[processedMessages.length - 1]];
+  }
+
+  const formattedMessages = processedMessages.map((m, index) => {
     const parts: any[] = [];
-    const isLast = index === messages.length - 1;
+    const isLast = index === processedMessages.length - 1;
     const content = (isLast && overrideLastMessageContent) ? overrideLastMessageContent : m.content;
     
     // Add attachments
-    if (m.attachments) {
+    if (m.attachments && (isLast || settings.includeAttachmentsHistory)) {
       for (const a of m.attachments) {
         if (a.type === 'image') {
           parts.push({
@@ -141,7 +157,7 @@ export async function* streamGeminiResponse(
 
   // Inject current artifact context if editing
   // Only inject if there are no images in the last message, or if the user explicitly mentions the artifact
-  if (currentArtifactContent && formattedMessages.length > 0) {
+  if (settings.includeArtifactContext && currentArtifactContent && formattedMessages.length > 0) {
     const lastUserMsg = [...formattedMessages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
       const hasImages = lastUserMsg.parts.some(p => p.inlineData);
@@ -156,9 +172,11 @@ export async function* streamGeminiResponse(
   }
 
   try {
-    const config: any = {
-      systemInstruction: SYSTEM_PROMPT,
-    };
+    const config: any = {};
+
+    if (settings.includeSystemPrompt) {
+      config.systemInstruction = SYSTEM_PROMPT;
+    }
 
     if (webSearchEnabled) {
       config.tools = [{ googleSearch: {} }];
@@ -205,18 +223,31 @@ export async function* streamOllamaResponse(
   model: string,
   initialArtifact?: Artifact | null,
   onAbort?: (controller: AbortController) => void,
-  overrideLastMessageContent?: string
+  overrideLastMessageContent?: string,
+  contextSettings?: ContextSettings
 ) {
   const currentArtifactContent = initialArtifact?.content;
   const controller = new AbortController();
   if (onAbort) onAbort(controller);
 
-  const ollamaMessages = messages.map((m, index) => {
+  const settings = contextSettings || {
+    includeSystemPrompt: true,
+    includeChatHistory: true,
+    includeAttachmentsHistory: true,
+    includeArtifactContext: true
+  };
+
+  let processedMessages = [...messages];
+  if (!settings.includeChatHistory && processedMessages.length > 1) {
+    processedMessages = [processedMessages[processedMessages.length - 1]];
+  }
+
+  const ollamaMessages = processedMessages.map((m, index) => {
     const images: string[] = [];
-    const isLast = index === messages.length - 1;
+    const isLast = index === processedMessages.length - 1;
     let content = (isLast && overrideLastMessageContent) ? overrideLastMessageContent : (m.content || "");
     
-    if (m.attachments) {
+    if (m.attachments && (isLast || settings.includeAttachmentsHistory)) {
       for (const a of m.attachments) {
         if (a.type === 'image') {
           images.push(a.data);
@@ -233,7 +264,7 @@ export async function* streamOllamaResponse(
     };
   });
 
-  if (currentArtifactContent && ollamaMessages.length > 0) {
+  if (settings.includeArtifactContext && currentArtifactContent && ollamaMessages.length > 0) {
     const lastUserMsg = [...ollamaMessages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
       const hasImages = lastUserMsg.images && lastUserMsg.images.length > 0;
@@ -251,7 +282,7 @@ export async function* streamOllamaResponse(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: model || 'llama3',
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...ollamaMessages],
+        messages: settings.includeSystemPrompt ? [{ role: 'system', content: SYSTEM_PROMPT }, ...ollamaMessages] : ollamaMessages,
         stream: true
       }),
       signal: controller.signal
@@ -319,11 +350,12 @@ export async function* streamResponse(
   overrideLastMessageContent?: string,
   webSearchEnabled?: boolean,
   geminiApiKey?: string,
-  geminiModel?: string
+  geminiModel?: string,
+  contextSettings?: ContextSettings
 ) {
   if (provider === 'gemini') {
-    yield* streamGeminiResponse(messages, initialArtifact, onAbort, overrideLastMessageContent, webSearchEnabled, geminiApiKey, geminiModel);
+    yield* streamGeminiResponse(messages, initialArtifact, onAbort, overrideLastMessageContent, webSearchEnabled, geminiApiKey, geminiModel, contextSettings);
   } else {
-    yield* streamOllamaResponse(messages, ollamaConfig.baseUrl, ollamaConfig.selectedModel, initialArtifact, onAbort, overrideLastMessageContent);
+    yield* streamOllamaResponse(messages, ollamaConfig.baseUrl, ollamaConfig.selectedModel, initialArtifact, onAbort, overrideLastMessageContent, contextSettings);
   }
 }

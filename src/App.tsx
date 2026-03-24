@@ -24,7 +24,7 @@ import {
   truncateAfterToolCall,
   parseMessageSteps
 } from './engines/patchEngine';
-import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig } from './types';
+import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings } from './types';
 import { generateId } from './utils';
 import { MCPService } from './services/mcpService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -73,6 +73,22 @@ export default function App() {
   const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(() => {
     return localStorage.getItem('webSearchEnabled') === 'true';
   });
+  const [contextSettings, setContextSettings] = useState<ContextSettings>(() => {
+    const saved = localStorage.getItem('contextSettings');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse contextSettings from localStorage', e);
+      }
+    }
+    return {
+      includeSystemPrompt: true,
+      includeChatHistory: true,
+      includeAttachmentsHistory: true,
+      includeArtifactContext: true
+    };
+  });
   const [skills, setSkills] = useState<Skill[]>([]);
   const [mcpConfigs, setMcpConfigs] = useState<MCPConfig[]>([]);
   const [ollamaConfig, setOllamaConfig] = useState<OllamaConfig>(() => {
@@ -110,6 +126,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('ollamaConfig', JSON.stringify(ollamaConfig));
   }, [ollamaConfig]);
+
+  useEffect(() => {
+    localStorage.setItem('contextSettings', JSON.stringify(contextSettings));
+  }, [contextSettings]);
 
   const [activeTab, setActiveTab] = useState<'chats' | 'skills' | 'mcp'>('chats');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -477,7 +497,8 @@ ${activeMCPs.map(c => {
           currentPrompt,
           webSearchEnabled,
           geminiApiKey,
-          geminiModel
+          geminiModel,
+          contextSettings
         );
 
         for await (const chunk of stream) {
@@ -857,6 +878,8 @@ ${activeMCPs.map(c => {
             onGeminiModelChange={setGeminiModel}
             webSearchEnabled={webSearchEnabled}
             onToggleWebSearch={() => setWebSearchEnabled(!webSearchEnabled)}
+            contextSettings={contextSettings}
+            onContextSettingsChange={setContextSettings}
           />
         </div>
 

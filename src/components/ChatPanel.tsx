@@ -16,9 +16,10 @@ import {
   Server,
   CheckCircle2,
   Circle,
-  Wand2
+  Wand2,
+  Layers
 } from 'lucide-react';
-import { Message, Attachment, Skill, MCPConfig } from '../types';
+import { Message, Attachment, Skill, MCPConfig, ContextSettings } from '../types';
 import { cn, generateId } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { MermaidPreview } from './MermaidPreview';
@@ -59,6 +60,8 @@ interface ChatPanelProps {
   onGeminiModelChange: (model: string) => void;
   webSearchEnabled: boolean;
   onToggleWebSearch: () => void;
+  contextSettings: ContextSettings;
+  onContextSettingsChange: (settings: ContextSettings) => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -86,7 +89,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   geminiModel,
   onGeminiModelChange,
   webSearchEnabled,
-  onToggleWebSearch
+  onToggleWebSearch,
+  contextSettings,
+  onContextSettingsChange
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -123,6 +128,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const toggleContextSetting = (key: keyof ContextSettings) => {
+    onContextSettingsChange({
+      ...contextSettings,
+      [key]: !contextSettings[key]
+    });
+  };
 
   const handleSend = () => {
     if ((!input.trim() && attachments.length === 0) || isStreaming) return;
@@ -1026,6 +1038,79 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 </div>
 
                 <div className="max-h-80 overflow-y-auto p-2 space-y-4">
+                  <div className="space-y-1">
+                    <div className="px-2 py-1 text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Layers size={10} />
+                      Context Management
+                    </div>
+                    <div className="grid grid-cols-1 gap-1 p-1">
+                      <button 
+                        onClick={() => toggleContextSetting('includeSystemPrompt')}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-xl transition-all text-left group",
+                          contextSettings.includeSystemPrompt ? "bg-indigo-50" : "hover:bg-zinc-50"
+                        )}
+                      >
+                        {contextSettings.includeSystemPrompt ? (
+                          <CheckCircle2 size={14} className="text-indigo-500" />
+                        ) : (
+                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                        )}
+                        <span className={cn("text-[10px] font-medium", contextSettings.includeSystemPrompt ? "text-indigo-700" : "text-zinc-600")}>
+                          System Prompt
+                        </span>
+                      </button>
+                      <button 
+                        onClick={() => toggleContextSetting('includeChatHistory')}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-xl transition-all text-left group",
+                          contextSettings.includeChatHistory ? "bg-indigo-50" : "hover:bg-zinc-50"
+                        )}
+                      >
+                        {contextSettings.includeChatHistory ? (
+                          <CheckCircle2 size={14} className="text-indigo-500" />
+                        ) : (
+                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                        )}
+                        <span className={cn("text-[10px] font-medium", contextSettings.includeChatHistory ? "text-indigo-700" : "text-zinc-600")}>
+                          Chat History
+                        </span>
+                      </button>
+                      <button 
+                        onClick={() => toggleContextSetting('includeAttachmentsHistory')}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-xl transition-all text-left group",
+                          contextSettings.includeAttachmentsHistory ? "bg-indigo-50" : "hover:bg-zinc-50"
+                        )}
+                      >
+                        {contextSettings.includeAttachmentsHistory ? (
+                          <CheckCircle2 size={14} className="text-indigo-500" />
+                        ) : (
+                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                        )}
+                        <span className={cn("text-[10px] font-medium", contextSettings.includeAttachmentsHistory ? "text-indigo-700" : "text-zinc-600")}>
+                          Attachments History
+                        </span>
+                      </button>
+                      <button 
+                        onClick={() => toggleContextSetting('includeArtifactContext')}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-xl transition-all text-left group",
+                          contextSettings.includeArtifactContext ? "bg-indigo-50" : "hover:bg-zinc-50"
+                        )}
+                      >
+                        {contextSettings.includeArtifactContext ? (
+                          <CheckCircle2 size={14} className="text-indigo-500" />
+                        ) : (
+                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                        )}
+                        <span className={cn("text-[10px] font-medium", contextSettings.includeArtifactContext ? "text-indigo-700" : "text-zinc-600")}>
+                          Active Artifact Context
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
                     <div className="px-2 py-1 text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
                       <Book size={10} />
