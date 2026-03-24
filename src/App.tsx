@@ -754,6 +754,13 @@ ${activeMCPs.map(c => {
     addArtifact(updatedArtifact);
   };
 
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsStreaming(false);
+    }
+  };
+
   const currentArtifact = currentSession?.artifacts.find(a => a.id === currentSession.currentArtifactId) || null;
   const currentIndex = currentSession?.artifacts.findIndex(a => a.id === currentSession.currentArtifactId) ?? -1;
 
@@ -861,6 +868,7 @@ ${activeMCPs.map(c => {
           <ChatPanel 
             messages={currentSession?.messages || []}
             onSendMessage={handleSendMessage}
+            onStop={handleStop}
             isStreaming={isStreaming}
             streamingText={streamingText}
             provider={provider}

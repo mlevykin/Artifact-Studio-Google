@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { Message, Attachment, Artifact, OllamaConfig, ContextSettings } from "../types";
+import { Message, Attachment, Artifact, OllamaConfig, ContextSettings, Skill, MCPConfig } from "../types";
 
 const SYSTEM_PROMPT = `You are a world-class engineer and product designer.
 You power Google AI Studio Build, turning natural language into production-ready web applications.
