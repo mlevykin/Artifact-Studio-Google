@@ -38,7 +38,10 @@ interface ChatPanelProps {
   onSendMessage: (content: string, attachments: Attachment[]) => void;
   isStreaming: boolean;
   streamingText: string;
+  autoSelectSkills: boolean;
+  onToggleAutoSelect: () => void;
   provider: 'gemini' | 'ollama';
+  onProviderChange: (provider: 'gemini' | 'ollama') => void;
   ollamaConfig: { baseUrl: string; selectedModel: string };
   availableModels: string[];
   onOllamaConfigChange: (config: { baseUrl?: string; selectedModel?: string }) => void;
@@ -50,8 +53,10 @@ interface ChatPanelProps {
   onToggleSkill: (id: string) => void;
   activeMcpIds: string[];
   onToggleMcp: (id: string) => void;
-  autoSelectSkills: boolean;
-  onToggleAutoSelect: () => void;
+  geminiApiKey: string;
+  onGeminiApiKeyChange: (key: string) => void;
+  webSearchEnabled: boolean;
+  onToggleWebSearch: () => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -60,6 +65,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   isStreaming,
   streamingText,
   provider,
+  onProviderChange,
   ollamaConfig,
   availableModels,
   onOllamaConfigChange,
@@ -72,13 +78,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   activeMcpIds,
   onToggleMcp,
   autoSelectSkills,
-  onToggleAutoSelect
+  onToggleAutoSelect,
+  geminiApiKey,
+  onGeminiApiKeyChange,
+  webSearchEnabled,
+  onToggleWebSearch
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const activeSkills = skills.filter(s => activeSkillIds.includes(s.id));
   const activeMcps = mcpConfigs.filter(m => activeMcpIds.includes(m.id));
   const [showOllamaSettings, setShowOllamaSettings] = useState(false);
+  const [showGeminiSettings, setShowGeminiSettings] = useState(false);
   const [showSelection, setShowSelection] = useState(false);
   const [expandedPatches, setExpandedPatches] = useState<Record<string, boolean>>({});
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
@@ -216,6 +227,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <Loader2 size={14} className={cn(showOllamaSettings && "rotate-45")} />
               </button>
             )}
+            {provider === 'gemini' && (
+              <button 
+                onClick={() => setShowGeminiSettings(!showGeminiSettings)}
+                className="p-1 hover:bg-zinc-100 rounded text-zinc-400 hover:text-zinc-600 transition-colors"
+              >
+                <Loader2 size={14} className={cn(showGeminiSettings && "rotate-45")} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -248,6 +267,40 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 className="text-[10px] bg-zinc-100 border-none rounded-lg px-2 py-1 focus:ring-1 focus:ring-zinc-200 outline-none"
                 placeholder="http://localhost:11434"
               />
+            </div>
+          </motion.div>
+        )}
+
+        {showGeminiSettings && provider === 'gemini' && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            className="overflow-hidden space-y-2 pt-2 border-t border-zinc-100"
+          >
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-bold text-zinc-400 uppercase">Gemini API Key</label>
+              <input 
+                type="password"
+                value={geminiApiKey}
+                onChange={(e) => onGeminiApiKeyChange(e.target.value)}
+                className="text-[10px] bg-zinc-100 border-none rounded-lg px-2 py-1 focus:ring-1 focus:ring-zinc-200 outline-none"
+                placeholder="Enter API Key..."
+              />
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <label className="text-[9px] font-bold text-zinc-400 uppercase">Web Search</label>
+              <button 
+                onClick={onToggleWebSearch}
+                className={cn(
+                  "w-8 h-4 rounded-full transition-colors relative",
+                  webSearchEnabled ? "bg-indigo-500" : "bg-zinc-300"
+                )}
+              >
+                <div className={cn(
+                  "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                  webSearchEnabled ? "left-4.5" : "left-0.5"
+                )} />
+              </button>
             </div>
           </motion.div>
         )}
@@ -875,7 +928,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <Plus size={20} className={cn(showSelection && "rotate-45 transition-transform")} />
               </button>
               
-              <div className="flex items-center gap-1 overflow-x-auto max-w-[150px] no-scrollbar py-0.5">
+              <div className="flex items-center gap-1 overflow-x-auto max-w-[200px] no-scrollbar py-0.5">
+                {webSearchEnabled && provider === 'gemini' && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-bold whitespace-nowrap">
+                    <Loader2 size={10} className="animate-spin" />
+                    WEB SEARCH
+                  </div>
+                )}
                 {autoSelectSkills ? (
                   <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 text-[9px] font-bold whitespace-nowrap">
                     <Wand2 size={10} />

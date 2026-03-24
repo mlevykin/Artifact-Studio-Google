@@ -62,6 +62,8 @@ export default function App() {
   } = useSessions();
 
   const [provider, setProvider] = useState<'gemini' | 'ollama'>('gemini');
+  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [mcpConfigs, setMcpConfigs] = useState<MCPConfig[]>([]);
   const [ollamaConfig, setOllamaConfig] = useState<OllamaConfig>({
@@ -71,6 +73,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'chats' | 'skills' | 'mcp'>('chats');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [availableModels, setAvailableModels] = useState<string[]>(['llama3']);
+
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [streamingArtifact, setStreamingArtifact] = useState<{ type: string; title: string; content: string } | null>(null);
@@ -430,7 +433,9 @@ ${activeMCPs.map(c => {
           ollamaConfig,
           initialArtifact,
           (controller) => { abortControllerRef.current = controller; },
-          currentPrompt
+          currentPrompt,
+          webSearchEnabled,
+          geminiApiKey
         );
 
         for await (const chunk of stream) {
@@ -781,19 +786,24 @@ ${activeMCPs.map(c => {
             isStreaming={isStreaming}
             streamingText={streamingText}
             provider={provider}
+            onProviderChange={setProvider}
             ollamaConfig={ollamaConfig}
-            availableModels={availableModels}
             onOllamaConfigChange={handleOllamaConfigChange}
-            isSidebarOpen={isSidebarOpen}
+            availableModels={availableModels}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            isSidebarOpen={isSidebarOpen}
             skills={skills}
-            mcpConfigs={mcpConfigs}
             activeSkillIds={currentSession?.activeSkills || []}
             onToggleSkill={handleToggleSkill}
+            mcpConfigs={mcpConfigs}
             activeMcpIds={currentSession?.activeMcpIds || []}
             onToggleMcp={handleToggleMcp}
             autoSelectSkills={currentSession?.autoSelectSkills || false}
             onToggleAutoSelect={handleToggleAutoSelect}
+            geminiApiKey={geminiApiKey}
+            onGeminiApiKeyChange={setGeminiApiKey}
+            webSearchEnabled={webSearchEnabled}
+            onToggleWebSearch={() => setWebSearchEnabled(!webSearchEnabled)}
           />
         </div>
 
