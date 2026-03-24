@@ -87,9 +87,9 @@ export default function App() {
       includeChatHistory: true,
       includeAttachmentsHistory: true,
       includeArtifactContext: true,
-      includeSkills: true,
-      includeMcp: true,
-      includeCurrentFile: true
+      includeSkills: false,
+      includeMcp: false,
+      includeCurrentFile: false
     };
   });
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -495,6 +495,9 @@ ${activeMCPs.map(c => {
         setStreamingText('');
         setStreamingArtifact(null);
         let fullResponse = '';
+        const activeSkillsData = skills.filter(s => currentSession?.activeSkills?.includes(s.id));
+        const activeMcpData = mcpConfigs.filter(m => currentSession?.activeMcpIds?.includes(m.id));
+
         const stream = streamResponse(
           provider,
           currentMessages,
@@ -505,7 +508,10 @@ ${activeMCPs.map(c => {
           webSearchEnabled,
           geminiApiKey,
           geminiModel,
-          contextSettings
+          contextSettings,
+          activeSkillsData,
+          activeMcpData,
+          currentSession?.selectedFilePath
         );
 
         for await (const chunk of stream) {

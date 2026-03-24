@@ -103,7 +103,10 @@ export async function* streamGeminiResponse(
   webSearchEnabled?: boolean,
   geminiApiKey?: string,
   modelName?: string,
-  contextSettings?: ContextSettings
+  contextSettings?: ContextSettings,
+  activeSkills?: Skill[],
+  activeMcpConfigs?: MCPConfig[],
+  selectedFilePath?: string | null
 ) {
   const currentArtifactContent = initialArtifact?.content;
   const ai = new GoogleGenAI({ apiKey: geminiApiKey || process.env.GEMINI_API_KEY || "" });
@@ -116,9 +119,9 @@ export async function* streamGeminiResponse(
     includeChatHistory: true,
     includeAttachmentsHistory: true,
     includeArtifactContext: true,
-    includeSkills: true,
-    includeMcp: true,
-    includeCurrentFile: true
+    includeSkills: false,
+    includeMcp: false,
+    includeCurrentFile: false
   };
 
   // Filter messages based on settings
@@ -161,15 +164,42 @@ export async function* streamGeminiResponse(
 
   // Inject current artifact context if editing
   // Only inject if there are no images in the last message, or if the user explicitly mentions the artifact
-  if (settings.includeArtifactContext && currentArtifactContent && formattedMessages.length > 0) {
+  if (formattedMessages.length > 0) {
     const lastUserMsg = [...formattedMessages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
       const hasImages = lastUserMsg.parts.some(p => p.inlineData);
       const mentionsArtifact = lastUserMsg.parts.some(p => p.text && /artifact|code|diagram|edit|change|fix|update/i.test(p.text));
       
-      if (currentArtifactContent && initialArtifact && (!hasImages || mentionsArtifact)) {
+      // Inject Artifact Context
+      if (settings.includeArtifactContext && currentArtifactContent && initialArtifact && (!hasImages || mentionsArtifact)) {
         lastUserMsg.parts.push({
           text: `\n\n[CONTEXT: Current Active Artifact]\nID: ${initialArtifact.id}\nTitle: ${initialArtifact.title}\nType: ${initialArtifact.type}\nContent:\n\`\`\`\n${currentArtifactContent}\n\`\`\``
+        });
+      }
+
+      // Inject Skills Context
+      if (settings.includeSkills && activeSkills && activeSkills.length > 0) {
+        const skillsText = activeSkills.map(s => `Skill: ${s.name}\nDescription: ${s.description}\nContent:\n${s.content}`).join('\n\n---\n\n');
+        lastUserMsg.parts.push({
+          text: `\n\n[CONTEXT: Active Skills]\n${skillsText}`
+        });
+      }
+
+      // Inject MCP Context
+      if (settings.includeMcp && activeMcpConfigs && activeMcpConfigs.length > 0) {
+        const mcpText = activeMcpConfigs.map(m => {
+          const tools = m.tools?.map(t => `- ${t.name}: ${t.description}`).join('\n') || 'No tools available';
+          return `MCP Server: ${m.name}\nURL: ${m.url}\nAvailable Tools:\n${tools}`;
+        }).join('\n\n---\n\n');
+        lastUserMsg.parts.push({
+          text: `\n\n[CONTEXT: Active MCP Servers]\n${mcpText}`
+        });
+      }
+
+      // Inject Current File Path
+      if (settings.includeCurrentFile && selectedFilePath) {
+        lastUserMsg.parts.push({
+          text: `\n\n[CONTEXT: Selected File Path]\n${selectedFilePath}`
         });
       }
     }
@@ -228,7 +258,10 @@ export async function* streamOllamaResponse(
   initialArtifact?: Artifact | null,
   onAbort?: (controller: AbortController) => void,
   overrideLastMessageContent?: string,
-  contextSettings?: ContextSettings
+  contextSettings?: ContextSettings,
+  activeSkills?: Skill[],
+  activeMcpConfigs?: MCPConfig[],
+  selectedFilePath?: string | null
 ) {
   const currentArtifactContent = initialArtifact?.content;
   const controller = new AbortController();
@@ -239,9 +272,9 @@ export async function* streamOllamaResponse(
     includeChatHistory: true,
     includeAttachmentsHistory: true,
     includeArtifactContext: true,
-    includeSkills: true,
-    includeMcp: true,
-    includeCurrentFile: true
+    includeSkills: false,
+    includeMcp: false,
+    includeCurrentFile: false
   };
 
   let processedMessages = [...messages];
@@ -271,14 +304,35 @@ export async function* streamOllamaResponse(
     };
   });
 
-  if (settings.includeArtifactContext && currentArtifactContent && ollamaMessages.length > 0) {
+  if (ollamaMessages.length > 0) {
     const lastUserMsg = [...ollamaMessages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
       const hasImages = lastUserMsg.images && lastUserMsg.images.length > 0;
       const mentionsArtifact = /artifact|code|diagram|edit|change|fix|update/i.test(lastUserMsg.content);
       
-      if (currentArtifactContent && initialArtifact && (!hasImages || mentionsArtifact)) {
+      // Inject Artifact Context
+      if (settings.includeArtifactContext && currentArtifactContent && initialArtifact && (!hasImages || mentionsArtifact)) {
         lastUserMsg.content += `\n\n[CONTEXT: Current Active Artifact]\nID: ${initialArtifact.id}\nTitle: ${initialArtifact.title}\nType: ${initialArtifact.type}\nContent:\n\`\`\`\n${currentArtifactContent}\n\`\`\``;
+      }
+
+      // Inject Skills Context
+      if (settings.includeSkills && activeSkills && activeSkills.length > 0) {
+        const skillsText = activeSkills.map(s => `Skill: ${s.name}\nDescription: ${s.description}\nContent:\n${s.content}`).join('\n\n---\n\n');
+        lastUserMsg.content += `\n\n[CONTEXT: Active Skills]\n${skillsText}`;
+      }
+
+      // Inject MCP Context
+      if (settings.includeMcp && activeMcpConfigs && activeMcpConfigs.length > 0) {
+        const mcpText = activeMcpConfigs.map(m => {
+          const tools = m.tools?.map(t => `- ${t.name}: ${t.description}`).join('\n') || 'No tools available';
+          return `MCP Server: ${m.name}\nURL: ${m.url}\nAvailable Tools:\n${tools}`;
+        }).join('\n\n---\n\n');
+        lastUserMsg.content += `\n\n[CONTEXT: Active MCP Servers]\n${mcpText}`;
+      }
+
+      // Inject Current File Path
+      if (settings.includeCurrentFile && selectedFilePath) {
+        lastUserMsg.content += `\n\n[CONTEXT: Selected File Path]\n${selectedFilePath}`;
       }
     }
   }
@@ -358,11 +412,37 @@ export async function* streamResponse(
   webSearchEnabled?: boolean,
   geminiApiKey?: string,
   geminiModel?: string,
-  contextSettings?: ContextSettings
+  contextSettings?: ContextSettings,
+  activeSkills?: Skill[],
+  activeMcpConfigs?: MCPConfig[],
+  selectedFilePath?: string | null
 ) {
   if (provider === 'gemini') {
-    yield* streamGeminiResponse(messages, initialArtifact, onAbort, overrideLastMessageContent, webSearchEnabled, geminiApiKey, geminiModel, contextSettings);
+    yield* streamGeminiResponse(
+      messages, 
+      initialArtifact, 
+      onAbort, 
+      overrideLastMessageContent, 
+      webSearchEnabled, 
+      geminiApiKey, 
+      geminiModel, 
+      contextSettings,
+      activeSkills,
+      activeMcpConfigs,
+      selectedFilePath
+    );
   } else {
-    yield* streamOllamaResponse(messages, ollamaConfig.baseUrl, ollamaConfig.selectedModel, initialArtifact, onAbort, overrideLastMessageContent, contextSettings);
+    yield* streamOllamaResponse(
+      messages, 
+      ollamaConfig.baseUrl, 
+      ollamaConfig.selectedModel, 
+      initialArtifact, 
+      onAbort, 
+      overrideLastMessageContent, 
+      contextSettings,
+      activeSkills,
+      activeMcpConfigs,
+      selectedFilePath
+    );
   }
 }
