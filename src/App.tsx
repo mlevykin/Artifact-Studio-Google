@@ -633,12 +633,21 @@ ${activeMCPs.map(c => {
         updateSession({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') }, sessionId);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Streaming error:', error);
+      let errorMessage = 'Sorry, I encountered an error while processing your request.';
+      
+      // Handle Gemini Quota Error
+      if (error?.message?.includes('429') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+        errorMessage = '⚠️ **Gemini API Quota Exceeded.**\n\nYour API key has reached its rate limit or daily quota. \n\n**What to do:**\n1. Wait a minute and try again.\n2. Check your usage at [Google AI Studio](https://aistudio.google.com/).\n3. Ensure your billing is set up if you are using a paid plan.';
+      } else if (error?.message?.includes('API_KEY_INVALID')) {
+        errorMessage = '❌ **Invalid API Key.**\n\nPlease check the Gemini API key you entered in the settings (gear icon next to Gemini provider).';
+      }
+
       addMessage({
         id: generateId(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error while processing your request.',
+        content: errorMessage,
         timestamp: Date.now()
       }, sessionId);
     } finally {

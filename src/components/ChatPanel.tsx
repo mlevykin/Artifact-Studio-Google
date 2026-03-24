@@ -278,7 +278,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             className="overflow-hidden space-y-2 pt-2 border-t border-zinc-100"
           >
             <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-bold text-zinc-400 uppercase">Gemini API Key</label>
+              <div className="flex items-center justify-between">
+                <label className="text-[9px] font-bold text-zinc-400 uppercase">Gemini API Key</label>
+                <span className="text-[8px] text-zinc-400 italic">Leave empty for system key</span>
+              </div>
               <input 
                 type="password"
                 value={geminiApiKey}
