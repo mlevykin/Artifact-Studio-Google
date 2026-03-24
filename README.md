@@ -16,7 +16,18 @@ Artifact Studio is a professional, AI-powered environment designed for generatin
   - **Markdown Rendering**: Rich text formatting with GFM (GitHub Flavored Markdown) support.
   - **SVG Previews**: Direct rendering of vector graphics.
   - **Multi-file Projects**: Hierarchical file explorer for complex codebases.
-- **Smart Patching**: AI can perform surgical edits to existing artifacts using a robust fuzzy patch engine, preserving your changes while updating specific parts.
+- **Context Management**: Granular control over the information sent to the LLM. Toggle individual context elements:
+  - **System Prompt**: Enable/disable the base AI instructions.
+  - **Chat History**: Control whether previous messages are included in the prompt.
+  - **Attachments History**: Toggle the inclusion of previous file/image attachments.
+  - **Active Artifact Context**: Automatically include the current code/diagram in the AI's context for editing.
+  - **Skills Context**: Toggle the inclusion of active skill definitions.
+  - **MCP Servers Context**: Toggle the inclusion of MCP tool definitions.
+  - **Selected File Path**: Control whether the AI knows which file you have selected in the workspace.
+- **Smart Patching**: AI can perform surgical edits to existing artifacts using a robust fuzzy patch engine. Features include:
+  - **Indentation Normalization**: Automatically detects and matches the indentation of your existing code.
+  - **Fuzzy Matching**: Robust parsing that handles minor formatting variations.
+  - **Real-time Updates**: Patches are applied instantly to the active artifact during streaming.
 - **MCP Integration**: Connect to Model Context Protocol (MCP) servers to augment the AI's context with external tools and data sources.
 - **Version Control**: Track changes with automatic versioning. Easily switch between previous versions of any artifact.
 - **Direct Code Editing**: Modify the generated code directly in the "Code" view and save changes.
