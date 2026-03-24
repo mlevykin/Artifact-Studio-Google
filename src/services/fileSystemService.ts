@@ -286,14 +286,18 @@ export async function writeProjectToDirectory(
       const fileName = pathParts.pop()!;
       let currentDir = directoryHandle;
 
+      const sanitizeName = (name: string) => name.replace(/[<>:"/\\|?*]/g, '_');
+
       // Create subdirectories if they don't exist
       for (const part of pathParts) {
         if (!part || part === '.') continue;
-        currentDir = await currentDir.getDirectoryHandle(part, { create: true });
+        const sanitizedPart = sanitizeName(part);
+        currentDir = await currentDir.getDirectoryHandle(sanitizedPart, { create: true });
       }
 
       // Write the file
-      const fileHandle = await currentDir.getFileHandle(fileName, { create: true });
+      const sanitizedFileName = sanitizeName(fileName);
+      const fileHandle = await currentDir.getFileHandle(sanitizedFileName, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(file.content);
       await writable.close();
