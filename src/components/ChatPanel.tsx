@@ -55,6 +55,8 @@ interface ChatPanelProps {
   onToggleMcp: (id: string) => void;
   geminiApiKey: string;
   onGeminiApiKeyChange: (key: string) => void;
+  geminiModel: string;
+  onGeminiModelChange: (model: string) => void;
   webSearchEnabled: boolean;
   onToggleWebSearch: () => void;
 }
@@ -81,6 +83,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onToggleAutoSelect,
   geminiApiKey,
   onGeminiApiKeyChange,
+  geminiModel,
+  onGeminiModelChange,
   webSearchEnabled,
   onToggleWebSearch
 }) => {
@@ -289,6 +293,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 className="text-[10px] bg-zinc-100 border-none rounded-lg px-2 py-1 focus:ring-1 focus:ring-zinc-200 outline-none"
                 placeholder="Enter API Key..."
               />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-bold text-zinc-400 uppercase">Gemini Model</label>
+              <select 
+                value={geminiModel}
+                onChange={(e) => onGeminiModelChange(e.target.value)}
+                className="text-[10px] bg-zinc-100 border-none rounded-lg px-2 py-1 focus:ring-1 focus:ring-zinc-200 outline-none"
+              >
+                <option value="gemini-3-flash-preview">Gemini 3 Flash (Experimental)</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Powerful)</option>
+                <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+              </select>
             </div>
             <div className="flex items-center justify-between pt-1">
               <label className="text-[9px] font-bold text-zinc-400 uppercase">Web Search</label>

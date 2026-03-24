@@ -100,7 +100,8 @@ export async function* streamGeminiResponse(
   onAbort?: (controller: AbortController) => void,
   overrideLastMessageContent?: string,
   webSearchEnabled?: boolean,
-  geminiApiKey?: string
+  geminiApiKey?: string,
+  modelName?: string
 ) {
   const currentArtifactContent = initialArtifact?.content;
   const ai = new GoogleGenAI({ apiKey: geminiApiKey || process.env.GEMINI_API_KEY || "" });
@@ -164,7 +165,7 @@ export async function* streamGeminiResponse(
     }
 
     const result = await ai.models.generateContentStream({
-      model: "gemini-3-flash-preview",
+      model: modelName || "gemini-3-flash-preview",
       contents: formattedMessages as any,
       config
     });
@@ -317,10 +318,11 @@ export async function* streamResponse(
   onAbort?: (controller: AbortController) => void,
   overrideLastMessageContent?: string,
   webSearchEnabled?: boolean,
-  geminiApiKey?: string
+  geminiApiKey?: string,
+  geminiModel?: string
 ) {
   if (provider === 'gemini') {
-    yield* streamGeminiResponse(messages, initialArtifact, onAbort, overrideLastMessageContent, webSearchEnabled, geminiApiKey);
+    yield* streamGeminiResponse(messages, initialArtifact, onAbort, overrideLastMessageContent, webSearchEnabled, geminiApiKey, geminiModel);
   } else {
     yield* streamOllamaResponse(messages, ollamaConfig.baseUrl, ollamaConfig.selectedModel, initialArtifact, onAbort, overrideLastMessageContent);
   }

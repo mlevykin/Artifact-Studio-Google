@@ -63,6 +63,7 @@ export default function App() {
 
   const [provider, setProvider] = useState<'gemini' | 'ollama'>('gemini');
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [geminiModel, setGeminiModel] = useState<string>('gemini-3-flash-preview');
   const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [mcpConfigs, setMcpConfigs] = useState<MCPConfig[]>([]);
@@ -435,7 +436,8 @@ ${activeMCPs.map(c => {
           (controller) => { abortControllerRef.current = controller; },
           currentPrompt,
           webSearchEnabled,
-          geminiApiKey
+          geminiApiKey,
+          geminiModel
         );
 
         for await (const chunk of stream) {
@@ -811,6 +813,8 @@ ${activeMCPs.map(c => {
             onToggleAutoSelect={handleToggleAutoSelect}
             geminiApiKey={geminiApiKey}
             onGeminiApiKeyChange={setGeminiApiKey}
+            geminiModel={geminiModel}
+            onGeminiModelChange={setGeminiModel}
             webSearchEnabled={webSearchEnabled}
             onToggleWebSearch={() => setWebSearchEnabled(!webSearchEnabled)}
           />
