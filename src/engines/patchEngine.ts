@@ -188,13 +188,22 @@ export function parsePartialArtifact(text: string): { type: string; title: strin
 export function parseThought(text: string): string | null {
   const thoughtRegex = /<thought>([\s\S]*?)<\/thought>/;
   const match = text.match(thoughtRegex);
-  if (match) return match[1].trim();
+  if (match) {
+    let content = match[1].trim();
+    // Strip artifacts and patches from thought content
+    content = content.replace(/<artifact[\s\S]*?(?:<\/artifact>|$)/g, '');
+    content = content.replace(/<patch[\s\S]*?(?:<\/patch>|$)/g, '');
+    return content.trim();
+  }
   
   // Fallback for cases where model doesn't use tags but starts with "thought" or "Thought:"
   const lines = text.split('\n');
-  const thoughtLines = lines.filter(l => l.toLowerCase().startsWith('thought ') || l.toLowerCase().startsWith('thought:'));
+  const thoughtLines = lines.filter(l => {
+    const lower = l.toLowerCase();
+    return lower.startsWith('thought ') || lower.startsWith('thought:') || lower.startsWith('thought process');
+  });
   if (thoughtLines.length > 0) {
-    return thoughtLines.map(l => l.replace(/^thought:?\s*/i, '')).join('\n').trim();
+    return thoughtLines.map(l => l.replace(/^(thought process|thought):?\s*/i, '').trim()).filter(l => l.length > 0).join('\n').trim();
   }
   
   return null;
@@ -379,9 +388,11 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): any[] {
       const lines = textBefore.split('\n');
       let currentText = '';
       for (const line of lines) {
-        if (line.toLowerCase().startsWith('thought ') || line.toLowerCase().startsWith('thought:')) {
+        const lowerLine = line.toLowerCase();
+        if (lowerLine.startsWith('thought ') || lowerLine.startsWith('thought:') || lowerLine.startsWith('thought process')) {
           if (currentText.trim()) steps.push({ type: 'text', content: currentText.trim() });
-          steps.push({ type: 'thought', content: line.replace(/^thought:?\s*/i, '').trim() });
+          const content = line.replace(/^(thought process|thought):?\s*/i, '').trim();
+          steps.push({ type: 'thought', content: content || 'Reasoning' });
           currentText = '';
         } else {
           currentText += line + '\n';
@@ -393,7 +404,11 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): any[] {
     // The tag itself
     const fullMatch = match[0];
     if (fullMatch.startsWith('<thought>')) {
-      steps.push({ type: 'thought', content: fullMatch.replace(/<\/?thought>/g, '').trim() });
+      let content = fullMatch.replace(/<\/?thought>/g, '').trim();
+      // Strip artifacts and patches from thought content
+      content = content.replace(/<artifact[\s\S]*?(?:<\/artifact>|$)/g, '');
+      content = content.replace(/<patch[\s\S]*?(?:<\/patch>|$)/g, '');
+      steps.push({ type: 'thought', content });
     } else if (fullMatch.startsWith('<skill_call')) {
       steps.push({ type: 'skill', name: match[2], description: match[3] });
     } else if (fullMatch.startsWith('<mcp_call')) {
@@ -434,9 +449,11 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): any[] {
     const lines = remainingText.split('\n');
     let currentText = '';
     for (const line of lines) {
-      if (line.toLowerCase().startsWith('thought ') || line.toLowerCase().startsWith('thought:')) {
+      const lowerLine = line.toLowerCase();
+      if (lowerLine.startsWith('thought ') || lowerLine.startsWith('thought:') || lowerLine.startsWith('thought process')) {
         if (currentText.trim()) steps.push({ type: 'text', content: currentText.trim() });
-        steps.push({ type: 'thought', content: line.replace(/^thought:?\s*/i, '').trim() });
+        const content = line.replace(/^(thought process|thought):?\s*/i, '').trim();
+        steps.push({ type: 'thought', content: content || 'Reasoning' });
         currentText = '';
       } else {
         currentText += line + '\n';
@@ -466,7 +483,10 @@ export function stripArtifactsAndPatches(text: string): string {
 
   // Strip fallback thoughts (lines starting with thought: or thought )
   cleaned = cleaned.split('\n')
-    .filter(line => !line.toLowerCase().startsWith('thought ') && !line.toLowerCase().startsWith('thought:'))
+    .filter(line => {
+      const lower = line.toLowerCase();
+      return !lower.startsWith('thought ') && !lower.startsWith('thought:') && !lower.startsWith('thought process');
+    })
     .join('\n');
 
   // Strip skill calls (handle both self-closing and paired tags, and unclosed ones)
