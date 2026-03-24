@@ -301,10 +301,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 onChange={(e) => onGeminiModelChange(e.target.value)}
                 className="text-[10px] bg-zinc-100 border-none rounded-lg px-2 py-1 focus:ring-1 focus:ring-zinc-200 outline-none"
               >
-                <option value="gemini-3-flash-preview">Gemini 3 Flash (Experimental)</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Powerful)</option>
-                <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+                <option value="gemini-3-flash-preview">Gemini 3 Flash (Default)</option>
+                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Powerful)</option>
+                <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
+                <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Stable)</option>
+                <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Stable)</option>
               </select>
             </div>
             <div className="flex items-center justify-between pt-1">
