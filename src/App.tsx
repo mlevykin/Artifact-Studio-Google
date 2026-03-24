@@ -61,16 +61,56 @@ export default function App() {
     setSessions
   } = useSessions();
 
-  const [provider, setProvider] = useState<'gemini' | 'ollama'>('gemini');
-  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
-  const [geminiModel, setGeminiModel] = useState<string>('gemini-3-flash-preview');
-  const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
+  const [provider, setProvider] = useState<'gemini' | 'ollama'>(() => {
+    return (localStorage.getItem('provider') as 'gemini' | 'ollama') || 'gemini';
+  });
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
+    return localStorage.getItem('geminiApiKey') || '';
+  });
+  const [geminiModel, setGeminiModel] = useState<string>(() => {
+    return localStorage.getItem('geminiModel') || 'gemini-3-flash-preview';
+  });
+  const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('webSearchEnabled') === 'true';
+  });
   const [skills, setSkills] = useState<Skill[]>([]);
   const [mcpConfigs, setMcpConfigs] = useState<MCPConfig[]>([]);
-  const [ollamaConfig, setOllamaConfig] = useState<OllamaConfig>({
-    baseUrl: 'http://localhost:11434',
-    selectedModel: 'llama3'
+  const [ollamaConfig, setOllamaConfig] = useState<OllamaConfig>(() => {
+    const saved = localStorage.getItem('ollamaConfig');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse ollamaConfig from localStorage', e);
+      }
+    }
+    return {
+      baseUrl: 'http://localhost:11434',
+      selectedModel: 'llama3'
+    };
   });
+
+  // Persistence effects
+  useEffect(() => {
+    localStorage.setItem('provider', provider);
+  }, [provider]);
+
+  useEffect(() => {
+    localStorage.setItem('geminiApiKey', geminiApiKey);
+  }, [geminiApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem('geminiModel', geminiModel);
+  }, [geminiModel]);
+
+  useEffect(() => {
+    localStorage.setItem('webSearchEnabled', String(webSearchEnabled));
+  }, [webSearchEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('ollamaConfig', JSON.stringify(ollamaConfig));
+  }, [ollamaConfig]);
+
   const [activeTab, setActiveTab] = useState<'chats' | 'skills' | 'mcp'>('chats');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [availableModels, setAvailableModels] = useState<string[]>(['llama3']);
