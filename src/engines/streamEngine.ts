@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { Message, Attachment, Artifact, OllamaConfig, ContextSettings, Skill, MCPConfig } from "../types";
+import { Message, Attachment, Artifact, OllamaConfig, ContextSettings, Skill, MCPConfig, VerificationReport } from "../types";
 
 const SYSTEM_PROMPT = `You are a world-class engineer and product designer.
 You power Google AI Studio Build, turning natural language into production-ready web applications.
@@ -94,6 +94,72 @@ Guidelines:
 - SUPPORTED MERMAID DIAGRAMS: graph, flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, journey, gantt, pie, quadrantChart, xychart-beta, mindmap, timeline, zenuml, sankey-beta, packet-beta, kanban, architecture, gitGraph, requirementDiagram, C4Context.
 - CRITICAL: Mermaid does NOT support 'useCaseDiagram'. Use 'graph TD' or 'flowchart TD' with custom shapes for use cases instead.
 `;
+
+export async function verifyArtifact(
+  artifact: Artifact,
+  testerSkills: Skill[],
+  geminiApiKey?: string,
+  modelName?: string
+): Promise<VerificationReport | null> {
+  const ai = new GoogleGenAI({ apiKey: geminiApiKey || process.env.GEMINI_API_KEY || "" });
+  
+  const testerInstructions = testerSkills.map(s => `Tester: ${s.name}\nInstructions:\n${s.content}`).join('\n\n---\n\n');
+  
+  const prompt = `You are a professional software tester and reviewer.
+Your task is to verify the following artifact based on the provided tester instructions.
+
+[ARTIFACT TO VERIFY]
+Title: ${artifact.title}
+Type: ${artifact.type}
+Content:
+\`\`\`
+${artifact.content}
+\`\`\`
+
+[TESTER INSTRUCTIONS]
+${testerInstructions}
+
+[YOUR TASK]
+1. Analyze the artifact for any issues, bugs, or non-compliance with the instructions.
+2. If there are issues, list them clearly.
+3. For each issue, provide a <patch> block that fixes it.
+   Format: <patch><old>...</old><new>...</new></patch>
+4. If the artifact is perfect, state that it is valid.
+
+[OUTPUT FORMAT]
+Your response MUST be a JSON object with the following structure:
+{
+  "isValid": boolean,
+  "issues": string[],
+  "patches": { "old": string, "new": string }[]
+}
+
+Respond ONLY with the JSON object.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: modelName || "gemini-3-flash-preview",
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    const text = response.text || "{}";
+    const result = JSON.parse(text);
+    
+    return {
+      testerName: testerSkills.map(s => s.name).join(', '),
+      isValid: result.isValid ?? true,
+      issues: result.issues || [],
+      suggestedPatches: result.patches || [],
+      status: 'pending'
+    };
+  } catch (error) {
+    console.error('Verification error:', error);
+    return null;
+  }
+}
 
 export async function* streamGeminiResponse(
   messages: Message[],

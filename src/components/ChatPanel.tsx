@@ -18,7 +18,11 @@ import {
   Circle,
   Wand2,
   Layers,
-  Square
+  Square,
+  ShieldCheck,
+  AlertTriangle,
+  CheckCircle,
+  RotateCcw
 } from 'lucide-react';
 import { Message, Attachment, Skill, MCPConfig, ContextSettings } from '../types';
 import { cn, generateId } from '../utils';
@@ -64,6 +68,9 @@ interface ChatPanelProps {
   contextSettings: ContextSettings;
   onContextSettingsChange: (settings: ContextSettings) => void;
   onStop?: () => void;
+  onApplyVerificationFixes: (messageId: string) => void;
+  testerSkillIds: string[];
+  onToggleTester: (id: string) => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -94,7 +101,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   webSearchEnabled,
   onToggleWebSearch,
   contextSettings,
-  onContextSettingsChange
+  onContextSettingsChange,
+  onApplyVerificationFixes,
+  testerSkillIds,
+  onToggleTester
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -743,6 +753,68 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       {m.content}
                     </ReactMarkdown>
                   </div>
+
+                  {m.verificationReport && (
+                    <div className={cn(
+                      "mt-3 p-3 rounded-xl border flex flex-col gap-2",
+                      m.verificationReport.isValid 
+                        ? "bg-emerald-50 border-emerald-100 text-emerald-800" 
+                        : "bg-amber-50 border-amber-100 text-amber-800"
+                    )}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-[11px]">
+                          {m.verificationReport.isValid ? (
+                            <ShieldCheck size={14} className="text-emerald-600" />
+                          ) : (
+                            <AlertTriangle size={14} className="text-amber-600" />
+                          )}
+                          VERIFICATION BY {m.verificationReport.testerName.toUpperCase()}
+                        </div>
+                        {m.verificationReport.isValid ? (
+                          <span className="text-[9px] bg-emerald-200 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold uppercase">Valid</span>
+                        ) : (
+                          <span className="text-[9px] bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded-full font-bold uppercase">Issues Found</span>
+                        )}
+                      </div>
+
+                      {!m.verificationReport.isValid && m.verificationReport.issues.length > 0 && (
+                        <ul className="text-[11px] list-disc list-inside space-y-1 mt-1 opacity-90">
+                          {m.verificationReport.issues.map((issue, i) => (
+                            <li key={i}>{issue}</li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {!m.verificationReport.isValid && m.verificationReport.suggestedPatches.length > 0 && (
+                        <div className="mt-2 flex flex-col gap-2">
+                          <div className="text-[9px] font-bold uppercase opacity-60">Suggested Patches</div>
+                          <div className="max-h-32 overflow-y-auto space-y-2 pr-1">
+                            {m.verificationReport.suggestedPatches.map((p, i) => (
+                              <div key={i} className="text-[9px] font-mono rounded-lg border border-amber-200/50 overflow-hidden bg-white/50">
+                                <div className="p-1.5 border-b border-amber-100/50 line-through opacity-50 whitespace-pre-wrap">{p.old}</div>
+                                <div className="p-1.5 text-emerald-700 whitespace-pre-wrap">{p.new}</div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {m.verificationReport.status === 'pending' ? (
+                            <button 
+                              onClick={() => onApplyVerificationFixes(m.id)}
+                              className="mt-1 flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white py-1.5 rounded-lg text-[11px] font-bold transition-colors shadow-sm"
+                            >
+                              <Wand2 size={12} />
+                              Apply {m.verificationReport.suggestedPatches.length} Fixes
+                            </button>
+                          ) : (
+                            <div className="mt-1 flex items-center justify-center gap-2 bg-emerald-100 text-emerald-700 py-1.5 rounded-lg text-[11px] font-bold border border-emerald-200">
+                              <CheckCircle size={12} />
+                              Fixes Applied
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
               

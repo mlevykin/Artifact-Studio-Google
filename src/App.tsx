@@ -10,7 +10,7 @@ import { ArtifactPanel } from './components/ArtifactPanel';
 import { SkillsPanel } from './components/SkillsPanel';
 import { MCPPanel } from './components/MCPPanel';
 import { useSessions } from './hooks/useSession';
-import { streamResponse, fetchOllamaModels } from './engines/streamEngine';
+import { streamResponse, fetchOllamaModels, verifyArtifact } from './engines/streamEngine';
 import { 
   parseArtifacts, 
   parsePatches, 
@@ -309,6 +309,65 @@ export default function App() {
       ? activeMcpIds.filter(id => id !== mcpId)
       : [...activeMcpIds, mcpId];
     updateSession({ activeMcpIds: newActiveMcpIds });
+  };
+
+  const handleToggleTester = (skillId: string) => {
+    if (!currentSession) return;
+    const testerSkillIds = currentSession.testerSkillIds || [];
+    const newTesterSkillIds = testerSkillIds.includes(skillId)
+      ? testerSkillIds.filter(id => id !== skillId)
+      : [...testerSkillIds, skillId];
+    updateSession({ testerSkillIds: newTesterSkillIds });
+  };
+
+  const handleApplyVerificationFixes = async (messageId: string) => {
+    if (!currentSession) return;
+    
+    const message = currentSession.messages.find(m => m.id === messageId);
+    if (!message || !message.verificationReport) return;
+    
+    const latestArtifact = currentSession.artifacts[currentSession.artifacts.length - 1];
+    if (!latestArtifact) return;
+    
+    const patches = message.verificationReport.suggestedPatches;
+    if (patches.length === 0) return;
+    
+    const { content: patchedContent, successCount } = applyPatches(latestArtifact.content, patches);
+    
+    if (successCount > 0) {
+      const updatedArtifact: Artifact = {
+        ...latestArtifact,
+        id: generateId(),
+        content: patchedContent,
+        version: latestArtifact.version + 1,
+        timestamp: Date.now()
+      };
+      addArtifact(updatedArtifact, currentSession.id);
+      
+      // Update message status
+      const updatedMessages = currentSession.messages.map(m => 
+        m.id === messageId 
+          ? { ...m, verificationReport: { ...m.verificationReport!, status: 'applied' as const } } 
+          : m
+      );
+      updateSession({ messages: updatedMessages });
+      
+      // Trigger re-verification
+      const activeTesters = skills.filter(s => currentSession?.testerSkillIds?.includes(s.id));
+      if (activeTesters.length > 0) {
+        const report = await verifyArtifact(updatedArtifact, activeTesters, geminiApiKey, geminiModel);
+        if (report) {
+          const verificationMessage: Message = {
+            id: generateId(),
+            role: 'system',
+            content: `Re-verification report from ${report.testerName}`,
+            timestamp: Date.now(),
+            verificationReport: report
+          };
+          addMessage(verificationMessage, currentSession.id);
+        }
+      }
+    }
   };
 
   const handleToggleAutoSelect = () => {
@@ -638,6 +697,7 @@ ${activeMCPs.map(c => {
               timestamp: Date.now()
             };
             addArtifact(updatedArtifact, sessionId);
+            initialArtifact = updatedArtifact; // Update for verification
           } else {
             // Create new artifact
             const newArtifact: Artifact = {
@@ -650,8 +710,25 @@ ${activeMCPs.map(c => {
               timestamp: Date.now()
             };
             addArtifact(newArtifact, sessionId);
+            initialArtifact = newArtifact; // Update for verification
           }
         });
+
+        // Trigger verification if there are active testers and an artifact was created/updated
+        const activeTesters = skills.filter(s => currentSession?.testerSkillIds?.includes(s.id));
+        if (activeTesters.length > 0 && initialArtifact) {
+          const report = await verifyArtifact(initialArtifact, activeTesters, geminiApiKey, geminiModel);
+          if (report) {
+            const verificationMessage: Message = {
+              id: generateId(),
+              role: 'system',
+              content: `Verification report from ${report.testerName}`,
+              timestamp: Date.now(),
+              verificationReport: report
+            };
+            addMessage(verificationMessage, sessionId);
+          }
+        }
 
         if (needsNextTurn) {
           // Update active skills in session if any were invoked
@@ -811,6 +888,8 @@ ${activeMCPs.map(c => {
             onDeleteSkill={handleDeleteSkill}
             activeSkillIds={currentSession?.activeSkills || []}
             onToggleSkill={handleToggleSkill}
+            testerSkillIds={currentSession?.testerSkillIds || []}
+            onToggleTester={handleToggleTester}
             autoSelectSkills={currentSession?.autoSelectSkills || false}
           />
         )}
@@ -883,7 +962,9 @@ ${activeMCPs.map(c => {
             isSidebarOpen={isSidebarOpen}
             skills={skills}
             activeSkillIds={currentSession?.activeSkills || []}
+            testerSkillIds={currentSession?.testerSkillIds || []}
             onToggleSkill={handleToggleSkill}
+            onToggleTester={handleToggleTester}
             mcpConfigs={mcpConfigs}
             activeMcpIds={currentSession?.activeMcpIds || []}
             onToggleMcp={handleToggleMcp}
@@ -897,6 +978,7 @@ ${activeMCPs.map(c => {
             onToggleWebSearch={() => setWebSearchEnabled(!webSearchEnabled)}
             contextSettings={contextSettings}
             onContextSettingsChange={setContextSettings}
+            onApplyVerificationFixes={handleApplyVerificationFixes}
           />
         </div>
 

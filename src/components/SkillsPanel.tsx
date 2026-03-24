@@ -12,7 +12,8 @@ import {
   Check,
   X,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  ShieldCheck
 } from 'lucide-react';
 import { Skill } from '../types';
 import { cn, generateId } from '../utils';
@@ -24,6 +25,8 @@ interface SkillsPanelProps {
   onDeleteSkill: (id: string) => void;
   activeSkillIds: string[];
   onToggleSkill: (id: string) => void;
+  testerSkillIds?: string[];
+  onToggleTester?: (id: string) => void;
   autoSelectSkills?: boolean;
 }
 
@@ -34,6 +37,8 @@ export const SkillsPanel: React.FC<SkillsPanelProps> = ({
   onDeleteSkill,
   activeSkillIds,
   onToggleSkill,
+  testerSkillIds = [],
+  onToggleTester,
   autoSelectSkills = false
 }) => {
   const [search, setSearch] = useState('');
@@ -150,6 +155,18 @@ export const SkillsPanel: React.FC<SkillsPanelProps> = ({
                     >
                       {activeSkillIds.includes(skill.id) ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
                     </button>
+                    {onToggleTester && (
+                      <button 
+                        onClick={() => onToggleTester(skill.id)}
+                        className={cn(
+                          "p-1 transition-colors",
+                          testerSkillIds.includes(skill.id) ? "text-amber-400" : "text-zinc-500 hover:text-zinc-300"
+                        )}
+                        title={testerSkillIds.includes(skill.id) ? "Disable Tester Role" : "Enable Tester Role"}
+                      >
+                        <ShieldCheck size={16} />
+                      </button>
+                    )}
                     <button 
                       onClick={() => startEditing(skill)}
                       className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"

@@ -25,6 +25,7 @@ export interface Skill {
   content: string; // Markdown content describing the skill
   path: string; // Folder structure (e.g., "Testing/QA")
   enabled: boolean;
+  role?: 'default' | 'tester';
 }
 
 export interface MCPConfig {
@@ -70,6 +71,14 @@ export interface MessageStep {
   response?: any;
 }
 
+export interface VerificationReport {
+  testerName: string;
+  isValid: boolean;
+  issues: string[];
+  suggestedPatches: Patch[];
+  status: 'pending' | 'applied' | 'rejected';
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -90,16 +99,19 @@ export interface Message {
     response: any;
   }[];
   steps?: MessageStep[]; // For ordered rendering of thoughts, skills, and text
+  verificationReport?: VerificationReport;
 }
 
 export interface Session {
   id: string;
+  name?: string; // Optional name for the session
   title: string;
   messages: Message[];
   artifacts: Artifact[]; // History of artifacts in this session
   currentArtifactId: string | null;
   lastUpdated: number;
   activeSkills?: string[]; // IDs of enabled skills for this session
+  testerSkillIds?: string[]; // IDs of skills acting as testers for this session
   activeMcpIds?: string[]; // IDs of enabled MCPs for this session
   autoSelectSkills?: boolean; // Whether AI should auto-select skills/MCPs
   selectedFilePath?: string | null; // Currently selected file in the workspace
