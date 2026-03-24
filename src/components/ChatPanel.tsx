@@ -304,8 +304,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <option value="gemini-3-flash-preview">Gemini 3 Flash (Default)</option>
                 <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Powerful)</option>
                 <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
-                <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Stable)</option>
-                <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Stable)</option>
+                <option value="gemini-flash-latest">Gemini Flash Latest (Stable)</option>
               </select>
             </div>
             <div className="flex items-center justify-between pt-1">
