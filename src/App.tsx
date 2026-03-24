@@ -714,22 +714,6 @@ ${activeMCPs.map(c => {
           }
         });
 
-        // Trigger verification if there are active testers and an artifact was created/updated
-        const activeTesters = skills.filter(s => currentSession?.testerSkillIds?.includes(s.id));
-        if (activeTesters.length > 0 && initialArtifact) {
-          const report = await verifyArtifact(initialArtifact, activeTesters, geminiApiKey, geminiModel);
-          if (report) {
-            const verificationMessage: Message = {
-              id: generateId(),
-              role: 'system',
-              content: `Verification report from ${report.testerName}`,
-              timestamp: Date.now(),
-              verificationReport: report
-            };
-            addMessage(verificationMessage, sessionId);
-          }
-        }
-
         if (needsNextTurn) {
           // Update active skills in session if any were invoked
           if (invokedSkills.length > 0) {
@@ -781,6 +765,22 @@ ${activeMCPs.map(c => {
           continue;
         } else {
           break;
+        }
+      }
+
+      // Trigger verification if there are active testers and an artifact exists
+      const activeTesters = skills.filter(s => currentSession?.testerSkillIds?.includes(s.id));
+      if (activeTesters.length > 0 && initialArtifact) {
+        const report = await verifyArtifact(initialArtifact, activeTesters, geminiApiKey, geminiModel);
+        if (report) {
+          const verificationMessage: Message = {
+            id: generateId(),
+            role: 'system',
+            content: `Verification report from ${report.testerName}`,
+            timestamp: Date.now(),
+            verificationReport: report
+          };
+          addMessage(verificationMessage, sessionId);
         }
       }
 

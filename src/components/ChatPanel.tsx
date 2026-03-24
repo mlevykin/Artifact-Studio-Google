@@ -1067,9 +1067,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             ) : (
                               <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
                             )}
-                            <div className="min-w-0">
-                              <div className={cn("text-[11px] font-medium truncate", activeSkillIds.includes(skill.id) ? "text-emerald-700" : "text-zinc-700")}>
-                                {skill.name}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <div className={cn("text-[11px] font-medium truncate", activeSkillIds.includes(skill.id) ? "text-emerald-700" : "text-zinc-700")}>
+                                  {skill.name}
+                                </div>
+                                {testerSkillIds.includes(skill.id) && (
+                                  <ShieldCheck size={10} className="text-blue-500" />
+                                )}
                               </div>
                               <div className="text-[9px] text-zinc-400 truncate">{skill.description}</div>
                             </div>
@@ -1304,16 +1309,38 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 </div>
               ) : (
                 <>
-                  {activeSkills.map(skill => (
-                    <div 
-                      key={skill.id}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 border border-emerald-100 text-[9px] font-bold whitespace-nowrap"
-                      title={skill.name}
-                    >
-                      <Book size={10} />
-                      {skill.name.length > 8 ? skill.name.substring(0, 8) + '...' : skill.name}
-                    </div>
-                  ))}
+                  {activeSkills.map(skill => {
+                    const isTester = testerSkillIds.includes(skill.id);
+                    return (
+                      <div 
+                        key={skill.id}
+                        className={cn(
+                          "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold whitespace-nowrap border transition-all",
+                          isTester 
+                            ? "bg-blue-50 text-blue-600 border-blue-100 shadow-sm" 
+                            : "bg-emerald-50 text-emerald-600 border-emerald-100 shadow-sm"
+                        )}
+                        title={skill.name}
+                      >
+                        {isTester ? <ShieldCheck size={10} /> : <Book size={10} />}
+                        {skill.name.length > 8 ? skill.name.substring(0, 8) + '...' : skill.name}
+                      </div>
+                    );
+                  })}
+                  {testerSkillIds.filter(id => !activeSkillIds.includes(id)).map(id => {
+                    const skill = skills.find(s => s.id === id);
+                    if (!skill) return null;
+                    return (
+                      <div 
+                        key={id}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-bold whitespace-nowrap shadow-sm transition-all"
+                        title={skill.name}
+                      >
+                        <ShieldCheck size={10} />
+                        {skill.name.length > 8 ? skill.name.substring(0, 8) + '...' : skill.name}
+                      </div>
+                    );
+                  })}
                   {activeMcps.map(mcp => (
                     <div 
                       key={mcp.id}

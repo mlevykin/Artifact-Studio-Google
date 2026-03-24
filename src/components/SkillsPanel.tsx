@@ -134,13 +134,24 @@ export const SkillsPanel: React.FC<SkillsPanelProps> = ({
                   "group flex flex-col gap-1 p-3 rounded-xl transition-all border border-transparent",
                   activeSkillIds.includes(skill.id) 
                     ? "bg-zinc-800/50 border-zinc-700/50" 
-                    : "hover:bg-zinc-800/30"
+                    : "hover:bg-zinc-800/30",
+                  testerSkillIds.includes(skill.id) && "border-blue-500/50 bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]"
                 )}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
-                    <FileText size={14} className={activeSkillIds.includes(skill.id) ? "text-emerald-400" : "text-zinc-600"} />
-                    <span className="text-sm font-medium truncate text-zinc-200">{skill.name}</span>
+                    <div className="relative">
+                      <FileText size={14} className={activeSkillIds.includes(skill.id) ? "text-emerald-400" : "text-zinc-600"} />
+                      {testerSkillIds.includes(skill.id) && (
+                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full flex items-center justify-center ring-2 ring-zinc-900">
+                          <ShieldCheck size={6} className="text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <span className={cn(
+                      "text-sm font-medium truncate",
+                      testerSkillIds.includes(skill.id) ? "text-blue-400" : "text-zinc-200"
+                    )}>{skill.name}</span>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
