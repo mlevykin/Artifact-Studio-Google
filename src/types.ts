@@ -120,6 +120,9 @@ export interface ContextSettings {
   includeChatHistory: boolean;
   includeAttachmentsHistory: boolean;
   includeArtifactContext: boolean;
+  includeSkills: boolean;
+  includeMcp: boolean;
+  includeCurrentFile: boolean;
 }
 
 export interface Settings {

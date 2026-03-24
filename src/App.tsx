@@ -86,7 +86,10 @@ export default function App() {
       includeSystemPrompt: true,
       includeChatHistory: true,
       includeAttachmentsHistory: true,
-      includeArtifactContext: true
+      includeArtifactContext: true,
+      includeSkills: true,
+      includeMcp: true,
+      includeCurrentFile: true
     };
   });
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -438,8 +441,15 @@ CRITICAL RULES FOR CONTENT:
 7. In a new chat (no previous messages), assume you are starting from scratch unless the user provides context or attachments.
 `;
 
-    if (isAutoSelect) {
+    if (isAutoSelect && contextSettings.includeSkills) {
       skillsContext = `AUTO-SELECT SKILLS ENABLED: You have access to all skills. Choose the most relevant one if needed. Available skills: ${skills.map(s => s.name).join(', ')}\n${reportingInstruction}`;
+    } else if (contextSettings.includeSkills) {
+      skillsContext = activeSkills.length > 0 
+        ? activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${reportingInstruction}`
+        : '';
+    }
+
+    if (isAutoSelect && contextSettings.includeMcp) {
       mcpContext = `AUTO-SELECT MCP ENABLED: You have access to all MCP servers.
 IMPORTANT: You MUST ONLY use the MCP servers and tools explicitly listed below. DO NOT try to guess server names or tools. If a server or tool is not in the list below, it DOES NOT EXIST.
 Available MCPs and their tools:
@@ -447,10 +457,7 @@ ${mcpConfigs.map(c => {
   const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (use list_tools to see tools)';
   return `Server: ${c.name}\nTools:\n${toolsList}`;
 }).join('\n\n')}`;
-    } else {
-      skillsContext = activeSkills.length > 0 
-        ? activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${reportingInstruction}`
-        : '';
+    } else if (contextSettings.includeMcp) {
       mcpContext = activeMCPs.length > 0 
         ? `ACTIVE MCP SERVERS AND THEIR TOOLS:
 IMPORTANT: You MUST ONLY use the MCP servers and tools explicitly listed below. DO NOT try to guess server names or tools. If a server or tool is not in the list below, it DOES NOT EXIST.
@@ -461,7 +468,7 @@ ${activeMCPs.map(c => {
         : '';
     }
 
-    const fullPrompt = selectedFilePath 
+    const fullPrompt = (selectedFilePath && contextSettings.includeCurrentFile)
       ? `CONTEXT: Currently working on file: ${selectedFilePath}\n\n${skillsContext}\n\n${mcpContext}\n\n${content}`
       : `${skillsContext}\n\n${mcpContext}\n\n${content}`;
 
@@ -589,6 +596,8 @@ ${activeMCPs.map(c => {
             addArtifact(updatedArtifact, sessionId);
             // Update initialArtifact for next potential turn's patches
             initialArtifact = updatedArtifact;
+          } else {
+            console.warn('Failed to apply any patches to the current artifact. Patches received:', patches);
           }
         }
 

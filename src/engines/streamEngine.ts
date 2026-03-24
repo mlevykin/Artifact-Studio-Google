@@ -69,6 +69,7 @@ PATCHES (EDITING):
 - Regenerating the entire artifact is only allowed if the changes are so extensive that a patch would be impractical (e.g., > 70% of the content changes).
 - If you use <artifact> to update an existing one, you MUST provide the FULL content. NEVER use <artifact> for partial updates.
 - DO NOT nest <patch> tags inside <artifact> tags or vice versa.
+- Patches MUST be standalone and NOT wrapped in any other tags.
 - Format for patches:
 <patch>
 <old>
@@ -114,7 +115,10 @@ export async function* streamGeminiResponse(
     includeSystemPrompt: true,
     includeChatHistory: true,
     includeAttachmentsHistory: true,
-    includeArtifactContext: true
+    includeArtifactContext: true,
+    includeSkills: true,
+    includeMcp: true,
+    includeCurrentFile: true
   };
 
   // Filter messages based on settings
@@ -234,7 +238,10 @@ export async function* streamOllamaResponse(
     includeSystemPrompt: true,
     includeChatHistory: true,
     includeAttachmentsHistory: true,
-    includeArtifactContext: true
+    includeArtifactContext: true,
+    includeSkills: true,
+    includeMcp: true,
+    includeCurrentFile: true
   };
 
   let processedMessages = [...messages];

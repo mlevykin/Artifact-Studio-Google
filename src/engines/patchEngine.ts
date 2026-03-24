@@ -54,7 +54,21 @@ export function fuzzyReplace(content: string, patch: Patch): string | null {
       if (match && oldLinesMatched === oldLines.length) {
         const newLines = [...lines];
         const indentation = lines[i].match(/^\s*/)?.[0] || '';
-        const indentedNewText = newText.split('\n').map(l => indentation + l).join('\n');
+        
+        // Calculate the common indentation of the new text to avoid double-indenting
+        const newTextLines = newText.split('\n');
+        const minNewIndentation = newTextLines
+          .filter(l => l.trim().length > 0)
+          .reduce((min, l) => {
+            const indent = l.match(/^\s*/)?.[0].length || 0;
+            return Math.min(min, indent);
+          }, Infinity);
+        
+        const normalizedNewLines = minNewIndentation === Infinity 
+          ? newTextLines 
+          : newTextLines.map(l => l.substring(minNewIndentation));
+
+        const indentedNewText = normalizedNewLines.map(l => indentation + l).join('\n');
         
         newLines.splice(i, linesConsumed, indentedNewText);
         return newLines.join('\n');
@@ -70,7 +84,8 @@ export function fuzzyReplace(content: string, patch: Patch): string | null {
  */
 export function parsePatches(text: string): Patch[] {
   const patches: Patch[] = [];
-  const patchRegex = /<patch>[\s\S]*?<old>([\s\S]*?)<\/old>[\s\S]*?<new>([\s\S]*?)<\/new>[\s\S]*?<\/patch>/g;
+  // Allow attributes in <patch> tag and be more flexible with whitespace
+  const patchRegex = /<patch[^>]*>[\s\S]*?<old>([\s\S]*?)<\/old>[\s\S]*?<new>([\s\S]*?)<\/new>[\s\S]*?<\/patch>/g;
   
   let match;
   while ((match = patchRegex.exec(text)) !== null) {
@@ -190,7 +205,7 @@ export function parseThought(text: string): string | null {
  */
 export function parsePartialPatches(text: string): { old: string; new: string; isComplete: boolean }[] {
   const patches: { old: string; new: string; isComplete: boolean }[] = [];
-  const patchRegex = /<patch>([\s\S]*?)(?:<\/patch>|$)/g;
+  const patchRegex = /<patch[^>]*>([\s\S]*?)(?:<\/patch>|$)/g;
   
   let match;
   while ((match = patchRegex.exec(text)) !== null) {
