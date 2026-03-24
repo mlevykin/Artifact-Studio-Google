@@ -156,6 +156,35 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     setAttachments(prev => prev.filter(a => a.id !== id));
   };
 
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (!file) continue;
+
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`Pasted image is too large (>10MB)`);
+          continue;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const data = event.target?.result as string;
+          const newAttachment: Attachment = {
+            id: generateId(),
+            type: 'image',
+            name: `pasted-image-${Date.now()}.png`,
+            data: data.split(',')[1],
+            mimeType: file.type
+          };
+          setAttachments(prev => [...prev, newAttachment]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-zinc-50 border-r border-zinc-200 w-full flex-shrink-0">
       <div className="p-4 border-b border-zinc-200 bg-white flex flex-col gap-2">
@@ -995,6 +1024,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onPaste={handlePaste}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
