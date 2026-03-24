@@ -99,7 +99,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const activeMcps = mcpConfigs.filter(m => activeMcpIds.includes(m.id));
   const [showOllamaSettings, setShowOllamaSettings] = useState(false);
   const [showGeminiSettings, setShowGeminiSettings] = useState(false);
-  const [showSelection, setShowSelection] = useState(false);
+  const [showSkills, setShowSkills] = useState(false);
+  const [showMcp, setShowMcp] = useState(false);
+  const [showContext, setShowContext] = useState(false);
   const [expandedPatches, setExpandedPatches] = useState<Record<string, boolean>>({});
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
   const [expandedSkills, setExpandedSkills] = useState<Record<string, boolean>>({});
@@ -949,16 +951,239 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div className="relative flex items-end gap-2">
           <div className="flex flex-col gap-2 items-start">
             <div className="flex items-center gap-1">
-              <button 
-                onClick={() => setShowSelection(!showSelection)}
-                className={cn(
-                  "p-2 rounded-lg transition-all",
-                  showSelection ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
-                )}
-                title="Select Skills & MCP"
-              >
-                <Plus size={20} className={cn(showSelection && "rotate-45 transition-transform")} />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => {
+                    setShowSkills(!showSkills);
+                    setShowMcp(false);
+                    setShowContext(false);
+                  }}
+                  className={cn(
+                    "p-2 rounded-lg transition-all",
+                    showSkills ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                  )}
+                  title="Select Skills"
+                >
+                  <Book size={20} />
+                </button>
+                
+                <AnimatePresence>
+                  {showSkills && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute bottom-full left-0 mb-4 w-64 bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden z-50"
+                    >
+                      <div className="p-3 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Skills</h3>
+                        <button 
+                          onClick={onToggleAutoSelect}
+                          className={cn(
+                            "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-bold transition-all",
+                            autoSelectSkills 
+                              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" 
+                              : "bg-zinc-100 text-zinc-400 hover:text-zinc-600"
+                          )}
+                        >
+                          <Wand2 size={10} />
+                          AUTO
+                        </button>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto p-1.5">
+                        {skills.length === 0 ? (
+                          <div className="px-2 py-3 text-[10px] text-zinc-400 italic">No skills available</div>
+                        ) : (
+                          skills.map(skill => (
+                            <button 
+                              key={skill.id}
+                              onClick={() => onToggleSkill(skill.id)}
+                              disabled={autoSelectSkills}
+                              className={cn(
+                                "w-full flex items-center gap-2.5 p-2 rounded-xl transition-all text-left group",
+                                activeSkillIds.includes(skill.id) ? "bg-emerald-50" : "hover:bg-zinc-50",
+                                autoSelectSkills && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              {activeSkillIds.includes(skill.id) ? (
+                                <CheckCircle2 size={14} className="text-emerald-500" />
+                              ) : (
+                                <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                              )}
+                              <div className="min-w-0">
+                                <div className={cn("text-[11px] font-medium truncate", activeSkillIds.includes(skill.id) ? "text-emerald-700" : "text-zinc-700")}>
+                                  {skill.name}
+                                </div>
+                                <div className="text-[9px] text-zinc-400 truncate">{skill.description}</div>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="relative">
+                <button 
+                  onClick={() => {
+                    setShowMcp(!showMcp);
+                    setShowSkills(false);
+                    setShowContext(false);
+                  }}
+                  className={cn(
+                    "p-2 rounded-lg transition-all",
+                    showMcp ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                  )}
+                  title="Select MCP Servers"
+                >
+                  <Server size={20} />
+                </button>
+
+                <AnimatePresence>
+                  {showMcp && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute bottom-full left-0 mb-4 w-64 bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden z-50"
+                    >
+                      <div className="p-3 border-b border-zinc-100 bg-zinc-50/50">
+                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">MCP Servers</h3>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto p-1.5">
+                        {mcpConfigs.length === 0 ? (
+                          <div className="px-2 py-3 text-[10px] text-zinc-400 italic">No MCP servers configured</div>
+                        ) : (
+                          mcpConfigs.map(mcp => (
+                            <button 
+                              key={mcp.id}
+                              onClick={() => onToggleMcp(mcp.id)}
+                              disabled={autoSelectSkills}
+                              className={cn(
+                                "w-full flex items-center gap-2.5 p-2 rounded-xl transition-all text-left group",
+                                activeMcpIds.includes(mcp.id) ? "bg-amber-50" : "hover:bg-zinc-50",
+                                autoSelectSkills && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              {activeMcpIds.includes(mcp.id) ? (
+                                <CheckCircle2 size={14} className="text-amber-500" />
+                              ) : (
+                                <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                              )}
+                              <div className="min-w-0">
+                                <div className={cn("text-[11px] font-medium truncate", activeMcpIds.includes(mcp.id) ? "text-amber-700" : "text-zinc-700")}>
+                                  {mcp.name}
+                                </div>
+                                <div className="text-[9px] text-zinc-400 truncate">{mcp.url}</div>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="relative">
+                <button 
+                  onClick={() => {
+                    setShowContext(!showContext);
+                    setShowSkills(false);
+                    setShowMcp(false);
+                  }}
+                  className={cn(
+                    "p-2 rounded-lg transition-all",
+                    showContext ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                  )}
+                  title="Context Management"
+                >
+                  <Layers size={20} />
+                </button>
+
+                <AnimatePresence>
+                  {showContext && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute bottom-full left-0 mb-4 w-64 bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden z-50"
+                    >
+                      <div className="p-3 border-b border-zinc-100 bg-zinc-50/50">
+                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Context Management</h3>
+                      </div>
+                      <div className="p-1.5 space-y-1">
+                        <button 
+                          onClick={() => toggleContextSetting('includeSystemPrompt')}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 p-2 rounded-xl transition-all text-left group",
+                            contextSettings.includeSystemPrompt ? "bg-indigo-50" : "hover:bg-zinc-50"
+                          )}
+                        >
+                          {contextSettings.includeSystemPrompt ? (
+                            <CheckCircle2 size={14} className="text-indigo-500" />
+                          ) : (
+                            <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                          )}
+                          <span className={cn("text-[11px] font-medium", contextSettings.includeSystemPrompt ? "text-indigo-700" : "text-zinc-700")}>
+                            System Prompt
+                          </span>
+                        </button>
+                        <button 
+                          onClick={() => toggleContextSetting('includeChatHistory')}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 p-2 rounded-xl transition-all text-left group",
+                            contextSettings.includeChatHistory ? "bg-indigo-50" : "hover:bg-zinc-50"
+                          )}
+                        >
+                          {contextSettings.includeChatHistory ? (
+                            <CheckCircle2 size={14} className="text-indigo-500" />
+                          ) : (
+                            <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                          )}
+                          <span className={cn("text-[11px] font-medium", contextSettings.includeChatHistory ? "text-indigo-700" : "text-zinc-700")}>
+                            Chat History
+                          </span>
+                        </button>
+                        <button 
+                          onClick={() => toggleContextSetting('includeAttachmentsHistory')}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 p-2 rounded-xl transition-all text-left group",
+                            contextSettings.includeAttachmentsHistory ? "bg-indigo-50" : "hover:bg-zinc-50"
+                          )}
+                        >
+                          {contextSettings.includeAttachmentsHistory ? (
+                            <CheckCircle2 size={14} className="text-indigo-500" />
+                          ) : (
+                            <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                          )}
+                          <span className={cn("text-[11px] font-medium", contextSettings.includeAttachmentsHistory ? "text-indigo-700" : "text-zinc-700")}>
+                            Attachments History
+                          </span>
+                        </button>
+                        <button 
+                          onClick={() => toggleContextSetting('includeArtifactContext')}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 p-2 rounded-xl transition-all text-left group",
+                            contextSettings.includeArtifactContext ? "bg-indigo-50" : "hover:bg-zinc-50"
+                          )}
+                        >
+                          {contextSettings.includeArtifactContext ? (
+                            <CheckCircle2 size={14} className="text-indigo-500" />
+                          ) : (
+                            <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                          )}
+                          <span className={cn("text-[11px] font-medium", contextSettings.includeArtifactContext ? "text-indigo-700" : "text-zinc-700")}>
+                            Active Artifact Context
+                          </span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               
               <div className="flex items-center gap-1 overflow-x-auto max-w-[200px] no-scrollbar py-0.5">
                 {webSearchEnabled && provider === 'gemini' && (
@@ -1014,175 +1239,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           />
 
           <AnimatePresence>
-            {showSelection && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute bottom-full left-0 mb-4 w-72 bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden z-50"
-              >
-                <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Context Selection</h3>
-                  <button 
-                    onClick={onToggleAutoSelect}
-                    className={cn(
-                      "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all",
-                      autoSelectSkills 
-                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" 
-                        : "bg-zinc-100 text-zinc-400 hover:text-zinc-600"
-                    )}
-                  >
-                    <Wand2 size={12} />
-                    AUTO
-                  </button>
-                </div>
-
-                <div className="max-h-80 overflow-y-auto p-2 space-y-4">
-                  <div className="space-y-1">
-                    <div className="px-2 py-1 text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
-                      <Layers size={10} />
-                      Context Management
-                    </div>
-                    <div className="grid grid-cols-1 gap-1 p-1">
-                      <button 
-                        onClick={() => toggleContextSetting('includeSystemPrompt')}
-                        className={cn(
-                          "flex items-center gap-2 p-2 rounded-xl transition-all text-left group",
-                          contextSettings.includeSystemPrompt ? "bg-indigo-50" : "hover:bg-zinc-50"
-                        )}
-                      >
-                        {contextSettings.includeSystemPrompt ? (
-                          <CheckCircle2 size={14} className="text-indigo-500" />
-                        ) : (
-                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
-                        )}
-                        <span className={cn("text-[10px] font-medium", contextSettings.includeSystemPrompt ? "text-indigo-700" : "text-zinc-600")}>
-                          System Prompt
-                        </span>
-                      </button>
-                      <button 
-                        onClick={() => toggleContextSetting('includeChatHistory')}
-                        className={cn(
-                          "flex items-center gap-2 p-2 rounded-xl transition-all text-left group",
-                          contextSettings.includeChatHistory ? "bg-indigo-50" : "hover:bg-zinc-50"
-                        )}
-                      >
-                        {contextSettings.includeChatHistory ? (
-                          <CheckCircle2 size={14} className="text-indigo-500" />
-                        ) : (
-                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
-                        )}
-                        <span className={cn("text-[10px] font-medium", contextSettings.includeChatHistory ? "text-indigo-700" : "text-zinc-600")}>
-                          Chat History
-                        </span>
-                      </button>
-                      <button 
-                        onClick={() => toggleContextSetting('includeAttachmentsHistory')}
-                        className={cn(
-                          "flex items-center gap-2 p-2 rounded-xl transition-all text-left group",
-                          contextSettings.includeAttachmentsHistory ? "bg-indigo-50" : "hover:bg-zinc-50"
-                        )}
-                      >
-                        {contextSettings.includeAttachmentsHistory ? (
-                          <CheckCircle2 size={14} className="text-indigo-500" />
-                        ) : (
-                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
-                        )}
-                        <span className={cn("text-[10px] font-medium", contextSettings.includeAttachmentsHistory ? "text-indigo-700" : "text-zinc-600")}>
-                          Attachments History
-                        </span>
-                      </button>
-                      <button 
-                        onClick={() => toggleContextSetting('includeArtifactContext')}
-                        className={cn(
-                          "flex items-center gap-2 p-2 rounded-xl transition-all text-left group",
-                          contextSettings.includeArtifactContext ? "bg-indigo-50" : "hover:bg-zinc-50"
-                        )}
-                      >
-                        {contextSettings.includeArtifactContext ? (
-                          <CheckCircle2 size={14} className="text-indigo-500" />
-                        ) : (
-                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
-                        )}
-                        <span className={cn("text-[10px] font-medium", contextSettings.includeArtifactContext ? "text-indigo-700" : "text-zinc-600")}>
-                          Active Artifact Context
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="px-2 py-1 text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
-                      <Book size={10} />
-                      Skills
-                    </div>
-                    {skills.length === 0 ? (
-                      <div className="px-2 py-3 text-[10px] text-zinc-400 italic">No skills available</div>
-                    ) : (
-                      skills.map(skill => (
-                        <button 
-                          key={skill.id}
-                          onClick={() => onToggleSkill(skill.id)}
-                          disabled={autoSelectSkills}
-                          className={cn(
-                            "w-full flex items-center gap-3 p-2 rounded-xl transition-all text-left group",
-                            activeSkillIds.includes(skill.id) ? "bg-emerald-50" : "hover:bg-zinc-50",
-                            autoSelectSkills && "opacity-50 cursor-not-allowed"
-                          )}
-                        >
-                          {activeSkillIds.includes(skill.id) ? (
-                            <CheckCircle2 size={16} className="text-emerald-500" />
-                          ) : (
-                            <Circle size={16} className="text-zinc-300 group-hover:text-zinc-400" />
-                          )}
-                          <div className="min-w-0">
-                            <div className={cn("text-xs font-medium truncate", activeSkillIds.includes(skill.id) ? "text-emerald-700" : "text-zinc-700")}>
-                              {skill.name}
-                            </div>
-                            <div className="text-[9px] text-zinc-400 truncate">{skill.description}</div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="px-2 py-1 text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
-                      <Server size={10} />
-                      MCP Servers
-                    </div>
-                    {mcpConfigs.length === 0 ? (
-                      <div className="px-2 py-3 text-[10px] text-zinc-400 italic">No MCP servers configured</div>
-                    ) : (
-                      mcpConfigs.map(mcp => (
-                        <button 
-                          key={mcp.id}
-                          onClick={() => onToggleMcp(mcp.id)}
-                          disabled={autoSelectSkills}
-                          className={cn(
-                            "w-full flex items-center gap-3 p-2 rounded-xl transition-all text-left group",
-                            activeMcpIds.includes(mcp.id) ? "bg-amber-50" : "hover:bg-zinc-50",
-                            autoSelectSkills && "opacity-50 cursor-not-allowed"
-                          )}
-                        >
-                          {activeMcpIds.includes(mcp.id) ? (
-                            <CheckCircle2 size={16} className="text-amber-500" />
-                          ) : (
-                            <Circle size={16} className="text-zinc-300 group-hover:text-zinc-400" />
-                          )}
-                          <div className="min-w-0">
-                            <div className={cn("text-xs font-medium truncate", activeMcpIds.includes(mcp.id) ? "text-amber-700" : "text-zinc-700")}>
-                              {mcp.name}
-                            </div>
-                            <div className="text-[9px] text-zinc-400 truncate">{mcp.url}</div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
           </AnimatePresence>
           
           <textarea

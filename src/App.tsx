@@ -759,15 +759,6 @@ ${activeMCPs.map(c => {
     timestamp: Date.now()
   } as Artifact : (currentArtifact || workspaceArtifact);
 
-  if (isInitializing) {
-    return (
-      <div className="h-screen w-full bg-zinc-950 flex flex-col items-center justify-center text-white font-sans">
-        <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-4" />
-        <div className="text-zinc-400 animate-pulse">Initializing Workspace...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen w-full bg-zinc-100 font-sans text-zinc-900 overflow-hidden relative">
       {isResizing && (
