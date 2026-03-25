@@ -116,7 +116,7 @@ export function parsePartialArtifact(text: string): { type: string; title: strin
  * Parses <thought> blocks from LLM response
  */
 export function parseThought(text: string): string | null {
-  const thoughtRegex = /<thought>([\s\S]*?)<\/thought>/;
+  const thoughtRegex = /<thought[^>]*>([\s\S]*?)<\/thought>/;
   const match = text.match(thoughtRegex);
   if (match) {
     let content = match[1].trim();
@@ -143,7 +143,7 @@ export function parseThought(text: string): string | null {
  * Parses <thought> blocks from LLM response, including partial ones
  */
 export function parsePartialThought(text: string): string | null {
-  const thoughtRegex = /<thought>([\s\S]*?)(?:<\/thought>|$)/;
+  const thoughtRegex = /<thought[^>]*>([\s\S]*?)(?:<\/thought>|$)/;
   const match = text.match(thoughtRegex);
   if (match) return match[1].trim();
 
@@ -278,7 +278,7 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): MessageStep[]
   const steps: MessageStep[] = [];
   
   // Regex to find tags and their positions, including unclosed tags during streaming
-  const tagsRegex = /(<thought>[\s\S]*?(?:<\/thought>|$)|<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>|>)|<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)|<artifact[\s\S]*?(?:<\/artifact>|$)|<patch[\s\S]*?(?:<\/patch>|$)|<response>[\s\S]*?(?:<\/response>|$))/g;
+  const tagsRegex = /(<thought[^>]*>[\s\S]*?(?:<\/thought>|$)|<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>|>)|<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)|<artifact[\s\S]*?(?:<\/artifact>|$)|<patch[\s\S]*?(?:<\/patch>|$)|<response>[\s\S]*?(?:<\/response>|$))/g;
   
   let lastIndex = 0;
   let match;
@@ -306,8 +306,8 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): MessageStep[]
     
     // The tag itself
     const fullMatch = match[0];
-    if (fullMatch.startsWith('<thought>')) {
-      let content = fullMatch.replace(/<\/?thought>/g, '').trim();
+    if (fullMatch.startsWith('<thought')) {
+      let content = fullMatch.replace(/<thought[^>]*>/g, '').replace(/<\/thought>/g, '').trim();
       // Strip artifacts and patches from thought content
       content = content.replace(/<artifact[\s\S]*?(?:<\/artifact>|$)/g, '');
       content = content.replace(/<patch[\s\S]*?(?:<\/patch>|$)/g, '');
@@ -380,7 +380,7 @@ export function stripArtifactsAndPatches(text: string): string {
   cleaned = cleaned.replace(/<patch[\s\S]*?(?:<\/patch>|$)/g, '');
 
   // Strip thoughts (including partial)
-  cleaned = cleaned.replace(/<thought>([\s\S]*?)(?:<\/thought>|$)/g, '');
+  cleaned = cleaned.replace(/<thought[^>]*>([\s\S]*?)(?:<\/thought>|$)/g, '');
 
   // Strip fallback thoughts (lines starting with thought: or thought )
   cleaned = cleaned.split('\n')

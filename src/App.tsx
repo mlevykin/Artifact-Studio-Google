@@ -529,12 +529,7 @@ export default function App() {
     let skillsContext = '';
     let mcpContext = '';
 
-    const reportingInstruction = `
-IMPORTANT: When you use a skill or an MCP server, you MUST report it at the beginning of your response using these tags.
-Each tag MUST include a "description" attribute explaining what you are doing in a human-readable way.
-- For skills: <skill_call name="Skill Name" description="Human-readable description of what this skill adds to the context" />. You do NOT need to wait for a response for skills as their content is already in your context. You MUST continue your response immediately after the tag.
-- For MCP: <mcp_call name="MCP Name" description="Human-readable description of why you are calling this tool"><request>JSON_REQUEST</request></mcp_call>. Wait for the system to provide the <response> tag before continuing your task if the tool output is required.
-
+    const commonReportingInstruction = `
 CRITICAL RULES FOR CONTENT:
 1. DO NOT write any code, scripts, structured documents, architecture plans, or long specifications directly in the chat text.
 2. ALL structured content MUST be wrapped in <artifact> tags. This includes Markdown documents, specifications, and requirements.
@@ -545,11 +540,23 @@ CRITICAL RULES FOR CONTENT:
 7. In a new chat (no previous messages), assume you are starting from scratch unless the user provides context or attachments.
 `;
 
+    const skillReportingInstruction = `
+IMPORTANT: When you use a skill, you MUST report it at the beginning of your response using this tag:
+<skill_call name="ACTUAL_SKILL_NAME" description="Human-readable description of what this skill adds to the context" />
+You do NOT need to wait for a response for skills as their content is already in your context. You MUST continue your response immediately after the tag.
+`;
+
+    const mcpReportingInstruction = `
+IMPORTANT: When you use an MCP server, you MUST report it at the beginning of your response using this tag:
+<mcp_call name="ACTUAL_SERVER_NAME" description="Human-readable description of why you are calling this tool"><request>JSON_REQUEST</request></mcp_call>
+Wait for the system to provide the <response> tag before continuing your task if the tool output is required.
+`;
+
     if (isAutoSelect && contextSettings.includeSkills) {
-      skillsContext = `AUTO-SELECT SKILLS ENABLED: You have access to all skills. Choose the most relevant one if needed. Available skills: ${skills.map(s => s.name).join(', ')}\n${reportingInstruction}`;
+      skillsContext = `AUTO-SELECT SKILLS ENABLED: You have access to all skills. Choose the most relevant one if needed. Available skills: ${skills.map(s => s.name).join(', ')}\n${skillReportingInstruction}`;
     } else if (contextSettings.includeSkills) {
       skillsContext = activeSkills.length > 0 
-        ? activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${reportingInstruction}`
+        ? activeSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${skillReportingInstruction}`
         : '';
     }
 
@@ -560,7 +567,7 @@ Available MCPs and their tools:
 ${mcpConfigs.filter(c => c.enabled).map(c => {
   const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (use list_tools to see tools)';
   return `Server: ${c.name}\nTools:\n${toolsList}`;
-}).join('\n\n')}`;
+}).join('\n\n')}\n${mcpReportingInstruction}`;
     } else if (contextSettings.includeMcp) {
       mcpContext = activeMCPs.length > 0 
         ? `ACTIVE MCP SERVERS AND THEIR TOOLS:
@@ -568,13 +575,13 @@ IMPORTANT: You MUST ONLY use the MCP servers and tools explicitly listed below. 
 ${activeMCPs.map(c => {
   const toolsList = c.tools?.map(t => `- ${t.name}: ${t.description || 'No description'}`).join('\n') || 'No tools listed (use list_tools to see tools)';
   return `Server: ${c.name}\nTools:\n${toolsList}`;
-}).join('\n\n')}` 
+}).join('\n\n')}\n${mcpReportingInstruction}` 
         : '';
     }
 
     const fullPrompt = (selectedFilePath && contextSettings.includeCurrentFile)
-      ? `CONTEXT: Currently working on file: ${selectedFilePath}\n\n${skillsContext}\n\n${mcpContext}\n\n${content}`
-      : `${skillsContext}\n\n${mcpContext}\n\n${content}`;
+      ? `CONTEXT: Currently working on file: ${selectedFilePath}\n\n${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}`
+      : `${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}`;
 
     const userMessage: Message = {
       id: generateId(),
