@@ -538,6 +538,7 @@ CRITICAL RULES FOR CONTENT:
 5. Do NOT mention skill or MCP calls in the visible chat text; use the tags instead.
 6. If you are generating a document, use <artifact type="markdown" title="Document Title">...</artifact>.
 7. In a new chat (no previous messages), assume you are starting from scratch unless the user provides context or attachments.
+8. RESPECT INTENT: NEVER generate an artifact or modify code unless the user explicitly asks for changes, improvements, or bug fixes. If the user is just asking a question or providing feedback, respond with text only.
 `;
 
     const skillReportingInstruction = `
@@ -636,6 +637,12 @@ ${activeMCPs.map(c => {
               setStreamingArtifact(partialArtifact as any);
             }
           }
+        }
+
+        if (!fullResponse.trim()) {
+          setIsStreaming(false);
+          setStreamingText('');
+          return;
         }
 
         const truncatedResponse = truncateAfterToolCall(fullResponse);
@@ -917,7 +924,7 @@ ${activeMCPs.map(c => {
     ...streamingArtifact,
     version: currentArtifact ? currentArtifact.version : 1,
     timestamp: Date.now()
-  } as Artifact : (currentArtifact || workspaceArtifact);
+  } as Artifact : (currentArtifact || (currentSession?.artifacts.length ? currentSession.artifacts[currentSession.artifacts.length - 1] : workspaceArtifact));
 
   return (
     <div className="flex h-screen w-full bg-zinc-100 font-sans text-zinc-900 overflow-hidden relative">
