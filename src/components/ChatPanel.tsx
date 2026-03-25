@@ -1394,7 +1394,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     {attachments.map((a) => (
                       <div key={a.id} className="relative group">
                         {a.type === 'image' ? (
-                          <img src={a.data} alt={a.name} className="w-12 h-12 rounded-lg object-cover border border-zinc-200" />
+                          <img src={`data:${a.mimeType};base64,${a.data}`} alt={a.name} className="w-12 h-12 rounded-lg object-cover border border-zinc-200" />
                         ) : (
                           <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500">
                             <FileText size={20} />
