@@ -1,4 +1,4 @@
-export type ArtifactType = 'mermaid' | 'html' | 'markdown' | 'svg' | 'text' | 'project';
+export type ArtifactType = 'mermaid' | 'html' | 'markdown' | 'svg' | 'text';
 
 export interface ProjectFile {
   id: string;

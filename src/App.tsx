@@ -11,10 +11,10 @@ import { SkillsPanel } from './components/SkillsPanel';
 import { MCPPanel } from './components/MCPPanel';
 import { useSessions } from './hooks/useSession';
 import { streamResponse, fetchOllamaModels, verifyArtifact } from './engines/streamEngine';
+import { applyPatches } from './engines/patchEngine';
 import { 
   parseArtifacts, 
   parsePatches, 
-  applyPatches, 
   stripArtifactsAndPatches, 
   parseThought,
   parseInvokedSkills,
@@ -23,7 +23,7 @@ import {
   parsePartialPatches,
   truncateAfterToolCall,
   parseMessageSteps
-} from './engines/patchEngine';
+} from './engines/responseParser';
 import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings } from './types';
 import { generateId } from './utils';
 import { MCPService } from './services/mcpService';
@@ -337,6 +337,17 @@ export default function App() {
     const { content: patchedContent, successCount } = applyPatches(latestArtifact.content, patches);
     
     if (successCount > 0) {
+      // Add a temporary "Applying fixes" message
+      const applyingMessageId = generateId();
+      const applyingMessage: Message = {
+        id: applyingMessageId,
+        role: 'system',
+        content: `🛠️ Applying ${successCount} fix(es) to ${latestArtifact.title}...`,
+        timestamp: Date.now(),
+        isSystemGenerated: true
+      };
+      addMessage(applyingMessage, currentSession.id);
+
       const updatedArtifact: Artifact = {
         ...latestArtifact,
         id: generateId(),
@@ -347,12 +358,9 @@ export default function App() {
       addArtifact(updatedArtifact, currentSession.id);
       
       // Update message status
-      const updatedMessages = currentSession.messages.map(m => 
-        m.id === messageId 
-          ? { ...m, verificationReport: { ...m.verificationReport!, status: 'applied' as const } } 
-          : m
-      );
-      updateSession({ messages: updatedMessages }, currentSession.id);
+      updateMessage(messageId, { 
+        verificationReport: { ...message.verificationReport!, status: 'applied' } 
+      }, currentSession.id);
       
       // Trigger re-verification
       const activeTesters = skills.filter(s => currentSession?.testerSkillIds?.includes(s.id));
@@ -365,6 +373,9 @@ export default function App() {
           timestamp: Date.now(),
           isSystemGenerated: true
         };
+        
+        // Remove "Applying fixes" and add "Re-verifying"
+        removeMessage(applyingMessageId, currentSession.id);
         addMessage(progressMessage, currentSession.id);
 
         try {
@@ -387,6 +398,9 @@ export default function App() {
           console.error('Re-verification failed:', error);
           removeMessage(progressMessageId, currentSession.id);
         }
+      } else {
+        // Just remove the "Applying fixes" message if no testers
+        removeMessage(applyingMessageId, currentSession.id);
       }
     } else {
       // Add a system message if patches failed to apply
@@ -707,23 +721,12 @@ ${activeMCPs.map(c => {
             (!newArtifactData.id && a.title === newArtifactData.title && a.type === newArtifactData.type)
           );
 
-          let files: any[] | undefined;
-          if (newArtifactData.type === 'project') {
-            try {
-              files = JSON.parse(newArtifactData.content);
-              files = files.map(f => ({ ...f, id: generateId() }));
-            } catch (e) {
-              console.error('Failed to parse project artifact JSON', e);
-            }
-          }
-
           if (existingArtifact) {
             // Update existing artifact (new version)
             const updatedArtifact: Artifact = {
               ...existingArtifact,
               id: generateId(),
               content: newArtifactData.content,
-              files,
               version: existingArtifact.version + 1,
               timestamp: Date.now()
             };
@@ -736,7 +739,6 @@ ${activeMCPs.map(c => {
               type: newArtifactData.type as any,
               title: newArtifactData.title,
               content: newArtifactData.content,
-              files,
               version: 1,
               timestamp: Date.now()
             };
@@ -895,9 +897,9 @@ ${activeMCPs.map(c => {
 
   const workspaceArtifact: Artifact = {
     id: 'workspace-explorer',
-    type: 'project',
+    type: 'markdown',
     title: 'Workspace Explorer',
-    content: '[]',
+    content: 'No artifact selected.',
     files: [],
     version: 1,
     timestamp: Date.now()

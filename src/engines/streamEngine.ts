@@ -85,7 +85,6 @@ Types of artifacts:
 - html: For interactive web components or simple apps.
 - markdown: For rich text documents.
 - svg: For vector graphics.
-- project: For multi-file projects (JSON array of files).
 
 Guidelines:
 - Be concise in your conversational response.

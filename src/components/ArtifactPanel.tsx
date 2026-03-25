@@ -19,7 +19,7 @@ import {
   parseArtifacts, 
   parsePartialArtifact, 
   parsePartialPatches 
-} from '../engines/patchEngine';
+} from '../engines/responseParser';
 import { Artifact, ProjectFile } from '../types';
 import { cn } from '../utils';
 import { MermaidPreview } from './MermaidPreview';
@@ -84,14 +84,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
   const isWorkspaceMode = artifact?.id === 'workspace-explorer';
 
-  const currentFile = artifact?.type === 'project' && selectedFileId 
-    ? artifact.files?.find(f => f.id === selectedFileId) 
-    : null;
+  const currentFile = null;
 
   const pContent = currentFile ? currentFile.content : (isWorkspaceMode ? editContent : artifact?.content || '');
   
   const getPreviewType = () => {
-    if (currentFile) return currentFile.type;
     if (isWorkspaceMode && selectedFilePath) {
       const ext = selectedFilePath.split('.').pop()?.toLowerCase();
       if (ext === 'html') return 'html';
@@ -188,12 +185,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       
       let filesToSync: { path: string; content: string }[] = [];
       
-      if (artifact?.type === 'project' && artifact.files) {
-        filesToSync = artifact.files.map(f => {
-          const path = sessionId ? `artifacts/${sessionId}/${f.path}` : f.path;
-          return { path, content: f.content };
-        });
-      } else if (artifact) {
+      if (artifact) {
         // For single artifacts, save them in an 'artifacts' folder
         const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
         const path = sessionId 
@@ -318,23 +310,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const handleFileSelect = async (path: string) => {
     onFileSelect(path);
     
-    // If it's a file in the current artifact, use its content
-    if (artifact?.type === 'project') {
-      const file = artifact.files?.find(f => f.path === path);
-      if (file) {
-        setEditContent(file.content);
-        setSelectedFileId(file.id);
-        return;
-      }
-    } else if (artifact) {
-      const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
-      const artifactPath = `artifacts/${artifact.title}.${ext}`;
-      if (path === artifactPath) {
-        setEditContent(artifact.content);
-        return;
-      }
-    }
-    
     // Try to load from disk if we have a handle
     if (workspaceHandle) {
       try {
@@ -358,31 +333,17 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   React.useEffect(() => {
     if (artifact) {
       const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
-      const defaultPath = artifact.type === 'project' && artifact.files?.[0] 
-        ? (sessionId ? `artifacts/${sessionId}/${artifact.files[0].path}` : artifact.files[0].path)
-        : (sessionId ? `artifacts/${sessionId}/${artifact.title}.${ext}` : `artifacts/${artifact.title}.${ext}`);
+      const defaultPath = sessionId ? `artifacts/${sessionId}/${artifact.title}.${ext}` : `artifacts/${artifact.title}.${ext}`;
 
       // If we already have a selection that is part of this artifact, update its content
       if (selectedFilePath) {
-        if (artifact.type === 'project') {
-          const file = artifact.files?.find(f => {
-            const path = sessionId ? `artifacts/${sessionId}/${f.path}` : f.path;
-            return path === selectedFilePath;
-          });
-          if (file) {
-            setEditContent(file.content);
-            setSelectedFileId(file.id);
-            return;
-          }
-        } else {
-          const artifactPath = sessionId 
-            ? `artifacts/${sessionId}/${artifact.title}.${ext}` 
-            : `artifacts/${artifact.title}.${ext}`;
-          if (selectedFilePath === artifactPath) {
-            setEditContent(artifact.content);
-            setSelectedFileId(null);
-            return;
-          }
+        const artifactPath = sessionId 
+          ? `artifacts/${sessionId}/${artifact.title}.${ext}` 
+          : `artifacts/${artifact.title}.${ext}`;
+        if (selectedFilePath === artifactPath) {
+          setEditContent(artifact.content);
+          setSelectedFileId(null);
+          return;
         }
       }
 
@@ -391,13 +352,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       const isNewArtifact = !prevArtifactIdRef.current || prevArtifactIdRef.current !== artifact.id;
       if (!selectedFilePath || isNewArtifact) {
         onFileSelect(defaultPath);
-        if (artifact.type === 'project' && artifact.files?.[0]) {
-          setSelectedFileId(artifact.files[0].id);
-          setEditContent(artifact.files[0].content);
-        } else {
-          setSelectedFileId(null);
-          setEditContent(artifact.content);
-        }
+        setSelectedFileId(null);
+        setEditContent(artifact.content);
       }
       
       prevArtifactIdRef.current = artifact.id;
@@ -439,19 +395,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   };
 
   const handleCancel = () => {
-    if (artifact.type === 'project' && selectedFileId) {
-      const file = artifact.files?.find(f => f.id === selectedFileId);
-      if (file) setEditContent(file.content);
-    } else {
-      setEditContent(artifact.content);
-    }
+    setEditContent(artifact.content);
     setIsEditing(false);
   };
 
   const handleCopy = () => {
-    const contentToCopy = artifact.type === 'project' && selectedFileId 
-      ? artifact.files?.find(f => f.id === selectedFileId)?.content || ''
-      : artifact.content;
+    const contentToCopy = artifact.content;
     navigator.clipboard.writeText(contentToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -461,18 +410,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     const element = document.getElementById('artifact-preview-container');
     if (!element) return;
 
-    const contentToExport = artifact.type === 'project' && selectedFileId
-      ? artifact.files?.find(f => f.id === selectedFileId)?.content || ''
-      : artifact.content;
+    const contentToExport = artifact.content;
 
     if (format === 'png') {
       try {
         // Special handling for SVG/Mermaid which html2canvas often fails on
         const svgElement = element.querySelector('svg');
-        const isMermaidOrSvg = artifact.type === 'mermaid' || artifact.type === 'svg' || 
-          (artifact.type === 'project' && selectedFileId && 
-           (artifact.files?.find(f => f.id === selectedFileId)?.type === 'mermaid' || 
-            artifact.files?.find(f => f.id === selectedFileId)?.type === 'svg'));
+        const isMermaidOrSvg = artifact.type === 'mermaid' || artifact.type === 'svg';
 
         if (svgElement && isMermaidOrSvg) {
           try {
@@ -512,7 +456,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         let targetElement: HTMLElement = element;
         
         // For HTML artifacts, try to capture the iframe body
-        if (artifact.type === 'html' || (artifact.type === 'project' && selectedFileId && artifact.files?.find(f => f.id === selectedFileId)?.type === 'html')) {
+        if (artifact.type === 'html' || (isWorkspaceMode && selectedFilePath?.endsWith('.html'))) {
           const iframe = element.querySelector('iframe');
           if (iframe && iframe.contentDocument && iframe.contentDocument.body) {
             targetElement = iframe.contentDocument.body;
@@ -716,9 +660,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 name: workspaceHandle?.name || 'Workspace',
                 kind: 'directory',
                 path: '',
-                children: artifact.type === 'project' && artifact.files 
-                  ? artifact.files.map(f => ({ name: f.path, kind: 'file', path: f.path }))
-                  : [{ 
+                children: [{ 
                       name: `${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`, 
                       kind: 'file',
                       path: `artifacts/${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`

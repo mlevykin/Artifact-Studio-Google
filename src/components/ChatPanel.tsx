@@ -34,7 +34,7 @@ import {
   parseInvokedSkills, 
   parseMcpCalls,
   parseMessageSteps
-} from '../engines/patchEngine';
+} from '../engines/responseParser';
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -1324,15 +1324,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       <div 
                         key={skill.id}
                         className={cn(
-                          "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold whitespace-nowrap border transition-all",
+                          "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold whitespace-nowrap border transition-all shadow-sm",
                           isTester 
-                            ? "bg-blue-50 text-blue-600 border-blue-100 shadow-sm" 
-                            : "bg-emerald-50 text-emerald-600 border-emerald-100 shadow-sm"
+                            ? "bg-blue-500 text-white border-blue-600" 
+                            : "bg-emerald-50 text-emerald-600 border-emerald-100"
                         )}
-                        title={skill.name}
+                        title={skill.name + (isTester ? ' (Tester)' : '')}
                       >
                         {isTester ? <ShieldCheck size={10} /> : <Book size={10} />}
-                        {skill.name.length > 8 ? skill.name.substring(0, 8) + '...' : skill.name}
+                        {skill.name.length > 12 ? skill.name.substring(0, 12) + '...' : skill.name}
                       </div>
                     );
                   })}
@@ -1342,11 +1342,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     return (
                       <div 
                         key={id}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-bold whitespace-nowrap shadow-sm transition-all"
-                        title={skill.name}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-500 text-white border border-blue-600 text-[9px] font-bold whitespace-nowrap shadow-sm transition-all"
+                        title={skill.name + ' (Tester Only)'}
                       >
                         <ShieldCheck size={10} />
-                        {skill.name.length > 8 ? skill.name.substring(0, 8) + '...' : skill.name}
+                        {skill.name.length > 12 ? skill.name.substring(0, 12) + '...' : skill.name}
                       </div>
                     );
                   })}
