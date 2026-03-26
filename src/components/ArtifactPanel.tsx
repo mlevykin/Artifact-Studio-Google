@@ -124,12 +124,10 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       const isMermaid = match && match[1] === 'mermaid';
       
       if (!inline && isMermaid) {
-        const content = children ? String(children).replace(/\n$/, '') : '';
         return (
           <div className="my-6 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
             <MermaidPreview 
-              key={`${artifact?.id}-${content.length}-${artifact?.mermaidStyleId}`}
-              content={content} 
+              content={children ? String(children).replace(/\n$/, '') : ''} 
               className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
               styleId={artifact?.mermaidStyleId}
             />
@@ -747,7 +745,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 >
                   {pType === 'mermaid' && (
                     <MermaidPreview 
-                      key={`${artifact?.id}-${pContent.length}-${artifact?.mermaidStyleId}`}
                       content={pContent} 
                       className="natural-size" 
                       styleId={artifact.mermaidStyleId}

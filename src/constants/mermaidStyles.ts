@@ -56,31 +56,22 @@ export const MERMAID_STYLES: MermaidStyle[] = [
     css: `
       .mermaid-container { background: #0D1117; }
       @keyframes flow {
-        from { stroke-dashoffset: 20; }
-        to { stroke-dashoffset: 0; }
+        to { stroke-dashoffset: -20; }
       }
-      .mermaid-container .edgePath path,
-      .mermaid-container .edgePaths .edgePath path,
-      .mermaid-container .flowchart-link,
-      .mermaid-container .transition,
-      .mermaid-container path.path {
-        stroke-dasharray: 10, 5 !important;
-        animation: flow 1s linear infinite !important;
+      .mermaid-container .edgePath path {
+        stroke-dasharray: 5;
+        animation: flow 1s linear infinite;
         stroke: #00FFFF !important;
         stroke-width: 2px !important;
       }
-      .mermaid-container .marker,
-      .mermaid-container .marker-end,
-      .mermaid-container .marker-start,
-      .mermaid-container marker path {
+      .mermaid-container .marker {
         fill: #00FFFF !important;
         stroke: #00FFFF !important;
       }
       .mermaid-container .node rect, 
       .mermaid-container .node circle, 
       .mermaid-container .node polygon, 
-      .mermaid-container .node path,
-      .mermaid-container .node .label-container {
+      .mermaid-container .node path {
         fill: #161B22 !important;
         stroke: #00FFFF !important;
         stroke-width: 1.5px !important;
