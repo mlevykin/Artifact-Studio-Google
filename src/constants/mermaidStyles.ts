@@ -27,9 +27,10 @@ export const MERMAID_STYLES: MermaidStyle[] = [
       .mermaid-container { background: #ffffff; }
       .edgePath path { stroke-width: 1px !important; }
       /* Color differentiation for Minimalist - Solid Pastel Fills */
-      .mermaid-container .node rect { fill: #eff6ff !important; stroke: #3b82f6 !important; }
+      .mermaid-container .node rect, .mermaid-container .actor { fill: #eff6ff !important; stroke: #3b82f6 !important; }
       .mermaid-container .node polygon { fill: #f5f3ff !important; stroke: #8b5cf6 !important; }
       .mermaid-container .node circle, .mermaid-container .node ellipse { fill: #f0fdf4 !important; stroke: #22c55e !important; }
+      .mermaid-container .note { fill: #fffbeb !important; stroke: #f59e0b !important; }
     `
   },
   {
@@ -77,8 +78,8 @@ export const MERMAID_STYLES: MermaidStyle[] = [
         stroke: #00FFFF !important;
       }
       /* Color differentiation for Dark Tech - Glowing Fills */
-      /* Processes - Cyan */
-      .mermaid-container .node rect {
+      /* Processes / Actors - Cyan */
+      .mermaid-container .node rect, .mermaid-container .actor {
         fill: rgba(0, 255, 255, 0.15) !important;
         stroke: #00FFFF !important;
         stroke-width: 2px !important;
@@ -98,6 +99,12 @@ export const MERMAID_STYLES: MermaidStyle[] = [
         stroke: #00FF80 !important;
         stroke-width: 2px !important;
         filter: drop-shadow(0 0 5px rgba(0, 255, 128, 0.4));
+      }
+      /* Notes - Yellow/Orange */
+      .mermaid-container .note {
+        fill: rgba(255, 255, 0, 0.1) !important;
+        stroke: #FFFF00 !important;
+        stroke-width: 1px !important;
       }
       /* Other shapes - Orange */
       .mermaid-container .node path:not(.path) {
@@ -124,9 +131,10 @@ export const MERMAID_STYLES: MermaidStyle[] = [
     },
     css: `
       .mermaid-container { background: #f8fafc; }
-      .node rect { rx: 8; ry: 8; fill: #dbeafe !important; stroke: #1e40af !important; }
+      .node rect, .actor { rx: 8; ry: 8; fill: #dbeafe !important; stroke: #1e40af !important; }
       .node polygon { fill: #ede9fe !important; stroke: #5b21b6 !important; }
       .node circle, .node ellipse { fill: #dcfce7 !important; stroke: #166534 !important; }
+      .note { fill: #fef3c7 !important; stroke: #92400e !important; }
     `
   },
   {
@@ -143,13 +151,14 @@ export const MERMAID_STYLES: MermaidStyle[] = [
     },
     css: `
       .mermaid-container { background: #fff; }
-      .node rect, .node circle, .node polygon, .node path {
+      .node rect, .node circle, .node polygon, .node path, .actor {
         stroke-width: 2px !important;
       }
       /* Color differentiation for Sketch - Light Hand-drawn Fills */
-      .mermaid-container .node rect { fill: #fdfcf0 !important; stroke: #000 !important; }
+      .mermaid-container .node rect, .mermaid-container .actor { fill: #fdfcf0 !important; stroke: #000 !important; }
       .mermaid-container .node polygon { fill: #f0fdfa !important; stroke: #000 !important; }
       .mermaid-container .node circle, .mermaid-container .node ellipse { fill: #fdf2f2 !important; stroke: #000 !important; }
+      .mermaid-container .note { fill: #fffbeb !important; stroke: #000 !important; }
       .edgePath path {
         stroke-width: 2px !important;
       }
@@ -171,12 +180,12 @@ export const MERMAID_STYLES: MermaidStyle[] = [
       .mermaid-container { 
         background: linear-gradient(135deg, #e0e7ff 0%, #f3f4f6 100%); 
       }
-      .node rect, .node circle, .node polygon, .node path {
+      .node rect, .node circle, .node polygon, .node path, .actor, .note {
         backdrop-filter: blur(8px);
         filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05));
       }
       /* Color differentiation for Glass - More Opaque Translucent Fills */
-      .mermaid-container .node rect {
+      .mermaid-container .node rect, .mermaid-container .actor {
         fill: rgba(59, 130, 246, 0.2) !important;
         stroke: rgba(59, 130, 246, 0.6) !important;
       }
@@ -187,6 +196,10 @@ export const MERMAID_STYLES: MermaidStyle[] = [
       .mermaid-container .node circle, .mermaid-container .node ellipse {
         fill: rgba(34, 197, 94, 0.2) !important;
         stroke: rgba(34, 197, 94, 0.6) !important;
+      }
+      .mermaid-container .note {
+        fill: rgba(245, 158, 11, 0.2) !important;
+        stroke: rgba(245, 158, 11, 0.6) !important;
       }
     `
   }
