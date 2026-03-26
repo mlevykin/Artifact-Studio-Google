@@ -174,7 +174,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
           className
         )}
         style={{ 
-          width: className?.includes('!w-full') ? 'auto' : (className?.includes('natural-size') ? 'auto' : '800px'), 
+          width: className?.includes('!w-full') ? 'auto' : (className?.includes('natural-size') ? 'auto' : 'auto'), 
           maxWidth: '100%',
           minHeight: className?.includes('!min-h-0') ? '0' : '400px' 
         }}

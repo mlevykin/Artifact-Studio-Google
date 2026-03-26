@@ -32,9 +32,15 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
 
   // Use refs to avoid re-attaching wheel listener too often
   const stateRef = useRef({ zoom, position, containerWidth, contentWidth });
+  
+  // Update ref immediately when state changes to avoid stale closures in event handlers
+  const updateStateRef = useCallback((updates: Partial<typeof stateRef.current>) => {
+    stateRef.current = { ...stateRef.current, ...updates };
+  }, []);
+
   useEffect(() => {
-    stateRef.current = { zoom, position, containerWidth, contentWidth };
-  }, [zoom, position, containerWidth, contentWidth]);
+    updateStateRef({ zoom, position, containerWidth, contentWidth });
+  }, [zoom, position, containerWidth, contentWidth, updateStateRef]);
 
   const hasInteractedRef = useRef(false);
   const [hasInteracted, setHasInteractedState] = useState(false);
@@ -103,14 +109,16 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           const currentLeft = getLeft(currentZoom, cW, conW);
           const nextLeft = getLeft(newZoom, cW, conW);
 
+          // Calculate relative position within unscaled content
           const relX = (scrollX + mouseX - currentLeft) / currentZoom;
           const relY = (scrollY + mouseY - 64) / currentZoom;
           
+          updateStateRef({ zoom: newZoom });
           setZoom(newZoom);
           
           pendingScroll.current = {
-            x: relX * newZoom - mouseX + nextLeft,
-            y: relY * newZoom - mouseY + 64
+            x: Math.round(relX * newZoom - mouseX + nextLeft),
+            y: Math.round(relY * newZoom - mouseY + 64)
           };
         } else {
           // Diagram mode zoom: adjust position
@@ -330,7 +338,10 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           isDragging && "select-none"
         )}
         onMouseDown={handleMouseDown}
-        style={{ cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto') }}
+        style={{ 
+          cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto'),
+          overflowAnchor: 'none' // Prevent browser from jumping scroll position during layout changes
+        }}
       >
         <div 
           className={cn(
