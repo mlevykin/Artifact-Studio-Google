@@ -108,9 +108,17 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
           const { svg } = await mermaid.render(id, processedContent);
           
           if (containerRef.current) {
-            const responsiveSvg = svg
-              .replace(/max-width: [^;]+;/, '')
-              .replace(/style="[^"]*max-width:[^"]*"/, '');
+            // Extract original width to prevent over-scaling
+            const widthMatch = svg.match(/width="([\d.]+)"/);
+            const originalWidth = widthMatch ? widthMatch[1] : null;
+            
+            // Make SVG responsive but respect its natural size for small diagrams
+            let responsiveSvg = svg
+              .replace(/width="[^"]*"/, 'width="100%"')
+              .replace(/height="[^"]*"/, 'height="auto"')
+              .replace(/style="[^"]*max-width:[^"]*"/, (match) => {
+                return match.replace(/max-width:\s*[^;"]+/, 'max-width: 100%');
+              });
             
             mermaidRenderCache.set(cacheKey, responsiveSvg);
             containerRef.current.innerHTML = responsiveSvg;
@@ -118,6 +126,16 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
             const svgElement = containerRef.current.querySelector('svg');
             if (svgElement) {
               svgElement.style.display = 'block';
+              svgElement.style.margin = 'auto';
+              svgElement.style.width = '100%';
+              svgElement.style.height = 'auto';
+              
+              // If we have original width, use it as max-width to prevent stretching
+              if (originalWidth) {
+                svgElement.style.maxWidth = `${originalWidth}px`;
+              } else {
+                svgElement.style.maxWidth = '100%';
+              }
             }
           }
         } catch (error: any) {
