@@ -14,125 +14,129 @@ const mermaidRenderCache = new Map<string, string>();
 
 export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId = 'minimalist', className }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInitialRender = useRef(true);
+  const renderCount = useRef(0);
+  const [isInitialized, setIsInitialized] = React.useState(false);
 
   const currentStyle = useMemo(() => {
     return MERMAID_STYLES.find(s => s.id === styleId) || MERMAID_STYLES[0];
   }, [styleId]);
 
-  const processMermaidContent = (rawContent: string) => {
-    let processed = rawContent.trim();
-    if (processed.startsWith('```')) {
-      const lines = processed.split('\n');
-      if (lines[0].startsWith('```')) lines.shift();
-      if (lines.length > 0 && lines[lines.length - 1].trim() === '```') lines.pop();
-      processed = lines.join('\n').trim();
+  // Initialize mermaid whenever style changes
+  useEffect(() => {
+    setIsInitialized(false);
+    try {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: currentStyle.theme as any,
+        themeVariables: currentStyle.themeVariables,
+        securityLevel: 'loose',
+        fontFamily: currentStyle.themeVariables?.fontFamily || 'Inter, sans-serif',
+      });
+      setIsInitialized(true);
+    } catch (err) {
+      console.error('Mermaid initialization error:', err);
+      // Fallback to basic initialization
+      mermaid.initialize({ startOnLoad: false });
+      setIsInitialized(true);
     }
-    return processed;
-  };
+  }, [currentStyle]);
 
+  // Use layout effect for immediate cache injection to prevent flicker
   useLayoutEffect(() => {
     if (containerRef.current && content) {
-      const processedContent = processMermaidContent(content);
+      const processedContent = content.trim().replace(/^```mermaid\n?/, '').replace(/\n?```$/, '');
       const cacheKey = `${styleId}-${processedContent}`;
       if (mermaidRenderCache.has(cacheKey)) {
         containerRef.current.innerHTML = mermaidRenderCache.get(cacheKey)!;
+        const svgElement = containerRef.current.querySelector('svg');
+        if (svgElement) svgElement.style.display = 'block';
       }
     }
   }, [content, styleId]);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     const renderDiagram = async () => {
-      if (!containerRef.current || !content) return;
-
-      const processedContent = processMermaidContent(content);
-      const cacheKey = `${styleId}-${processedContent}`;
+      const currentRenderId = ++renderCount.current;
       
-      // If we have it in cache, we already injected it in useLayoutEffect
-      if (mermaidRenderCache.has(cacheKey)) {
-        return;
-      }
-
-      // Basic check for valid mermaid content - simplified
-      if (processedContent.length < 5) return;
-
-      try {
-        // Initialize mermaid with current style before rendering
-        mermaid.initialize({
-          startOnLoad: false, // Changed to false as we call render manually
-          theme: currentStyle.theme as any,
-          themeVariables: currentStyle.themeVariables,
-          securityLevel: 'loose',
-          fontFamily: currentStyle.themeVariables?.fontFamily || 'Inter, sans-serif',
-        });
-
-        // Wrap unquoted labels containing parentheses in double quotes
-        const finalContent = processedContent.replace(/\[([^"\]]*\([^"\]]*\)[^"\]]*)\]/g, '["$1"]');
+      if (containerRef.current && content) {
+        let processedContent = content.trim();
         
-        // Try to parse first to avoid noisy errors during streaming
-        try {
-          await mermaid.parse(finalContent);
-        } catch (parseError: any) {
-          if (content.length < 100 || !content.includes('\n')) {
-             if (containerRef.current && containerRef.current.innerHTML === '') {
-               containerRef.current.innerHTML = '<div class="flex items-center justify-center p-8 text-zinc-400 text-xs">Rendering diagram...</div>';
-             }
-             return; 
-          }
-          throw parseError;
+        // Strip markdown code block wrappers if present
+        if (processedContent.startsWith('```')) {
+          const lines = processedContent.split('\n');
+          if (lines[0].startsWith('```')) lines.shift();
+          if (lines.length > 0 && lines[lines.length - 1].trim() === '```') lines.pop();
+          processedContent = lines.join('\n').trim();
         }
 
-        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg } = await mermaid.render(id, finalContent);
+        const cacheKey = `${styleId}-${processedContent}`;
         
-        if (containerRef.current) {
-          // Extract original width to prevent over-scaling
-          const widthMatch = svg.match(/width="([\d.]+)"/);
-          const originalWidth = widthMatch ? widthMatch[1] : null;
+        // If we already injected from cache in useLayoutEffect, we can skip re-rendering
+        // unless it's the very first render of this component instance
+        if (mermaidRenderCache.has(cacheKey) && renderCount.current > 1) {
+          return;
+        }
+
+        // Basic check for valid mermaid content
+        const isPotentiallyValid = /^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|quadrantChart|xychart|mindmap|timeline|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|packetBeta|kanban|architecture|requirementDiagram)/i.test(processedContent);
+
+        if (!isPotentiallyValid && processedContent.length < 20) {
+          if (containerRef.current && containerRef.current.innerHTML === '') {
+            containerRef.current.innerHTML = '<div class="flex items-center justify-center p-8 text-zinc-400 text-xs animate-pulse">Initializing diagram...</div>';
+          }
+          return;
+        }
+
+        try {
+          // Wrap unquoted labels containing parentheses in double quotes
+          processedContent = processedContent.replace(/\[([^"\]]*\([^"\]]*\)[^"\]]*)\]/g, '["$1"]');
           
-          // Make SVG responsive but respect its natural size for small diagrams
-          let responsiveSvg = svg
-            .replace(/width="[^"]*"/, 'width="100%"')
-            .replace(/height="[^"]*"/, 'height="auto"')
-            .replace(/style="[^"]*max-width:[^"]*"/, (match) => {
-              return match.replace(/max-width:\s*[^;"]+/, 'max-width: 100%');
-            });
+          // Validate syntax
+          try {
+            await mermaid.parse(processedContent);
+          } catch (parseError: any) {
+            if (content.length < 100 || !content.includes('\n')) return; 
+            throw parseError;
+          }
+
+          const id = `mermaid-svg-${Math.random().toString(36).substring(2, 11)}`;
+          const { svg } = await mermaid.render(id, processedContent);
           
-          mermaidRenderCache.set(cacheKey, responsiveSvg);
-          containerRef.current.innerHTML = responsiveSvg;
-          
-          const svgElement = containerRef.current.querySelector('svg');
-          if (svgElement) {
-            svgElement.style.display = 'block';
-            svgElement.style.margin = 'auto';
-            svgElement.style.width = '100%';
-            svgElement.style.height = 'auto';
+          // Only update if this is still the most recent render request
+          if (currentRenderId === renderCount.current && containerRef.current) {
+            const responsiveSvg = svg
+              .replace(/max-width: [^;]+;/, '')
+              .replace(/style="[^"]*max-width:[^"]*"/, '');
             
-            if (originalWidth) {
-              svgElement.style.maxWidth = `${originalWidth}px`;
-            } else {
-              svgElement.style.maxWidth = '100%';
+            mermaidRenderCache.set(cacheKey, responsiveSvg);
+            containerRef.current.innerHTML = responsiveSvg;
+            
+            const svgElement = containerRef.current.querySelector('svg');
+            if (svgElement) {
+              svgElement.style.display = 'block';
             }
           }
-        }
-      } catch (error: any) {
-        const isStreamingError = error?.message?.includes('Parse error') || error?.message?.includes('Syntax error');
-        if (isStreamingError && content.length < 200) return;
+        } catch (error: any) {
+          const isStreamingError = error?.message?.includes('Parse error') || error?.message?.includes('Syntax error');
+          if (isStreamingError && content.length < 200) return;
 
-        console.error('Mermaid render error:', error);
-        if (containerRef.current) {
-          containerRef.current.innerHTML = `
-            <div class="text-red-500 p-4 border border-red-200 rounded bg-red-50 text-xs font-mono">
-              <div class="font-bold mb-2">Mermaid Render Error</div>
-              <pre class="whitespace-pre-wrap">${error?.message || 'Unknown error'}</pre>
-            </div>
-          `;
+          console.error('Mermaid render error:', error);
+          if (currentRenderId === renderCount.current && containerRef.current) {
+            containerRef.current.innerHTML = `
+              <div class="text-red-500 p-4 border border-red-200 rounded bg-red-50 text-xs font-mono">
+                <div class="font-bold mb-2">Mermaid Render Error</div>
+                <pre class="whitespace-pre-wrap">${error?.message || 'Unknown error'}</pre>
+              </div>
+            `;
+          }
         }
       }
     };
 
     renderDiagram();
-  }, [content, styleId, currentStyle]);
+  }, [content, styleId, isInitialized]);
 
   return (
     <div className="relative w-full h-full overflow-auto flex items-center justify-center p-4">
