@@ -31,7 +31,6 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
         themeVariables: currentStyle.themeVariables,
         securityLevel: 'loose',
         fontFamily: currentStyle.themeVariables?.fontFamily || 'Inter, sans-serif',
-        fontSize: 16,
         flowchart: { useMaxWidth: false },
         sequence: { useMaxWidth: false },
         class: { useMaxWidth: false },
@@ -128,12 +127,12 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
           
           // Only update if this is still the most recent render request
           if (currentRenderId === renderCount.current && containerRef.current) {
-            // Remove any fixed width/height and add responsive styles
+            // Make SVG responsive: fit container but don't upscale beyond natural size
             const responsiveSvg = svg
-              .replace(/width="[^"]*"/g, '') 
-              .replace(/height="[^"]*"/g, '')
-              .replace(/style="[^"]*max-width:[^"]*"/g, '')
-              .replace(/max-width: [^;]+;/g, '')
+              .replace(/max-width: [^;]+;/, '')
+              .replace(/style="[^"]*max-width:[^"]*"/, '')
+              .replace(/width="100%"/, '')
+              .replace(/height="100%"/, '')
               .replace('<svg ', '<svg style="max-width: 100%; height: auto; display: block; margin: 0 auto;" ');
             
             mermaidRenderCache.set(cacheKey, responsiveSvg);
@@ -177,7 +176,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
         style={{ 
           width: className?.includes('!w-full') ? 'auto' : (className?.includes('natural-size') ? 'auto' : 'auto'), 
           maxWidth: '100%',
-          minHeight: '0' 
+          minHeight: className?.includes('!min-h-0') ? '0' : '400px' 
         }}
       />
     </div>

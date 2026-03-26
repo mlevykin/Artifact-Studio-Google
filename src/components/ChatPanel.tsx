@@ -548,7 +548,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                     <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
                                       <MermaidPreview 
                                         content={String(children).replace(/\n$/, '')} 
-                                        className="w-fit max-w-full mx-auto !p-4 !shadow-none !rounded-none !min-h-0"
+                                        className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
                                       />
                                     </div>
                                   );
@@ -736,7 +736,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                               <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
                                 <MermaidPreview 
                                   content={String(children).replace(/\n$/, '')} 
-                                  className="w-fit max-w-full mx-auto !p-4 !shadow-none !rounded-none !min-h-0"
+                                  className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
                                 />
                               </div>
                             );
@@ -975,7 +975,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                     <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
                                       <MermaidPreview 
                                         content={String(children).replace(/\n$/, '')} 
-                                        className="w-fit max-w-full mx-auto !p-4 !shadow-none !rounded-none !min-h-0"
+                                        className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
                                       />
                                     </div>
                                   );
