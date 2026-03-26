@@ -27,8 +27,34 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const pendingScroll = useRef<{ x: number, y: number } | null>(null);
+  const intendedScroll = useRef({ x: 0, y: 0 });
 
   const isDocMode = fitMode === 'width';
+
+  // Sync intendedScroll with native scroll
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !isDocMode) return;
+
+    // Initial sync
+    intendedScroll.current = {
+      x: container.scrollLeft,
+      y: container.scrollTop
+    };
+
+    const handleScroll = () => {
+      // Only update intendedScroll from native scroll if we're not in the middle of a zoom-induced scroll
+      if (!pendingScroll.current) {
+        intendedScroll.current = {
+          x: container.scrollLeft,
+          y: container.scrollTop
+        };
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isDocMode]);
 
   // Use refs to avoid re-attaching wheel listener too often
   const stateRef = useRef({ zoom, position, containerWidth, contentWidth });
@@ -99,8 +125,10 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           // Document mode zoom: adjust scroll to keep focal point
           const mouseX = e.clientX - rect.left;
           const mouseY = e.clientY - rect.top;
-          const scrollX = containerRef.current.scrollLeft;
-          const scrollY = containerRef.current.scrollTop;
+          
+          // Use intendedScroll instead of containerRef.current.scrollLeft to avoid stale values during rapid events
+          const scrollX = intendedScroll.current.x;
+          const scrollY = intendedScroll.current.y;
           
           const { containerWidth: cW, contentWidth: conW } = stateRef.current;
           
@@ -113,13 +141,14 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           const relX = (scrollX + mouseX - currentLeft) / currentZoom;
           const relY = (scrollY + mouseY - 64) / currentZoom;
           
+          const nextScrollX = Math.round(relX * newZoom - mouseX + nextLeft);
+          const nextScrollY = Math.round(relY * newZoom - mouseY + 64);
+
+          intendedScroll.current = { x: nextScrollX, y: nextScrollY };
+          pendingScroll.current = { x: nextScrollX, y: nextScrollY };
+          
           updateStateRef({ zoom: newZoom });
           setZoom(newZoom);
-          
-          pendingScroll.current = {
-            x: Math.round(relX * newZoom - mouseX + nextLeft),
-            y: Math.round(relY * newZoom - mouseY + 64)
-          };
         } else {
           // Diagram mode zoom: adjust position
           const mouseX = e.clientX - rect.left;
@@ -187,6 +216,10 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           // Document mode: pan by scrolling
           containerRef.current.scrollTop -= e.movementY;
           containerRef.current.scrollLeft -= e.movementX;
+          intendedScroll.current = {
+            x: containerRef.current.scrollLeft,
+            y: containerRef.current.scrollTop
+          };
         } else {
           // Diagram mode: pan by translating
           setPosition(prev => ({
@@ -255,6 +288,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       if (resetScroll && containerRef.current) {
         containerRef.current.scrollTop = 0;
         containerRef.current.scrollLeft = 0;
+        intendedScroll.current = { x: 0, y: 0 };
       }
       setPosition({ x: 0, y: 0 });
     } else {
