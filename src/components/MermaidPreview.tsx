@@ -108,11 +108,11 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
           
           // Only update if this is still the most recent render request
           if (currentRenderId === renderCount.current && containerRef.current) {
+            // Make SVG responsive: fit container but don't upscale beyond natural size
             const responsiveSvg = svg
               .replace(/max-width: [^;]+;/, '')
               .replace(/style="[^"]*max-width:[^"]*"/, '')
-              .replace(/width="[^"]*"/, isFullWidth ? 'width="100%"' : '')
-              .replace(/height="[^"]*"/, isFullWidth ? 'height="auto"' : '');
+              .replace('<svg ', '<svg style="max-width: 100%; height: auto; display: block; margin: 0 auto;" ');
             
             mermaidRenderCache.set(cacheKey, responsiveSvg);
             containerRef.current.innerHTML = responsiveSvg;
