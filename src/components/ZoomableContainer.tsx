@@ -28,8 +28,17 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const pendingScroll = useRef<{ x: number, y: number } | null>(null);
   const intendedScroll = useRef({ x: 0, y: 0 });
+  const lastZoomTime = useRef(0);
 
   const isDocMode = fitMode === 'width';
+
+  // Use refs to avoid re-attaching wheel listener too often
+  const stateRef = useRef({ zoom, position, containerWidth, contentWidth });
+  
+  // Update ref immediately when state changes to avoid stale closures in event handlers
+  const updateStateRef = useCallback((updates: Partial<typeof stateRef.current>) => {
+    stateRef.current = { ...stateRef.current, ...updates };
+  }, []);
 
   // Sync intendedScroll with native scroll
   useEffect(() => {
@@ -43,6 +52,9 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     };
 
     const handleScroll = () => {
+      // Ignore scroll events for a short period after a zoom action to avoid stale events
+      if (Date.now() - lastZoomTime.current < 100) return;
+      
       // Only update intendedScroll from native scroll if we're not in the middle of a zoom-induced scroll
       if (!pendingScroll.current) {
         intendedScroll.current = {
@@ -55,14 +67,6 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
   }, [isDocMode]);
-
-  // Use refs to avoid re-attaching wheel listener too often
-  const stateRef = useRef({ zoom, position, containerWidth, contentWidth });
-  
-  // Update ref immediately when state changes to avoid stale closures in event handlers
-  const updateStateRef = useCallback((updates: Partial<typeof stateRef.current>) => {
-    stateRef.current = { ...stateRef.current, ...updates };
-  }, []);
 
   useEffect(() => {
     updateStateRef({ zoom, position, containerWidth, contentWidth });
@@ -109,9 +113,10 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     
     if (isZoomAction) {
       e.preventDefault();
+      lastZoomTime.current = Date.now();
       
       // Standardize delta
-      const delta = -e.deltaY;
+      const delta = Math.max(Math.min(-e.deltaY, 1000), -1000);
       const factor = Math.pow(1.1, delta / 100);
       const { zoom: currentZoom, position: currentPos } = stateRef.current;
       
@@ -318,6 +323,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       for (const entry of entries) {
         if (entry.target === contentRef.current) {
           const { width, height } = entry.contentRect;
+          updateStateRef({ contentWidth: width });
           setContentHeight(height);
           setContentWidth(width);
 
@@ -330,6 +336,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           }
         } else if (entry.target === containerRef.current) {
           const { width } = entry.contentRect;
+          updateStateRef({ containerWidth: width });
           setContainerWidth(width);
           // Also trigger fit if container size changes significantly and we haven't interacted
           if (!hasInteractedRef.current || !initialFitDone.current) {
@@ -367,7 +374,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       <div 
         ref={containerRef}
         className={cn(
-          "w-full h-full transition-colors duration-200",
+          "w-full h-full",
           isDocMode ? "overflow-auto" : "overflow-hidden bg-zinc-50",
           isDragging && "select-none"
         )}
