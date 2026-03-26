@@ -151,7 +151,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         </code>
       );
     }
-  }), []);
+  }), [artifact?.mermaidStyleId]);
 
   // Expand parent folders when selected file changes
   useEffect(() => {
