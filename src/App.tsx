@@ -92,8 +92,7 @@ export default function App() {
       includeAttachmentsHistory: true,
       includeArtifactContext: true,
       includeSkills: true,
-      includeMcp: true,
-      includeCurrentFile: false
+      includeMcp: true
     };
   });
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -582,9 +581,7 @@ ${activeMCPs.map(c => {
         : '';
     }
 
-    const fullPrompt = (selectedFilePath && contextSettings.includeCurrentFile)
-      ? `CONTEXT: Currently working on file: ${selectedFilePath}\n\n${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}`
-      : `${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}`;
+    const fullPrompt = `${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}`;
 
     const userMessage: Message = {
       id: generateId(),
@@ -625,8 +622,7 @@ ${activeMCPs.map(c => {
           geminiModel,
           contextSettings,
           activeSkillsData,
-          activeMcpData,
-          currentSession?.selectedFilePath
+          activeMcpData
         );
 
         for await (const chunk of stream) {

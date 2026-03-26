@@ -1282,22 +1282,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                           MCP Servers Context
                         </span>
                       </button>
-                      <button 
-                        onClick={() => toggleContextSetting('includeCurrentFile')}
-                        className={cn(
-                          "w-full flex items-center gap-2.5 p-2 rounded-xl transition-all text-left group",
-                          contextSettings.includeCurrentFile ? "bg-indigo-50" : "hover:bg-zinc-50"
-                        )}
-                      >
-                        {contextSettings.includeCurrentFile ? (
-                          <CheckCircle2 size={14} className="text-indigo-500" />
-                        ) : (
-                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
-                        )}
-                        <span className={cn("text-[11px] font-medium", contextSettings.includeCurrentFile ? "text-indigo-700" : "text-zinc-700")}>
-                          Selected File Path
-                        </span>
-                      </button>
                     </div>
                   </motion.div>
                 )}

@@ -158,7 +158,6 @@ export interface ContextSettings {
   includeArtifactContext: boolean;
   includeSkills: boolean;
   includeMcp: boolean;
-  includeCurrentFile: boolean;
 }
 
 export interface Settings {

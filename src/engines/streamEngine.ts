@@ -171,23 +171,20 @@ export async function* streamGeminiResponse(
   modelName?: string,
   contextSettings?: ContextSettings,
   activeSkills?: Skill[],
-  activeMcpConfigs?: MCPConfig[],
-  selectedFilePath?: string | null
+  activeMcpConfigs?: MCPConfig[]
 ) {
   const currentArtifactContent = initialArtifact?.content;
   const ai = new GoogleGenAI({ apiKey: geminiApiKey || process.env.GEMINI_API_KEY || "" });
   const controller = new AbortController();
   if (onAbort) onAbort(controller);
 
-  // Default context settings if not provided
   const settings = contextSettings || {
     includeSystemPrompt: true,
     includeChatHistory: true,
     includeAttachmentsHistory: true,
     includeArtifactContext: true,
     includeSkills: false,
-    includeMcp: false,
-    includeCurrentFile: false
+    includeMcp: false
   };
 
   // Filter messages based on settings
@@ -243,14 +240,6 @@ export async function* streamGeminiResponse(
         });
       }
 
-      // Inject Skills Context
-      if (settings.includeSkills && activeSkills && activeSkills.length > 0) {
-        const skillsText = activeSkills.map(s => `Skill: ${s.name}\nDescription: ${s.description}\nContent:\n${s.content}`).join('\n\n---\n\n');
-        lastUserMsg.parts.push({
-          text: `\n\n[CONTEXT: Active Skills]\n${skillsText}`
-        });
-      }
-
       // Inject MCP Context
       if (settings.includeMcp && activeMcpConfigs && activeMcpConfigs.length > 0) {
         const mcpText = activeMcpConfigs.map(m => {
@@ -259,13 +248,6 @@ export async function* streamGeminiResponse(
         }).join('\n\n---\n\n');
         lastUserMsg.parts.push({
           text: `\n\n[CONTEXT: Active MCP Servers]\n${mcpText}`
-        });
-      }
-
-      // Inject Current File Path
-      if (settings.includeCurrentFile && selectedFilePath) {
-        lastUserMsg.parts.push({
-          text: `\n\n[CONTEXT: Selected File Path]\n${selectedFilePath}`
         });
       }
     }
@@ -355,8 +337,7 @@ export async function* streamOllamaResponse(
   overrideLastMessageContent?: string,
   contextSettings?: ContextSettings,
   activeSkills?: Skill[],
-  activeMcpConfigs?: MCPConfig[],
-  selectedFilePath?: string | null
+  activeMcpConfigs?: MCPConfig[]
 ) {
   const currentArtifactContent = initialArtifact?.content;
   const controller = new AbortController();
@@ -368,8 +349,7 @@ export async function* streamOllamaResponse(
     includeAttachmentsHistory: true,
     includeArtifactContext: true,
     includeSkills: false,
-    includeMcp: false,
-    includeCurrentFile: false
+    includeMcp: false
   };
 
   let processedMessages = [...messages];
@@ -410,12 +390,6 @@ export async function* streamOllamaResponse(
         lastUserMsg.content += `\n\n[CONTEXT: Current Active Artifact]\nID: ${initialArtifact.id}\nTitle: ${initialArtifact.title}\nType: ${initialArtifact.type}\nContent:\n\`\`\`\n${currentArtifactContent}\n\`\`\``;
       }
 
-      // Inject Skills Context
-      if (settings.includeSkills && activeSkills && activeSkills.length > 0) {
-        const skillsText = activeSkills.map(s => `Skill: ${s.name}\nDescription: ${s.description}\nContent:\n${s.content}`).join('\n\n---\n\n');
-        lastUserMsg.content += `\n\n[CONTEXT: Active Skills]\n${skillsText}`;
-      }
-
       // Inject MCP Context
       if (settings.includeMcp && activeMcpConfigs && activeMcpConfigs.length > 0) {
         const mcpText = activeMcpConfigs.map(m => {
@@ -423,11 +397,6 @@ export async function* streamOllamaResponse(
           return `MCP Server: ${m.name}\nURL: ${m.url}\nAvailable Tools:\n${tools}`;
         }).join('\n\n---\n\n');
         lastUserMsg.content += `\n\n[CONTEXT: Active MCP Servers]\n${mcpText}`;
-      }
-
-      // Inject Current File Path
-      if (settings.includeCurrentFile && selectedFilePath) {
-        lastUserMsg.content += `\n\n[CONTEXT: Selected File Path]\n${selectedFilePath}`;
       }
     }
   }
@@ -533,8 +502,7 @@ export async function* streamResponse(
   geminiModel?: string,
   contextSettings?: ContextSettings,
   activeSkills?: Skill[],
-  activeMcpConfigs?: MCPConfig[],
-  selectedFilePath?: string | null
+  activeMcpConfigs?: MCPConfig[]
 ) {
   if (provider === 'gemini') {
     yield* streamGeminiResponse(
@@ -548,8 +516,7 @@ export async function* streamResponse(
       geminiModel, 
       contextSettings,
       activeSkills,
-      activeMcpConfigs,
-      selectedFilePath
+      activeMcpConfigs
     );
   } else {
     yield* streamOllamaResponse(
@@ -562,8 +529,7 @@ export async function* streamResponse(
       overrideLastMessageContent, 
       contextSettings,
       activeSkills,
-      activeMcpConfigs,
-      selectedFilePath
+      activeMcpConfigs
     );
   }
 }
