@@ -61,6 +61,7 @@ export default function App() {
     updateArtifact,
     updateMessage,
     removeMessage,
+    addContextLog,
     setSessions
   } = useSessions();
 
@@ -617,6 +618,7 @@ ${activeMCPs.map(c => {
           ollamaConfig,
           initialArtifact,
           (controller) => { abortControllerRef.current = controller; },
+          (log) => addContextLog(log, sessionId),
           currentPrompt,
           webSearchEnabled,
           geminiApiKey,
@@ -1077,6 +1079,7 @@ ${activeMCPs.map(c => {
             sessionId={currentSession?.id}
             streamingText={streamingText}
             onUpdateArtifact={(updates) => displayArtifact && displayArtifact.id !== 'workspace-explorer' && displayArtifact.id !== 'streaming' && updateArtifact(displayArtifact.id, updates)}
+            contextLogs={currentSession?.contextLogs || []}
           />
           
           <AnimatePresence>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Session, Message, Artifact, Attachment } from '../types';
+import { Session, Message, Artifact, Attachment, ContextLogEntry } from '../types';
 import { generateId } from '../utils';
 
 export function useSessions() {
@@ -22,11 +22,22 @@ export function useSessions() {
       currentArtifactId: null,
       lastUpdated: Date.now(),
       activeSkills: [],
-      selectedFilePath: null
+      selectedFilePath: null,
+      contextLogs: []
     };
     setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);
     return newSession;
+  };
+
+  const addContextLog = (log: ContextLogEntry, sessionId?: string) => {
+    const targetId = sessionId || currentSessionRef.current;
+    if (!targetId) return;
+    setSessions(prev => prev.map(s => 
+      s.id === targetId 
+        ? { ...s, contextLogs: [...(s.contextLogs || []), log], lastUpdated: Date.now() } 
+        : s
+    ));
   };
 
   const updateSession = (updates: Partial<Session>, sessionId?: string) => {
@@ -110,6 +121,7 @@ export function useSessions() {
     updateArtifact,
     updateMessage,
     removeMessage,
+    addContextLog,
     setSessions
   };
 }

@@ -103,6 +103,28 @@ export interface Message {
   verificationReport?: VerificationReport;
 }
 
+export interface ContextLogEntry {
+  id: string;
+  timestamp: number;
+  request: {
+    model: string;
+    systemInstruction?: string;
+    contents: any;
+    tools?: any;
+    config?: any;
+  };
+  response: {
+    text?: string;
+    functionCalls?: any;
+    usageMetadata?: {
+      promptTokenCount: number;
+      candidatesTokenCount: number;
+      totalTokenCount: number;
+    };
+    raw?: any;
+  };
+}
+
 export interface Session {
   id: string;
   name?: string; // Optional name for the session
@@ -116,6 +138,7 @@ export interface Session {
   activeMcpIds?: string[]; // IDs of enabled MCPs for this session
   autoSelectSkills?: boolean; // Whether AI should auto-select skills/MCPs
   selectedFilePath?: string | null; // Currently selected file in the workspace
+  contextLogs?: ContextLogEntry[];
 }
 
 export interface Patch {

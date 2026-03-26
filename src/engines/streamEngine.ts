@@ -164,6 +164,7 @@ export async function* streamGeminiResponse(
   messages: Message[],
   initialArtifact?: Artifact | null,
   onAbort?: (controller: AbortController) => void,
+  onLogEntry?: (entry: any) => void,
   overrideLastMessageContent?: string,
   webSearchEnabled?: boolean,
   geminiApiKey?: string,
@@ -281,17 +282,45 @@ export async function* streamGeminiResponse(
       config.tools = [{ googleSearch: {} }];
     }
 
+    const model = modelName || "gemini-3-flash-preview";
     const result = await ai.models.generateContentStream({
-      model: modelName || "gemini-3-flash-preview",
+      model,
       contents: formattedMessages as any,
       config
     });
 
     let fullText = "";
+    let usageMetadata: any = null;
+
     for await (const chunk of result) {
       const text = chunk.text || "";
       fullText += text;
+      if (chunk.usageMetadata) {
+        usageMetadata = chunk.usageMetadata;
+      }
       yield { text, fullText, done: false };
+    }
+
+    if (onLogEntry) {
+      onLogEntry({
+        id: Math.random().toString(36).substring(2, 11),
+        timestamp: Date.now(),
+        request: {
+          model,
+          systemInstruction: config.systemInstruction,
+          contents: formattedMessages,
+          tools: config.tools,
+          config: { ...config, systemInstruction: undefined }
+        },
+        response: {
+          text: fullText,
+          usageMetadata: usageMetadata ? {
+            promptTokenCount: usageMetadata.promptTokenCount,
+            candidatesTokenCount: usageMetadata.candidatesTokenCount,
+            totalTokenCount: usageMetadata.totalTokenCount
+          } : undefined
+        }
+      });
     }
 
     yield { text: "", fullText, done: true };
@@ -322,6 +351,7 @@ export async function* streamOllamaResponse(
   model: string,
   initialArtifact?: Artifact | null,
   onAbort?: (controller: AbortController) => void,
+  onLogEntry?: (entry: any) => void,
   overrideLastMessageContent?: string,
   contextSettings?: ContextSettings,
   activeSkills?: Skill[],
@@ -421,6 +451,7 @@ export async function* streamOllamaResponse(
     const decoder = new TextDecoder();
     let fullText = "";
     let buffer = "";
+    let lastJson: any = null;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -436,6 +467,7 @@ export async function* streamOllamaResponse(
         if (!line.trim()) continue;
         try {
           const json = JSON.parse(line);
+          lastJson = json;
           const text = json.message?.content || "";
           fullText += text;
           yield { text, fullText, done: false };
@@ -449,12 +481,33 @@ export async function* streamOllamaResponse(
     if (buffer.trim()) {
       try {
         const json = JSON.parse(buffer);
+        lastJson = json;
         const text = json.message?.content || "";
         fullText += text;
         yield { text, fullText, done: false };
       } catch (e) {
         // Final partial line might not be valid JSON if the stream was cut
       }
+    }
+
+    if (onLogEntry) {
+      onLogEntry({
+        id: Math.random().toString(36).substring(2, 11),
+        timestamp: Date.now(),
+        request: {
+          model: model || 'llama3',
+          contents: ollamaMessages,
+          config: { baseUrl, systemInstruction: settings.includeSystemPrompt ? SYSTEM_PROMPT : undefined }
+        },
+        response: {
+          text: fullText,
+          usageMetadata: lastJson ? {
+            promptTokenCount: lastJson.prompt_eval_count || 0,
+            candidatesTokenCount: lastJson.eval_count || 0,
+            totalTokenCount: (lastJson.prompt_eval_count || 0) + (lastJson.eval_count || 0)
+          } : undefined
+        }
+      });
     }
 
     yield { text: "", fullText, done: true };
@@ -473,6 +526,7 @@ export async function* streamResponse(
   ollamaConfig: OllamaConfig,
   initialArtifact?: Artifact | null,
   onAbort?: (controller: AbortController) => void,
+  onLogEntry?: (entry: any) => void,
   overrideLastMessageContent?: string,
   webSearchEnabled?: boolean,
   geminiApiKey?: string,
@@ -487,6 +541,7 @@ export async function* streamResponse(
       messages, 
       initialArtifact, 
       onAbort, 
+      onLogEntry,
       overrideLastMessageContent, 
       webSearchEnabled, 
       geminiApiKey, 
@@ -503,6 +558,7 @@ export async function* streamResponse(
       ollamaConfig.selectedModel, 
       initialArtifact, 
       onAbort, 
+      onLogEntry,
       overrideLastMessageContent, 
       contextSettings,
       activeSkills,

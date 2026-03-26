@@ -21,13 +21,15 @@ import {
   parsePartialArtifact, 
   parsePartialPatches 
 } from '../engines/responseParser';
-import { Artifact, ProjectFile } from '../types';
+import { Artifact, ProjectFile, ContextLogEntry } from '../types';
 import { cn } from '../utils';
 import { MermaidPreview } from './MermaidPreview';
 import { MERMAID_STYLES } from '../constants/mermaidStyles';
 import { HtmlPreview } from './HtmlPreview';
 import { ZoomableContainer } from './ZoomableContainer';
 import { FileExplorer } from './FileExplorer';
+import { ContextLog } from './ContextLog';
+import { Terminal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import html2canvas from 'html2canvas';
@@ -51,6 +53,7 @@ interface ArtifactPanelProps {
   onFileSelect: (path: string) => void;
   sessionId?: string | null;
   onUpdateArtifact?: (updates: Partial<Artifact>) => void;
+  contextLogs?: ContextLogEntry[];
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -70,9 +73,10 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   selectedFilePath,
   onFileSelect,
   sessionId,
-  onUpdateArtifact
+  onUpdateArtifact,
+  contextLogs = []
 }) => {
-  const [view, setView] = useState<'preview' | 'code'>('preview');
+  const [view, setView] = useState<'preview' | 'code' | 'log'>('preview');
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [copied, setCopied] = useState(false);
@@ -560,6 +564,15 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           >
             <Code size={14} /> Code
           </button>
+          <button 
+            onClick={() => setView('log')}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+              view === 'log' ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+            )}
+          >
+            <Terminal size={14} /> Context Log
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -713,7 +726,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           )}
 
         <div className="flex-1 overflow-hidden relative">
-          {view === 'preview' ? (
+          {view === 'log' ? (
+            <ContextLog logs={contextLogs} />
+          ) : view === 'preview' ? (
             <div className="w-full h-full" id="artifact-preview-container">
               {pType === 'html' ? (
                 <div className="w-full h-full bg-white">
