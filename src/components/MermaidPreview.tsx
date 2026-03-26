@@ -41,18 +41,20 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
     }
   }, [currentStyle]);
 
+  const isFullWidth = className?.includes('!w-full');
+
   // Use layout effect for immediate cache injection to prevent flicker
   useLayoutEffect(() => {
     if (containerRef.current && content) {
       const processedContent = content.trim().replace(/^```mermaid\n?/, '').replace(/\n?```$/, '');
-      const cacheKey = `${styleId}-${processedContent}`;
+      const cacheKey = `${styleId}-${isFullWidth ? 'full' : 'nat'}-${processedContent}`;
       if (mermaidRenderCache.has(cacheKey)) {
         containerRef.current.innerHTML = mermaidRenderCache.get(cacheKey)!;
         const svgElement = containerRef.current.querySelector('svg');
         if (svgElement) svgElement.style.display = 'block';
       }
     }
-  }, [content, styleId]);
+  }, [content, styleId, isFullWidth]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -71,7 +73,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
           processedContent = lines.join('\n').trim();
         }
 
-        const cacheKey = `${styleId}-${processedContent}`;
+        const cacheKey = `${styleId}-${isFullWidth ? 'full' : 'nat'}-${processedContent}`;
         
         // If we already injected from cache in useLayoutEffect, we can skip re-rendering
         // unless it's the very first render of this component instance
@@ -108,7 +110,9 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
           if (currentRenderId === renderCount.current && containerRef.current) {
             const responsiveSvg = svg
               .replace(/max-width: [^;]+;/, '')
-              .replace(/style="[^"]*max-width:[^"]*"/, '');
+              .replace(/style="[^"]*max-width:[^"]*"/, '')
+              .replace(/width="[^"]*"/, isFullWidth ? 'width="100%"' : '')
+              .replace(/height="[^"]*"/, isFullWidth ? 'height="auto"' : '');
             
             mermaidRenderCache.set(cacheKey, responsiveSvg);
             containerRef.current.innerHTML = responsiveSvg;
@@ -136,15 +140,15 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId
     };
 
     renderDiagram();
-  }, [content, styleId, isInitialized]);
+  }, [content, styleId, isInitialized, isFullWidth]);
 
   return (
-    <div className="relative w-full h-full overflow-auto flex items-center justify-center p-4">
+    <div className={cn("relative w-full overflow-visible flex items-center justify-center p-4", className?.includes('!min-h-0') ? "h-auto" : "h-full")}>
       <style dangerouslySetInnerHTML={{ __html: currentStyle.css || '' }} />
       <div 
         ref={containerRef} 
         className={cn(
-          "mermaid-container svg-preview-container p-8 shadow-sm rounded-lg flex items-center justify-center transition-all duration-300", 
+          "mermaid-container svg-preview-container p-8 shadow-sm rounded-lg flex items-center justify-center", 
           styleId,
           className
         )}
