@@ -87,6 +87,16 @@ export function useSessions() {
     ));
   };
 
+  const updateArtifact = (artifactId: string, updates: Partial<Artifact>, sessionId?: string) => {
+    const targetId = sessionId || currentSessionRef.current;
+    if (!targetId) return;
+    setSessions(prev => prev.map(s => 
+      s.id === targetId 
+        ? { ...s, artifacts: s.artifacts.map(a => a.id === artifactId ? { ...a, ...updates } : a), lastUpdated: Date.now() } 
+        : s
+    ));
+  };
+
   return {
     sessions,
     currentSession,
@@ -97,6 +107,7 @@ export function useSessions() {
     deleteSession,
     addMessage,
     addArtifact,
+    updateArtifact,
     updateMessage,
     removeMessage,
     setSessions

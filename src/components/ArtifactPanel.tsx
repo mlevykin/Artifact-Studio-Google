@@ -13,7 +13,8 @@ import {
   Save,
   X,
   FolderSync,
-  RefreshCw
+  RefreshCw,
+  Palette
 } from 'lucide-react';
 import { 
   parseArtifacts, 
@@ -23,6 +24,7 @@ import {
 import { Artifact, ProjectFile } from '../types';
 import { cn } from '../utils';
 import { MermaidPreview } from './MermaidPreview';
+import { MERMAID_STYLES } from '../constants/mermaidStyles';
 import { HtmlPreview } from './HtmlPreview';
 import { ZoomableContainer } from './ZoomableContainer';
 import { FileExplorer } from './FileExplorer';
@@ -48,6 +50,7 @@ interface ArtifactPanelProps {
   selectedFilePath: string | null;
   onFileSelect: (path: string) => void;
   sessionId?: string | null;
+  onUpdateArtifact?: (updates: Partial<Artifact>) => void;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -66,7 +69,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   onDisconnectWorkspace,
   selectedFilePath,
   onFileSelect,
-  sessionId
+  sessionId,
+  onUpdateArtifact
 }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -120,8 +124,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         return (
           <div className="my-6 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
             <MermaidPreview 
-              content={String(children).replace(/\n$/, '')} 
+              content={children ? String(children).replace(/\n$/, '') : ''} 
               className="!w-full !p-4 !shadow-none !rounded-none !min-h-0"
+              styleId={artifact?.mermaidStyleId}
             />
           </div>
         );
@@ -545,6 +550,25 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {pType === 'mermaid' && !isStreaming && onUpdateArtifact && (
+            <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
+              <div className="flex items-center gap-1 px-2 text-zinc-500">
+                <Palette size={14} />
+              </div>
+              <select 
+                value={artifact.mermaidStyleId || 'minimalist'}
+                onChange={(e) => onUpdateArtifact({ mermaidStyleId: e.target.value })}
+                className="bg-transparent text-xs font-medium text-zinc-700 outline-none pr-2 py-1 cursor-pointer"
+              >
+                {MERMAID_STYLES.map(style => (
+                  <option key={style.id} value={style.id}>
+                    {style.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {view === 'code' && (
             <>
               {isEditing ? (
@@ -706,7 +730,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   contentId={artifact?.id}
                   isStreaming={isStreaming}
                 >
-                  {pType === 'mermaid' && <MermaidPreview content={pContent} className="natural-size" />}
+                  {pType === 'mermaid' && (
+                    <MermaidPreview 
+                      content={pContent} 
+                      className="natural-size" 
+                      styleId={artifact.mermaidStyleId}
+                    />
+                  )}
                   {pType === 'svg' && (
                     <div 
                       className="svg-preview-container bg-white shadow-sm rounded-lg overflow-hidden"

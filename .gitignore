@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+s_arch.md
+plantuml_spec.md

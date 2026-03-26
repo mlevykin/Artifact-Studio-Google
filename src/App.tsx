@@ -58,6 +58,7 @@ export default function App() {
     deleteSession,
     addMessage,
     addArtifact,
+    updateArtifact,
     updateMessage,
     removeMessage,
     setSessions
@@ -800,7 +801,7 @@ ${activeMCPs.map(c => {
           const updatedActiveMCPs = mcpConfigs.filter(c => sessionActiveMcpIds.includes(c.id));
           
           const nextSkillsContext = updatedActiveSkills.length > 0 
-            ? updatedActiveSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${reportingInstruction}`
+            ? updatedActiveSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${skillReportingInstruction}`
             : '';
           const nextMcpContext = isAutoSelect 
             ? `AUTO-SELECT MCP ENABLED: You have access to all MCP servers.\nIMPORTANT: You MUST ONLY use the MCP servers and tools explicitly listed below.\nAvailable MCPs:\n${mcpConfigs.map(c => `Server: ${c.name}`).join('\n')}`
@@ -1075,6 +1076,7 @@ ${activeMCPs.map(c => {
             onFileSelect={(path) => updateSession({ selectedFilePath: path })}
             sessionId={currentSession?.id}
             streamingText={streamingText}
+            onUpdateArtifact={(updates) => displayArtifact && displayArtifact.id !== 'workspace-explorer' && displayArtifact.id !== 'streaming' && updateArtifact(displayArtifact.id, updates)}
           />
           
           <AnimatePresence>

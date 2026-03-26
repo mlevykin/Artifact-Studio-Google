@@ -1,38 +1,44 @@
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import mermaid from 'mermaid';
 import { cn } from '../utils';
+import { MERMAID_STYLES } from '../constants/mermaidStyles';
 
 interface MermaidPreviewProps {
   content: string;
-  theme?: string;
+  styleId?: string;
   className?: string;
 }
 
 // Global cache to prevent flickering on remounts/resizes
 const mermaidRenderCache = new Map<string, string>();
 
-export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme = 'default', className }) => {
+export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId = 'minimalist', className }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitialRender = useRef(true);
+
+  const currentStyle = useMemo(() => {
+    return MERMAID_STYLES.find(s => s.id === styleId) || MERMAID_STYLES[0];
+  }, [styleId]);
 
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: true,
-      theme: theme as any,
+      theme: currentStyle.theme as any,
+      themeVariables: currentStyle.themeVariables,
       securityLevel: 'loose',
-      fontFamily: 'Inter, sans-serif',
+      fontFamily: currentStyle.themeVariables?.fontFamily || 'Inter, sans-serif',
     });
-  }, [theme]);
+  }, [currentStyle]);
 
   useLayoutEffect(() => {
     if (containerRef.current && content) {
       const processedContent = content.trim().replace(/^```mermaid\n?/, '').replace(/\n?```$/, '');
-      const cacheKey = `${theme}-${processedContent}`;
+      const cacheKey = `${styleId}-${processedContent}`;
       if (mermaidRenderCache.has(cacheKey)) {
         containerRef.current.innerHTML = mermaidRenderCache.get(cacheKey)!;
       }
     }
-  }, [content, theme]);
+  }, [content, styleId]);
 
   useEffect(() => {
     const renderDiagram = async () => {
@@ -51,7 +57,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
           processedContent = lines.join('\n').trim();
         }
 
-        const cacheKey = `${theme}-${processedContent}`;
+        const cacheKey = `${styleId}-${processedContent}`;
         
         // If we have it in cache, we already injected it in useLayoutEffect
         if (mermaidRenderCache.has(cacheKey)) {
@@ -133,16 +139,23 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, theme =
 
     renderDiagram();
     isInitialRender.current = false;
-  }, [content, theme]);
+  }, [content, styleId, currentStyle]);
 
   return (
-    <div 
-      ref={containerRef} 
-      className={cn("svg-preview-container bg-white p-8 shadow-sm rounded-lg flex items-center justify-center", className)}
-      style={{ 
-        width: className?.includes('!w-full') ? '100%' : (className?.includes('natural-size') ? 'auto' : '800px'), 
-        minHeight: className?.includes('!min-h-0') ? '0' : '400px' 
-      }}
-    />
+    <div className="relative w-full h-full overflow-auto flex items-center justify-center p-4">
+      <style dangerouslySetInnerHTML={{ __html: currentStyle.css || '' }} />
+      <div 
+        ref={containerRef} 
+        className={cn(
+          "mermaid-container svg-preview-container p-8 shadow-sm rounded-lg flex items-center justify-center transition-all duration-300", 
+          styleId,
+          className
+        )}
+        style={{ 
+          width: className?.includes('!w-full') ? '100%' : (className?.includes('natural-size') ? 'auto' : '800px'), 
+          minHeight: className?.includes('!min-h-0') ? '0' : '400px' 
+        }}
+      />
+    </div>
   );
 };

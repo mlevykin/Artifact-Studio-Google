@@ -16,6 +16,7 @@ export interface Artifact {
   files?: ProjectFile[]; // For multi-file artifacts
   version: number;
   timestamp: number;
+  mermaidStyleId?: string; // For per-artifact style persistence
 }
 
 export interface Skill {
