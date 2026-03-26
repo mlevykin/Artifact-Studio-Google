@@ -113,13 +113,15 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           const relX = (scrollX + mouseX - currentLeft) / currentZoom;
           const relY = (scrollY + mouseY - 64) / currentZoom;
           
+          const nextScrollX = Math.round(relX * newZoom - mouseX + nextLeft);
+          const nextScrollY = Math.round(relY * newZoom - mouseY + 64);
+
           updateStateRef({ zoom: newZoom });
           setZoom(newZoom);
           
-          pendingScroll.current = {
-            x: Math.round(relX * newZoom - mouseX + nextLeft),
-            y: Math.round(relY * newZoom - mouseY + 64)
-          };
+          // Apply scroll immediately
+          containerRef.current.scrollLeft = nextScrollX;
+          containerRef.current.scrollTop = nextScrollY;
         } else {
           // Diagram mode zoom: adjust position
           const mouseX = e.clientX - rect.left;
