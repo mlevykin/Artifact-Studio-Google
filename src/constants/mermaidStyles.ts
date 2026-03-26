@@ -26,9 +26,9 @@ export const MERMAID_STYLES: MermaidStyle[] = [
     css: `
       .mermaid-container { background: #ffffff; }
       .edgePath path { stroke-width: 1px !important; }
-      /* Color differentiation for Minimalist */
-      .mermaid-container .node rect { fill: #ffffff !important; stroke: #3b82f6 !important; }
-      .mermaid-container .node polygon { fill: #f8fafc !important; stroke: #8b5cf6 !important; }
+      /* Color differentiation for Minimalist - Solid Pastel Fills */
+      .mermaid-container .node rect { fill: #eff6ff !important; stroke: #3b82f6 !important; }
+      .mermaid-container .node polygon { fill: #f5f3ff !important; stroke: #8b5cf6 !important; }
       .mermaid-container .node circle, .mermaid-container .node ellipse { fill: #f0fdf4 !important; stroke: #22c55e !important; }
     `
   },
@@ -76,32 +76,32 @@ export const MERMAID_STYLES: MermaidStyle[] = [
         fill: #00FFFF !important;
         stroke: #00FFFF !important;
       }
-      /* Color differentiation for Dark Tech */
+      /* Color differentiation for Dark Tech - Glowing Fills */
       /* Processes - Cyan */
       .mermaid-container .node rect {
-        fill: rgba(0, 255, 255, 0.05) !important;
+        fill: rgba(0, 255, 255, 0.15) !important;
         stroke: #00FFFF !important;
         stroke-width: 2px !important;
-        filter: drop-shadow(0 0 3px rgba(0, 255, 255, 0.4));
+        filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.4));
       }
       /* Decisions - Magenta/Purple */
       .mermaid-container .node polygon {
-        fill: rgba(255, 0, 255, 0.05) !important;
+        fill: rgba(255, 0, 255, 0.15) !important;
         stroke: #FF00FF !important;
         stroke-width: 2px !important;
-        filter: drop-shadow(0 0 3px rgba(255, 0, 255, 0.4));
+        filter: drop-shadow(0 0 5px rgba(255, 0, 255, 0.4));
       }
       /* Start/End - Green */
       .mermaid-container .node circle, 
       .mermaid-container .node ellipse {
-        fill: rgba(0, 255, 128, 0.05) !important;
+        fill: rgba(0, 255, 128, 0.15) !important;
         stroke: #00FF80 !important;
         stroke-width: 2px !important;
-        filter: drop-shadow(0 0 3px rgba(0, 255, 128, 0.4));
+        filter: drop-shadow(0 0 5px rgba(0, 255, 128, 0.4));
       }
       /* Other shapes - Orange */
       .mermaid-container .node path:not(.path) {
-        fill: rgba(255, 128, 0, 0.05) !important;
+        fill: rgba(255, 128, 0, 0.15) !important;
         stroke: #FF8000 !important;
         stroke-width: 2px !important;
       }
@@ -124,9 +124,9 @@ export const MERMAID_STYLES: MermaidStyle[] = [
     },
     css: `
       .mermaid-container { background: #f8fafc; }
-      .node rect { rx: 8; ry: 8; fill: #eff6ff !important; stroke: #2563eb !important; }
-      .node polygon { fill: #f5f3ff !important; stroke: #7c3aed !important; }
-      .node circle, .node ellipse { fill: #f0fdf4 !important; stroke: #16a34a !important; }
+      .node rect { rx: 8; ry: 8; fill: #dbeafe !important; stroke: #1e40af !important; }
+      .node polygon { fill: #ede9fe !important; stroke: #5b21b6 !important; }
+      .node circle, .node ellipse { fill: #dcfce7 !important; stroke: #166534 !important; }
     `
   },
   {
@@ -146,6 +146,10 @@ export const MERMAID_STYLES: MermaidStyle[] = [
       .node rect, .node circle, .node polygon, .node path {
         stroke-width: 2px !important;
       }
+      /* Color differentiation for Sketch - Light Hand-drawn Fills */
+      .mermaid-container .node rect { fill: #fdfcf0 !important; stroke: #000 !important; }
+      .mermaid-container .node polygon { fill: #f0fdfa !important; stroke: #000 !important; }
+      .mermaid-container .node circle, .mermaid-container .node ellipse { fill: #fdf2f2 !important; stroke: #000 !important; }
       .edgePath path {
         stroke-width: 2px !important;
       }
@@ -171,18 +175,18 @@ export const MERMAID_STYLES: MermaidStyle[] = [
         backdrop-filter: blur(8px);
         filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05));
       }
-      /* Color differentiation for Glass */
+      /* Color differentiation for Glass - More Opaque Translucent Fills */
       .mermaid-container .node rect {
-        fill: rgba(59, 130, 246, 0.1) !important;
-        stroke: rgba(59, 130, 246, 0.5) !important;
+        fill: rgba(59, 130, 246, 0.2) !important;
+        stroke: rgba(59, 130, 246, 0.6) !important;
       }
       .mermaid-container .node polygon {
-        fill: rgba(139, 92, 246, 0.1) !important;
-        stroke: rgba(139, 92, 246, 0.5) !important;
+        fill: rgba(139, 92, 246, 0.2) !important;
+        stroke: rgba(139, 92, 246, 0.6) !important;
       }
       .mermaid-container .node circle, .mermaid-container .node ellipse {
-        fill: rgba(34, 197, 94, 0.1) !important;
-        stroke: rgba(34, 197, 94, 0.5) !important;
+        fill: rgba(34, 197, 94, 0.2) !important;
+        stroke: rgba(34, 197, 94, 0.6) !important;
       }
     `
   }
