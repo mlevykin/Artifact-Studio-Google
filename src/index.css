@@ -47,7 +47,7 @@
 .prose ol { @apply list-decimal pl-5 mb-4; }
 .prose li { @apply mb-1; }
 .prose code { @apply bg-zinc-100 px-1 py-0.5 rounded text-sm font-mono text-zinc-700; }
-.prose pre { @apply bg-zinc-900 text-zinc-300 p-4 rounded-xl overflow-auto mb-4 font-mono text-xs; }
+.prose pre { @apply bg-zinc-100 text-zinc-800 p-4 rounded-xl overflow-auto mb-4 font-mono text-xs border border-zinc-200; }
 .prose blockquote { @apply border-l-4 border-zinc-200 pl-4 italic text-zinc-500 mb-4; }
 .prose a { @apply text-zinc-900 underline underline-offset-4 decoration-zinc-300 hover:decoration-zinc-900 transition-colors; }
 .prose-invert { @apply text-white; }

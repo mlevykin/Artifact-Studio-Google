@@ -116,6 +116,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         </div>
       );
     },
+    pre({ children }: any) {
+      return <>{children}</>;
+    },
     code({ node, inline, className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || '');
       const isMermaid = match && match[1] === 'mermaid';
@@ -132,8 +135,18 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         );
       }
       
+      if (!inline) {
+        return (
+          <pre className="bg-zinc-100 text-zinc-800 p-4 rounded-xl overflow-auto mb-4 font-mono text-xs border border-zinc-200">
+            <code className={cn(className, "whitespace-pre-wrap break-words")} {...props}>
+              {children}
+            </code>
+          </pre>
+        );
+      }
+
       return (
-        <code className={cn(className, "whitespace-pre-wrap break-words")} {...props}>
+        <code className={cn(className, "bg-zinc-100 px-1 py-0.5 rounded text-sm font-mono text-zinc-700")} {...props}>
           {children}
         </code>
       );
@@ -550,7 +563,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {pType === 'mermaid' && !isStreaming && onUpdateArtifact && (
+          {(pType === 'mermaid' || pType === 'markdown') && !isStreaming && onUpdateArtifact && (
             <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
               <div className="flex items-center gap-1 px-2 text-zinc-500">
                 <Palette size={14} />
