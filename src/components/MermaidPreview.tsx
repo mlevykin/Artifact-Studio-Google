@@ -12,15 +12,15 @@ interface MermaidPreviewProps {
 // Global cache to prevent flickering on remounts/resizes
 const mermaidRenderCache = new Map<string, string>();
 
-export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ content, styleId = 'minimalist', className }) => {
+export const MermaidPreview: React.FC<MermaidPreviewProps> = ({ content, styleId = 'minimalist', className }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const renderCount = useRef(0);
   const [isInitialized, setIsInitialized] = React.useState(false);
-  
+
   const currentStyle = useMemo(() => {
     return MERMAID_STYLES.find(s => s.id === styleId) || MERMAID_STYLES[0];
   }, [styleId]);
-  
+
   // Initialize mermaid whenever style changes
   useEffect(() => {
     setIsInitialized(false);
@@ -162,6 +162,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
 
     renderDiagram();
   }, [content, styleId, isInitialized, isFullWidth]);
+
   return (
     <div className={cn("relative w-full overflow-visible flex items-center justify-center p-4", className?.includes('!min-h-0') ? "h-auto" : "h-full")}>
       <style dangerouslySetInnerHTML={{ __html: currentStyle.css || '' }} />
@@ -180,6 +181,4 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
       />
     </div>
   );
-});
-
-MermaidPreview.displayName = 'MermaidPreview';
+};
