@@ -29,6 +29,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const pendingScroll = useRef<{ x: number, y: number } | null>(null);
   const intendedScroll = useRef({ x: 0, y: 0 });
   const lastZoomTime = useRef(0);
+  const isZooming = useRef(false);
+  const zoomTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const isDocMode = fitMode === 'width';
 
@@ -143,8 +145,11 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           const nextLeft = getLeft(newZoom, cW, conW);
 
           // Calculate relative position within unscaled content
-          const relX = (scrollX + mouseX - currentLeft) / currentZoom;
-          const relY = (scrollY + mouseY - 64) / currentZoom;
+          const focalX = (scrollX + mouseX - currentLeft);
+          const focalY = (scrollY + mouseY - 64);
+          
+          const relX = focalX / currentZoom;
+          const relY = focalY / currentZoom;
           
           const nextScrollX = Math.round(relX * newZoom - mouseX + nextLeft);
           const nextScrollY = Math.round(relY * newZoom - mouseY + 64);
@@ -169,7 +174,15 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
 
           setZoom(newZoom);
           setPosition({ x: newX, y: newY });
+          updateStateRef({ zoom: newZoom, position: { x: newX, y: newY } });
         }
+
+        // Set isZooming flag to help other components know we are in a high-frequency update
+        isZooming.current = true;
+        if (zoomTimeout.current) clearTimeout(zoomTimeout.current);
+        zoomTimeout.current = setTimeout(() => {
+          isZooming.current = false;
+        }, 150);
       }
     } else {
       // Normal scrolling: browser handles it in DocMode via overflow-y: auto
@@ -381,7 +394,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         onMouseDown={handleMouseDown}
         style={{ 
           cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto'),
-          overflowAnchor: 'none' // Prevent browser from jumping scroll position during layout changes
+          overflowAnchor: 'none', // Prevent browser from jumping scroll position during layout changes
+          willChange: isZooming.current ? 'transform, scroll-position' : 'auto'
         }}
       >
         <div 
