@@ -385,36 +385,47 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           >
             <div 
               className={cn(
-                "p-3 rounded-2xl text-sm shadow-sm",
+                "p-4 rounded-2xl text-sm shadow-sm relative",
                 m.role === 'user' 
                   ? (m.content.startsWith('MCP CALL RESULT') 
                       ? "bg-zinc-100 border border-zinc-200 text-zinc-600 rounded-tr-none font-mono text-[10px]" 
                       : "bg-zinc-800 text-white rounded-tr-none shadow-md")
-                  : "bg-white border border-zinc-200 text-zinc-800 rounded-tl-none"
+                  : "bg-white border border-zinc-100 text-zinc-800 rounded-tl-none pl-6"
               )}
             >
+              {m.role === 'assistant' && (
+                <div className="absolute left-2 top-4 bottom-4 w-0.5 bg-zinc-100 rounded-full" />
+              )}
+              {m.role === 'assistant' && m.id === messages[messages.length - 1].id && (
+                <div className="absolute -left-1.5 top-4 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-sm" />
+              )}
               {m.role === 'assistant' && m.steps ? (
                 <div className="flex flex-col gap-3">
                   {m.steps.map((step, stepIdx) => {
                     if (step.type === 'thought') {
+                      const thoughtId = `${m.id}-${stepIdx}`;
+                      const isExpanded = expandedThoughts[thoughtId] ?? true; // Default to expanded for better visibility
+                      
                       return (
-                        <div key={`step-${stepIdx}`} className="pb-3 border-b border-zinc-100 last:border-0">
+                        <div key={`step-${stepIdx}`} className="pb-2 last:pb-0">
                           <button 
-                            onClick={() => toggleThought(`${m.id}-${stepIdx}`)}
-                            className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
+                            onClick={() => toggleThought(thoughtId)}
+                            className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-wider"
                           >
-                            <Sparkles size={12} />
+                            <div className="w-5 h-5 rounded-lg bg-indigo-50 flex items-center justify-center">
+                              <Sparkles size={12} className="text-indigo-500" />
+                            </div>
                             THOUGHT PROCESS
-                            {expandedThoughts[`${m.id}-${stepIdx}`] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                           </button>
                           
                           <AnimatePresence>
-                            {expandedThoughts[`${m.id}-${stepIdx}`] && (
+                            {isExpanded && (
                               <motion.div 
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap"
+                                className="mt-2 text-[11px] text-zinc-600 bg-zinc-50/80 p-3 rounded-xl border border-zinc-100/50 overflow-hidden whitespace-pre-wrap leading-relaxed"
                               >
                                 {step.content}
                               </motion.div>

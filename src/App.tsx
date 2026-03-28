@@ -433,24 +433,28 @@ export default function App() {
     updateSession({ autoSelectSkills: !currentSession.autoSelectSkills });
   };
 
-  const handleAssembleProject = () => {
-    if (!currentSession) return;
+  const handleAssembleProject = (sessionId?: string) => {
+    const targetSession = sessionId ? sessions.find(s => s.id === sessionId) : currentSession;
+    if (!targetSession) return;
     
-    const artifacts = currentSession.artifacts || [];
+    const artifacts = targetSession.artifacts || [];
     if (artifacts.length === 0) return;
     
     // Filter out TOC and existing Final Documents
     const chapters = artifacts.filter(a => 
       !a.title.toLowerCase().includes('table of contents') && 
       !a.title.toLowerCase().includes('final document') &&
+      !a.title.toLowerCase().includes('toc') &&
       a.id !== 'workspace-explorer' &&
       a.id !== 'streaming'
     );
     
-    if (chapters.length === 0) return;
+    if (chapters.length === 0) {
+      console.warn('No chapters found to assemble.');
+      return;
+    }
     
     // Sort chapters by title to get them in order (e.g., Chapter 1, Chapter 2)
-    // This is a simple heuristic, might need refinement if titles are complex
     const sortedChapters = [...chapters].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
     
     const finalContent = sortedChapters.map(c => `## ${c.title}\n\n${c.content}`).join('\n\n---\n\n');
@@ -464,7 +468,7 @@ export default function App() {
       timestamp: Date.now()
     };
     
-    addArtifact(finalArtifact, currentSession.id);
+    addArtifact(finalArtifact, targetSession.id);
     
     addMessage({
       id: generateId(),
@@ -472,7 +476,7 @@ export default function App() {
       content: `✅ Final document assembled from ${sortedChapters.length} chapters.`,
       timestamp: Date.now(),
       isSystemGenerated: true
-    }, currentSession.id);
+    }, targetSession.id);
   };
 
   const handleAddSkill = (skill: Skill) => {
@@ -907,6 +911,14 @@ ${activeMCPs.map(c => {
 
       if (initialMessages.length === 0) {
         updateSession({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') }, sessionId);
+      }
+
+      // Auto-assemble if completed
+      if (fullText.includes('COMPLETED:')) {
+        // Use a small timeout to ensure state updates have propagated
+        setTimeout(() => {
+          handleAssembleProject(sessionId);
+        }, 500);
       }
 
     } catch (error: any) {
