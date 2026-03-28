@@ -125,6 +125,26 @@ export interface ContextLogEntry {
   };
 }
 
+export interface ProjectConfig {
+  id: string;
+  name: string;
+  description: string;
+  targetDepth: number; // 1-5 (granularity)
+  tone: string;
+  audience: string;
+  rootFolder: string;
+  status: 'planning' | 'generating' | 'completed' | 'idle';
+  currentChapter?: number;
+  totalChapters?: number;
+  blueprint?: {
+    toc: string[];
+    glossary: Record<string, string>;
+    styleGuide: string;
+  };
+  summary?: string; // Cumulative summary
+  knowledgeGraph?: string; // Compressed knowledge graph
+}
+
 export interface Session {
   id: string;
   name?: string; // Optional name for the session
@@ -139,6 +159,7 @@ export interface Session {
   autoSelectSkills?: boolean; // Whether AI should auto-select skills/MCPs
   selectedFilePath?: string | null; // Currently selected file in the workspace
   contextLogs?: ContextLogEntry[];
+  activeProjectId?: string | null; // Currently active project for multi-chapter generation
 }
 
 export interface Patch {
@@ -158,6 +179,7 @@ export interface ContextSettings {
   includeArtifactContext: boolean;
   includeSkills: boolean;
   includeMcp: boolean;
+  includeMultiChapter: boolean;
 }
 
 export interface Settings {

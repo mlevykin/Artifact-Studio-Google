@@ -22,7 +22,8 @@ import {
   ShieldCheck,
   AlertTriangle,
   CheckCircle,
-  RotateCcw
+  RotateCcw,
+  Settings2
 } from 'lucide-react';
 import { Message, Attachment, Skill, MCPConfig, ContextSettings } from '../types';
 import { cn, generateId } from '../utils';
@@ -68,6 +69,7 @@ interface ChatPanelProps {
   contextSettings: ContextSettings;
   onContextSettingsChange: (settings: ContextSettings) => void;
   onStop?: () => void;
+  onOpenProjectConfigurator?: () => void;
   onApplyVerificationFixes: (messageId: string) => void;
   testerSkillIds: string[];
   onToggleTester: (id: string) => void;
@@ -102,6 +104,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onToggleWebSearch,
   contextSettings,
   onContextSettingsChange,
+  onOpenProjectConfigurator,
   onApplyVerificationFixes,
   testerSkillIds,
   onToggleTester
@@ -1282,6 +1285,40 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                           MCP Servers Context
                         </span>
                       </button>
+
+                      <div className="h-px bg-zinc-100 my-1" />
+
+                      <button 
+                        onClick={() => toggleContextSetting('includeMultiChapter')}
+                        className={cn(
+                          "w-full flex items-center gap-2.5 p-2 rounded-xl transition-all text-left group",
+                          contextSettings.includeMultiChapter ? "bg-amber-50" : "hover:bg-zinc-50"
+                        )}
+                      >
+                        {contextSettings.includeMultiChapter ? (
+                          <CheckCircle2 size={14} className="text-amber-500" />
+                        ) : (
+                          <Circle size={14} className="text-zinc-300 group-hover:text-zinc-400" />
+                        )}
+                        <div className="flex-1">
+                          <span className={cn("text-[11px] font-bold", contextSettings.includeMultiChapter ? "text-amber-700" : "text-zinc-700")}>
+                            Multi-Chapter Mode
+                          </span>
+                          <p className="text-[9px] text-zinc-400 leading-tight">Generate large documents iteratively</p>
+                        </div>
+                      </button>
+
+                      {contextSettings.includeMultiChapter && (
+                        <button 
+                          onClick={onOpenProjectConfigurator}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-zinc-100 transition-all text-left group mt-1 border border-dashed border-zinc-200"
+                        >
+                          <Settings2 size={14} className="text-zinc-400 group-hover:text-zinc-600" />
+                          <span className="text-[11px] font-medium text-zinc-600">
+                            Configure Project...
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -1289,6 +1326,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </div>
             
             <div className="flex items-center gap-1 overflow-x-auto flex-1 no-scrollbar py-0.5">
+              {contextSettings.includeMultiChapter && (
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-100 text-[9px] font-bold whitespace-nowrap">
+                  <Layers size={10} />
+                  MULTI-CHAPTER
+                </div>
+              )}
               {webSearchEnabled && provider === 'gemini' && (
                 <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-bold whitespace-nowrap">
                   <Loader2 size={10} className="animate-spin" />

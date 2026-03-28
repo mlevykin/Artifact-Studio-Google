@@ -8,3 +8,4 @@ coverage/
 !.env.example
 s_arch.md
 plantuml_spec.md
+multi_chapter_generation_spec.md

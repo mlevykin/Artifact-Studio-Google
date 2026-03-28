@@ -21,7 +21,8 @@ import {
   parsePartialArtifact, 
   parsePartialPatches 
 } from '../engines/responseParser';
-import { Artifact, ProjectFile, ContextLogEntry } from '../types';
+import { Artifact, ProjectFile, ContextLogEntry, ProjectConfig } from '../types';
+import { ProjectPanel } from './ProjectPanel';
 import { cn } from '../utils';
 import { MermaidPreview } from './MermaidPreview';
 import { MERMAID_STYLES } from '../constants/mermaidStyles';
@@ -54,6 +55,7 @@ interface ArtifactPanelProps {
   sessionId?: string | null;
   onUpdateArtifact?: (updates: Partial<Artifact>) => void;
   contextLogs?: ContextLogEntry[];
+  project?: ProjectConfig | null;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -74,7 +76,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   onFileSelect,
   sessionId,
   onUpdateArtifact,
-  contextLogs = []
+  contextLogs = [],
+  project = null
 }) => {
   const [view, setView] = useState<'preview' | 'code' | 'log'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -91,6 +94,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const prevArtifactIdRef = useRef<string | null>(null);
 
   const isWorkspaceMode = artifact?.id === 'workspace-explorer';
+  const isProjectMode = !!project && !artifact;
 
   const currentFile = null;
 
@@ -509,6 +513,31 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       link.click();
     }
   };
+
+  if (isProjectMode && project) {
+    return (
+      <ProjectPanel 
+        project={project} 
+        artifacts={history} 
+        onSelectArtifact={(id) => {
+          const index = history.findIndex(a => a.id === id);
+          if (index !== -1) onVersionSelect(index);
+        }} 
+      />
+    );
+  }
+
+  if (!artifact && !isStreaming) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 p-8 text-center bg-zinc-50">
+        <div className="w-16 h-16 rounded-3xl bg-white shadow-sm flex items-center justify-center mb-6 border border-zinc-100">
+          <Code size={32} className="opacity-20" />
+        </div>
+        <h3 className="text-lg font-bold text-zinc-900 mb-2">No active artifact</h3>
+        <p className="text-sm max-w-xs">Ask me to generate something, or select an existing artifact from history.</p>
+      </div>
+    );
+  }
 
   return (
     <div ref={panelRef} className={cn("flex-1 flex flex-col h-full bg-white overflow-hidden", isFullScreen && "fixed inset-0 z-[100]")}>

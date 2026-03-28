@@ -4,6 +4,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { ProjectConfigurator } from './components/ProjectConfigurator';
+import { ProjectPanel } from './components/ProjectPanel';
 import { Sidebar } from './components/Sidebar';
 import { ChatPanel } from './components/ChatPanel';
 import { ArtifactPanel } from './components/ArtifactPanel';
@@ -24,7 +26,7 @@ import {
   truncateAfterToolCall,
   parseMessageSteps
 } from './engines/responseParser';
-import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings } from './types';
+import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings, ProjectConfig } from './types';
 import { generateId } from './utils';
 import { MCPService } from './services/mcpService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -92,7 +94,8 @@ export default function App() {
       includeAttachmentsHistory: true,
       includeArtifactContext: true,
       includeSkills: true,
-      includeMcp: true
+      includeMcp: true,
+      includeMultiChapter: false
     };
   });
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -142,6 +145,16 @@ export default function App() {
   const [availableModels, setAvailableModels] = useState<string[]>(['llama3']);
 
   const [isStreaming, setIsStreaming] = useState(false);
+  const [projects, setProjects] = useState<ProjectConfig[]>(() => {
+    const saved = localStorage.getItem('projects');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('projects', JSON.stringify(projects));
+  }, [projects]);
+
+  const [isProjectConfiguratorOpen, setIsProjectConfiguratorOpen] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [streamingArtifact, setStreamingArtifact] = useState<{ type: string; title: string; content: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -414,6 +427,28 @@ export default function App() {
       };
       addMessage(errorMessage, currentSession.id);
     }
+  };
+
+  const handleCreateProject = (config: ProjectConfig) => {
+    setProjects(prev => [...prev, config]);
+    setIsProjectConfiguratorOpen(false);
+    
+    // If we have a current session, link it to the project
+    if (currentSessionId) {
+      updateSession({ activeProjectId: config.id });
+    }
+    
+    // Switch to multi-chapter mode automatically
+    setContextSettings(prev => ({ ...prev, includeMultiChapter: true }));
+    
+    // Add a system message about project initialization
+    addMessage({
+      id: generateId(),
+      role: 'system',
+      content: `Project "${config.name}" initialized. Root folder: ${config.rootFolder}. Target depth: ${config.targetDepth}.`,
+      timestamp: Date.now(),
+      isSystemGenerated: true
+    }, currentSessionId || '');
   };
 
   const handleToggleAutoSelect = () => {
@@ -1046,6 +1081,7 @@ ${activeMCPs.map(c => {
             contextSettings={contextSettings}
             onContextSettingsChange={setContextSettings}
             onApplyVerificationFixes={handleApplyVerificationFixes}
+            onOpenProjectConfigurator={() => setIsProjectConfiguratorOpen(true)}
           />
         </div>
 
@@ -1076,6 +1112,7 @@ ${activeMCPs.map(c => {
             streamingText={streamingText}
             onUpdateArtifact={(updates) => displayArtifact && displayArtifact.id !== 'workspace-explorer' && displayArtifact.id !== 'streaming' && updateArtifact(displayArtifact.id, updates)}
             contextLogs={currentSession?.contextLogs || []}
+            project={projects.find(p => p.id === currentSession?.activeProjectId)}
           />
           
           <AnimatePresence>
