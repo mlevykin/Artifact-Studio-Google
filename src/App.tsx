@@ -657,6 +657,7 @@ ${activeMCPs.map(c => {
     let currentMessages = [...initialMessages, userMessage];
     let currentPrompt = fullPrompt;
     let turnCount = 0;
+    let lastFullResponse = '';
     const maxTurns = 10;
 
     try {
@@ -673,7 +674,10 @@ ${activeMCPs.map(c => {
           ollamaConfig,
           initialArtifact,
           (controller) => { abortControllerRef.current = controller; },
-          (log) => addContextLog(log, sessionId),
+          (log) => {
+            console.log('Adding context log for turn:', turnCount + 1);
+            addContextLog(log, sessionId);
+          },
           currentPrompt,
           webSearchEnabled,
           geminiApiKey,
@@ -686,6 +690,7 @@ ${activeMCPs.map(c => {
         for await (const chunk of stream) {
           if (chunk.text) {
             fullResponse = chunk.fullText;
+            lastFullResponse = fullResponse;
             const displayResponse = truncateAfterToolCall(fullResponse);
             setStreamingText(displayResponse);
             
@@ -914,7 +919,7 @@ ${activeMCPs.map(c => {
       }
 
       // Auto-assemble if completed
-      if (fullText.includes('COMPLETED:')) {
+      if (lastFullResponse.includes('COMPLETED:')) {
         // Use a small timeout to ensure state updates have propagated
         setTimeout(() => {
           handleAssembleProject(sessionId);
