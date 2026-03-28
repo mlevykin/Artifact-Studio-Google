@@ -24,8 +24,7 @@ import {
   CheckCircle,
   RotateCcw,
   Settings2,
-  Target,
-  Play
+  Target
 } from 'lucide-react';
 import { Message, Attachment, Skill, MCPConfig, ContextSettings } from '../types';
 import { cn, generateId } from '../utils';
@@ -385,47 +384,36 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           >
             <div 
               className={cn(
-                "p-4 rounded-2xl text-sm shadow-sm relative",
+                "p-3 rounded-2xl text-sm shadow-sm",
                 m.role === 'user' 
                   ? (m.content.startsWith('MCP CALL RESULT') 
                       ? "bg-zinc-100 border border-zinc-200 text-zinc-600 rounded-tr-none font-mono text-[10px]" 
                       : "bg-zinc-800 text-white rounded-tr-none shadow-md")
-                  : "bg-white border border-zinc-100 text-zinc-800 rounded-tl-none pl-6"
+                  : "bg-white border border-zinc-200 text-zinc-800 rounded-tl-none"
               )}
             >
-              {m.role === 'assistant' && (
-                <div className="absolute left-2 top-4 bottom-4 w-0.5 bg-zinc-100 rounded-full" />
-              )}
-              {m.role === 'assistant' && m.id === messages[messages.length - 1].id && (
-                <div className="absolute -left-1.5 top-4 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-sm" />
-              )}
               {m.role === 'assistant' && m.steps ? (
                 <div className="flex flex-col gap-3">
                   {m.steps.map((step, stepIdx) => {
                     if (step.type === 'thought') {
-                      const thoughtId = `${m.id}-${stepIdx}`;
-                      const isExpanded = expandedThoughts[thoughtId] ?? true; // Default to expanded for better visibility
-                      
                       return (
-                        <div key={`step-${stepIdx}`} className="pb-2 last:pb-0">
+                        <div key={`step-${stepIdx}`} className="pb-3 border-b border-zinc-100 last:border-0">
                           <button 
-                            onClick={() => toggleThought(thoughtId)}
-                            className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-wider"
+                            onClick={() => toggleThought(`${m.id}-${stepIdx}`)}
+                            className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
                           >
-                            <div className="w-5 h-5 rounded-lg bg-indigo-50 flex items-center justify-center">
-                              <Sparkles size={12} className="text-indigo-500" />
-                            </div>
+                            <Sparkles size={12} />
                             THOUGHT PROCESS
-                            {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            {expandedThoughts[`${m.id}-${stepIdx}`] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                           </button>
                           
                           <AnimatePresence>
-                            {isExpanded && (
+                            {expandedThoughts[`${m.id}-${stepIdx}`] && (
                               <motion.div 
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="mt-2 text-[11px] text-zinc-600 bg-zinc-50/80 p-3 rounded-xl border border-zinc-100/50 overflow-hidden whitespace-pre-wrap leading-relaxed"
+                                className="mt-2 text-[11px] text-zinc-500 italic bg-zinc-50 p-2 rounded-lg border border-zinc-100 overflow-hidden whitespace-pre-wrap"
                               >
                                 {step.content}
                               </motion.div>
@@ -900,7 +888,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </span>
           </div>
         ))}
-
+        
         {isStreaming && (
           <div className="mr-auto items-start max-w-[85%] flex flex-col">
             <div className="p-3 rounded-2xl text-sm bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm w-full min-h-[40px] flex items-center">

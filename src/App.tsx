@@ -433,52 +433,6 @@ export default function App() {
     updateSession({ autoSelectSkills: !currentSession.autoSelectSkills });
   };
 
-  const handleAssembleProject = (sessionId?: string) => {
-    const targetSession = sessionId ? sessions.find(s => s.id === sessionId) : currentSession;
-    if (!targetSession) return;
-    
-    const artifacts = targetSession.artifacts || [];
-    if (artifacts.length === 0) return;
-    
-    // Filter out TOC and existing Final Documents
-    const chapters = artifacts.filter(a => 
-      !a.title.toLowerCase().includes('table of contents') && 
-      !a.title.toLowerCase().includes('final document') &&
-      !a.title.toLowerCase().includes('toc') &&
-      a.id !== 'workspace-explorer' &&
-      a.id !== 'streaming'
-    );
-    
-    if (chapters.length === 0) {
-      console.warn('No chapters found to assemble.');
-      return;
-    }
-    
-    // Sort chapters by title to get them in order (e.g., Chapter 1, Chapter 2)
-    const sortedChapters = [...chapters].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
-    
-    const finalContent = sortedChapters.map(c => `## ${c.title}\n\n${c.content}`).join('\n\n---\n\n');
-    
-    const finalArtifact: Artifact = {
-      id: generateId(),
-      title: 'Final Document',
-      type: 'markdown',
-      content: finalContent,
-      version: 1,
-      timestamp: Date.now()
-    };
-    
-    addArtifact(finalArtifact, targetSession.id);
-    
-    addMessage({
-      id: generateId(),
-      role: 'system',
-      content: `✅ Final document assembled from ${sortedChapters.length} chapters.`,
-      timestamp: Date.now(),
-      isSystemGenerated: true
-    }, targetSession.id);
-  };
-
   const handleAddSkill = (skill: Skill) => {
     setSkills(prev => [skill, ...prev]);
   };
@@ -657,7 +611,6 @@ ${activeMCPs.map(c => {
     let currentMessages = [...initialMessages, userMessage];
     let currentPrompt = fullPrompt;
     let turnCount = 0;
-    let lastFullResponse = '';
     const maxTurns = 10;
 
     try {
@@ -674,10 +627,7 @@ ${activeMCPs.map(c => {
           ollamaConfig,
           initialArtifact,
           (controller) => { abortControllerRef.current = controller; },
-          (log) => {
-            console.log('Adding context log for turn:', turnCount + 1);
-            addContextLog(log, sessionId);
-          },
+          (log) => addContextLog(log, sessionId),
           currentPrompt,
           webSearchEnabled,
           geminiApiKey,
@@ -690,7 +640,6 @@ ${activeMCPs.map(c => {
         for await (const chunk of stream) {
           if (chunk.text) {
             fullResponse = chunk.fullText;
-            lastFullResponse = fullResponse;
             const displayResponse = truncateAfterToolCall(fullResponse);
             setStreamingText(displayResponse);
             
@@ -916,14 +865,6 @@ ${activeMCPs.map(c => {
 
       if (initialMessages.length === 0) {
         updateSession({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') }, sessionId);
-      }
-
-      // Auto-assemble if completed
-      if (lastFullResponse.includes('COMPLETED:')) {
-        // Use a small timeout to ensure state updates have propagated
-        setTimeout(() => {
-          handleAssembleProject(sessionId);
-        }, 500);
       }
 
     } catch (error: any) {
