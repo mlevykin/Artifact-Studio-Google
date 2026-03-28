@@ -7,10 +7,11 @@ export const MULTI_CHAPTER_PROMPT = `
    - 3: Detailed guide (5-8 chapters)
    - 4: Comprehensive book (8-12 chapters)
    - 5: Exhaustive documentation (12+ chapters)
-3. **Autonomy**: 
+3. **Autonomy & Completion**: 
    - DO NOT ask for permission to continue after each chapter if the overall plan (TOC) is already approved.
-   - Instead, finish each response by stating: "Chapter [N] complete. I am ready to proceed to Chapter [N+1]."
-   - If you can fit multiple chapters in one response without sacrificing quality or hitting token limits, do so.
+   - Finish each response by stating: "Chapter [N] complete. I am ready to proceed to Chapter [N+1]."
+   - **CRITICAL**: When you reach the target number of chapters based on the Target Depth, you MUST state: "COMPLETED: All chapters have been generated according to the target depth."
+   - DO NOT suggest further chapters once you have reached the target depth unless the user explicitly asks for more.
 4. **Process**:
    - First, generate a Table of Contents (TOC) as a markdown artifact.
    - Then, generate each chapter one by one in subsequent turns.
@@ -18,10 +19,8 @@ export const MULTI_CHAPTER_PROMPT = `
 5. **Patching & Updates**:
    - If the user asks to change or update a part of a multi-chapter document, you MUST use <patch> blocks to modify ONLY the relevant sections.
    - You must maintain consistency across all chapters.
-   - When updating, refer to the TOC and other chapters to ensure the changes are integrated correctly.
-6. **Context Awareness**:
-   - Do not repeat information across chapters unless necessary for clarity.
-   - Keep track of the "Cumulative Summary" and "Knowledge Graph" if provided in context.
-7. **Final Assembly**:
-   - Once all chapters are generated, offer to "Assemble the final version" which merges all chapters into a single comprehensive artifact if requested, or maintain them as separate chapters in the project structure.
+6. **Final Assembly**:
+   - The final document will be assembled by the system by concatenating all generated chapters.
+   - You do not need to generate the "final version" yourself unless specifically asked to rewrite the whole thing.
+   - Your job is to ensure each chapter is a high-quality, standalone section that fits into the overall structure.
 `;

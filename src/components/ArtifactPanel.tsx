@@ -59,6 +59,7 @@ interface ArtifactPanelProps {
   includeMultiChapter?: boolean;
   targetDepth?: number;
   onContinue?: () => void;
+  onAssemble?: () => void;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -83,7 +84,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   project = null,
   includeMultiChapter = false,
   targetDepth = 3,
-  onContinue
+  onContinue,
+  onAssemble
 }) => {
   const [view, setView] = useState<'preview' | 'code' | 'log'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -416,6 +418,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           if (index !== -1) onVersionSelect(index);
         }} 
         onContinue={onContinue}
+        onAssemble={onAssemble}
       />
     );
   }
