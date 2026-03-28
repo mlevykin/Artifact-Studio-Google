@@ -6,28 +6,29 @@ import { motion } from 'motion/react';
 interface ProjectConfiguratorProps {
   onClose: () => void;
   onSave: (config: ProjectConfig) => void;
+  initialConfig?: ProjectConfig;
 }
 
-export const ProjectConfigurator: React.FC<ProjectConfiguratorProps> = ({ onClose, onSave }) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [targetDepth, setTargetDepth] = useState(3);
-  const [tone, setTone] = useState('Professional');
-  const [audience, setAudience] = useState('General');
-  const [rootFolder, setRootFolder] = useState('');
+export const ProjectConfigurator: React.FC<ProjectConfiguratorProps> = ({ onClose, onSave, initialConfig }) => {
+  const [name, setName] = useState(initialConfig?.name || '');
+  const [description, setDescription] = useState(initialConfig?.description || '');
+  const [targetDepth, setTargetDepth] = useState(initialConfig?.targetDepth || 3);
+  const [tone, setTone] = useState(initialConfig?.tone || 'Professional');
+  const [audience, setAudience] = useState(initialConfig?.audience || 'General');
+  const [rootFolder, setRootFolder] = useState(initialConfig?.rootFolder || '');
 
   const handleSave = () => {
     if (!name || !description) return;
     
     const config: ProjectConfig = {
-      id: crypto.randomUUID(),
+      id: initialConfig?.id || crypto.randomUUID(),
       name,
       description,
       targetDepth,
       tone,
       audience,
       rootFolder: rootFolder || `projects/${name.toLowerCase().replace(/\s+/g, '-')}`,
-      status: 'idle'
+      status: initialConfig?.status || 'idle'
     };
     
     onSave(config);

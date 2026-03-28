@@ -94,7 +94,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const prevArtifactIdRef = useRef<string | null>(null);
 
   const isWorkspaceMode = artifact?.id === 'workspace-explorer';
-  const isProjectMode = !!project && !artifact;
 
   const currentFile = null;
 
@@ -387,6 +386,21 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     }
   }, [artifact]);
 
+  const isProjectMode = !!project && !artifact;
+
+  if (isProjectMode && project) {
+    return (
+      <ProjectPanel 
+        project={project} 
+        artifacts={history} 
+        onSelectArtifact={(id) => {
+          const index = history.findIndex(a => a.id === id);
+          if (index !== -1) onVersionSelect(index);
+        }} 
+      />
+    );
+  }
+
   if (!artifact || (artifact.id === 'workspace-explorer' && !workspaceHandle)) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-zinc-100 text-zinc-400 p-12 text-center">
@@ -513,19 +527,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       link.click();
     }
   };
-
-  if (isProjectMode && project) {
-    return (
-      <ProjectPanel 
-        project={project} 
-        artifacts={history} 
-        onSelectArtifact={(id) => {
-          const index = history.findIndex(a => a.id === id);
-          if (index !== -1) onVersionSelect(index);
-        }} 
-      />
-    );
-  }
 
   if (!artifact && !isStreaming) {
     return (

@@ -70,6 +70,7 @@ interface ChatPanelProps {
   onContextSettingsChange: (settings: ContextSettings) => void;
   onStop?: () => void;
   onOpenProjectConfigurator?: () => void;
+  isProjectConfiguratorOpen?: boolean;
   onApplyVerificationFixes: (messageId: string) => void;
   testerSkillIds: string[];
   onToggleTester: (id: string) => void;
@@ -105,6 +106,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   contextSettings,
   onContextSettingsChange,
   onOpenProjectConfigurator,
+  isProjectConfiguratorOpen,
   onApplyVerificationFixes,
   testerSkillIds,
   onToggleTester
@@ -118,6 +120,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [showSkills, setShowSkills] = useState(false);
   const [showMcp, setShowMcp] = useState(false);
   const [showContext, setShowContext] = useState(false);
+  const [showMultiChapter, setShowMultiChapter] = useState(false);
   const [expandedPatches, setExpandedPatches] = useState<Record<string, boolean>>({});
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
   const [expandedSkills, setExpandedSkills] = useState<Record<string, boolean>>({});
@@ -1167,6 +1170,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   setShowContext(!showContext);
                   setShowSkills(false);
                   setShowMcp(false);
+                  setShowMultiChapter(false);
                 }}
                 className={cn(
                   "p-2 rounded-lg transition-all",
@@ -1287,7 +1291,56 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       </button>
 
                       <div className="h-px bg-zinc-100 my-1" />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
+            <div className="relative flex items-center gap-1">
+              <button 
+                onClick={() => {
+                  setShowMultiChapter(!showMultiChapter);
+                  setShowContext(false);
+                  setShowSkills(false);
+                  setShowMcp(false);
+                }}
+                className={cn(
+                  "p-2 rounded-lg transition-all",
+                  contextSettings.includeMultiChapter ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                )}
+                title="Multi-Chapter Mode"
+              >
+                <Book size={20} />
+              </button>
+
+              <button 
+                onClick={() => {
+                  onOpenProjectConfigurator?.();
+                  setShowMultiChapter(false);
+                  setShowContext(false);
+                }}
+                className={cn(
+                  "p-2 rounded-lg transition-all",
+                  isProjectConfiguratorOpen ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                )}
+                title="Configure Project"
+              >
+                <Settings2 size={20} />
+              </button>
+
+              <AnimatePresence>
+                {showMultiChapter && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute bottom-full left-0 mb-4 w-64 bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden z-50"
+                  >
+                    <div className="p-3 border-b border-zinc-100 bg-zinc-50/50">
+                      <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Multi-Chapter Mode</h3>
+                    </div>
+                    <div className="p-1.5 space-y-1">
                       <button 
                         onClick={() => toggleContextSetting('includeMultiChapter')}
                         className={cn(
@@ -1302,23 +1355,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                         )}
                         <div className="flex-1">
                           <span className={cn("text-[11px] font-bold", contextSettings.includeMultiChapter ? "text-amber-700" : "text-zinc-700")}>
-                            Multi-Chapter Mode
+                            Enable Mode
                           </span>
                           <p className="text-[9px] text-zinc-400 leading-tight">Generate large documents iteratively</p>
                         </div>
                       </button>
-
-                      {contextSettings.includeMultiChapter && (
-                        <button 
-                          onClick={onOpenProjectConfigurator}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-zinc-100 transition-all text-left group mt-1 border border-dashed border-zinc-200"
-                        >
-                          <Settings2 size={14} className="text-zinc-400 group-hover:text-zinc-600" />
-                          <span className="text-[11px] font-medium text-zinc-600">
-                            Configure Project...
-                          </span>
-                        </button>
-                      )}
                     </div>
                   </motion.div>
                 )}

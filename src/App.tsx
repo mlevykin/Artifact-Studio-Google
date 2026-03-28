@@ -429,26 +429,34 @@ export default function App() {
     }
   };
 
-  const handleCreateProject = (config: ProjectConfig) => {
-    setProjects(prev => [...prev, config]);
+  const handleSaveProject = (config: ProjectConfig) => {
+    const existingIndex = projects.findIndex(p => p.id === config.id);
+    if (existingIndex !== -1) {
+      const newProjects = [...projects];
+      newProjects[existingIndex] = config;
+      setProjects(newProjects);
+    } else {
+      setProjects(prev => [...prev, config]);
+      
+      // Add a system message about project initialization only for new projects
+      addMessage({
+        id: generateId(),
+        role: 'system',
+        content: `Project "${config.name}" initialized. Root folder: ${config.rootFolder}. Target depth: ${config.targetDepth}.`,
+        timestamp: Date.now(),
+        isSystemGenerated: true
+      }, currentSessionId || '');
+    }
+    
     setIsProjectConfiguratorOpen(false);
     
-    // If we have a current session, link it to the project
-    if (currentSessionId) {
+    // Link current session to the project if not already linked
+    if (currentSessionId && currentSession?.activeProjectId !== config.id) {
       updateSession({ activeProjectId: config.id });
     }
     
     // Switch to multi-chapter mode automatically
     setContextSettings(prev => ({ ...prev, includeMultiChapter: true }));
-    
-    // Add a system message about project initialization
-    addMessage({
-      id: generateId(),
-      role: 'system',
-      content: `Project "${config.name}" initialized. Root folder: ${config.rootFolder}. Target depth: ${config.targetDepth}.`,
-      timestamp: Date.now(),
-      isSystemGenerated: true
-    }, currentSessionId || '');
   };
 
   const handleToggleAutoSelect = () => {
@@ -1082,6 +1090,7 @@ ${activeMCPs.map(c => {
             onContextSettingsChange={setContextSettings}
             onApplyVerificationFixes={handleApplyVerificationFixes}
             onOpenProjectConfigurator={() => setIsProjectConfiguratorOpen(true)}
+            isProjectConfiguratorOpen={isProjectConfiguratorOpen}
           />
         </div>
 
@@ -1161,6 +1170,14 @@ ${activeMCPs.map(c => {
       </>
     )}
   </main>
+
+  {isProjectConfiguratorOpen && (
+    <ProjectConfigurator
+      onClose={() => setIsProjectConfiguratorOpen(false)}
+      onSave={handleSaveProject}
+      initialConfig={projects.find(p => p.id === currentSession?.activeProjectId)}
+    />
+  )}
 </div>
 );
 }
