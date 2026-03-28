@@ -4,7 +4,6 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ProjectConfigurator } from './components/ProjectConfigurator';
 import { ProjectPanel } from './components/ProjectPanel';
 import { Sidebar } from './components/Sidebar';
 import { ChatPanel } from './components/ChatPanel';
@@ -95,7 +94,8 @@ export default function App() {
       includeArtifactContext: true,
       includeSkills: true,
       includeMcp: true,
-      includeMultiChapter: false
+      includeMultiChapter: false,
+      targetDepth: 3
     };
   });
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -154,7 +154,6 @@ export default function App() {
     localStorage.setItem('projects', JSON.stringify(projects));
   }, [projects]);
 
-  const [isProjectConfiguratorOpen, setIsProjectConfiguratorOpen] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [streamingArtifact, setStreamingArtifact] = useState<{ type: string; title: string; content: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -427,36 +426,6 @@ export default function App() {
       };
       addMessage(errorMessage, currentSession.id);
     }
-  };
-
-  const handleSaveProject = (config: ProjectConfig) => {
-    const existingIndex = projects.findIndex(p => p.id === config.id);
-    if (existingIndex !== -1) {
-      const newProjects = [...projects];
-      newProjects[existingIndex] = config;
-      setProjects(newProjects);
-    } else {
-      setProjects(prev => [...prev, config]);
-      
-      // Add a system message about project initialization only for new projects
-      addMessage({
-        id: generateId(),
-        role: 'system',
-        content: `Project "${config.name}" initialized. Root folder: ${config.rootFolder}. Target depth: ${config.targetDepth}.`,
-        timestamp: Date.now(),
-        isSystemGenerated: true
-      }, currentSessionId || '');
-    }
-    
-    setIsProjectConfiguratorOpen(false);
-    
-    // Link current session to the project if not already linked
-    if (currentSessionId && currentSession?.activeProjectId !== config.id) {
-      updateSession({ activeProjectId: config.id });
-    }
-    
-    // Switch to multi-chapter mode automatically
-    setContextSettings(prev => ({ ...prev, includeMultiChapter: true }));
   };
 
   const handleToggleAutoSelect = () => {
@@ -1089,8 +1058,6 @@ ${activeMCPs.map(c => {
             contextSettings={contextSettings}
             onContextSettingsChange={setContextSettings}
             onApplyVerificationFixes={handleApplyVerificationFixes}
-            onOpenProjectConfigurator={() => setIsProjectConfiguratorOpen(true)}
-            isProjectConfiguratorOpen={isProjectConfiguratorOpen}
           />
         </div>
 
@@ -1122,6 +1089,8 @@ ${activeMCPs.map(c => {
             onUpdateArtifact={(updates) => displayArtifact && displayArtifact.id !== 'workspace-explorer' && displayArtifact.id !== 'streaming' && updateArtifact(displayArtifact.id, updates)}
             contextLogs={currentSession?.contextLogs || []}
             project={projects.find(p => p.id === currentSession?.activeProjectId)}
+            includeMultiChapter={contextSettings.includeMultiChapter}
+            targetDepth={contextSettings.targetDepth}
           />
           
           <AnimatePresence>
@@ -1171,13 +1140,7 @@ ${activeMCPs.map(c => {
     )}
   </main>
 
-  {isProjectConfiguratorOpen && (
-    <ProjectConfigurator
-      onClose={() => setIsProjectConfiguratorOpen(false)}
-      onSave={handleSaveProject}
-      initialConfig={projects.find(p => p.id === currentSession?.activeProjectId)}
-    />
-  )}
+  {/* ProjectConfigurator removed */}
 </div>
 );
 }

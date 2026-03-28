@@ -56,6 +56,8 @@ interface ArtifactPanelProps {
   onUpdateArtifact?: (updates: Partial<Artifact>) => void;
   contextLogs?: ContextLogEntry[];
   project?: ProjectConfig | null;
+  includeMultiChapter?: boolean;
+  targetDepth?: number;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -77,7 +79,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   sessionId,
   onUpdateArtifact,
   contextLogs = [],
-  project = null
+  project = null,
+  includeMultiChapter = false,
+  targetDepth = 3
 }) => {
   const [view, setView] = useState<'preview' | 'code' | 'log'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -94,6 +98,20 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const prevArtifactIdRef = useRef<string | null>(null);
 
   const isWorkspaceMode = artifact?.id === 'workspace-explorer';
+  
+  const virtualProject: ProjectConfig | null = includeMultiChapter ? {
+    id: 'virtual-project',
+    name: 'Multi-Chapter Document',
+    description: 'Iterative generation of a large document.',
+    targetDepth: targetDepth || 3,
+    status: 'idle',
+    rootFolder: '',
+    tone: 'professional',
+    audience: 'general'
+  } : null;
+
+  const activeProject = project || virtualProject;
+  const isProjectMode = !!activeProject && !artifact;
 
   const currentFile = null;
 
@@ -386,12 +404,10 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     }
   }, [artifact]);
 
-  const isProjectMode = !!project && !artifact;
-
-  if (isProjectMode && project) {
+  if (isProjectMode && activeProject) {
     return (
       <ProjectPanel 
-        project={project} 
+        project={activeProject} 
         artifacts={history} 
         onSelectArtifact={(id) => {
           const index = history.findIndex(a => a.id === id);

@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   CheckCircle,
   RotateCcw,
-  Settings2
+  Settings2,
+  Target
 } from 'lucide-react';
 import { Message, Attachment, Skill, MCPConfig, ContextSettings } from '../types';
 import { cn, generateId } from '../utils';
@@ -69,8 +70,6 @@ interface ChatPanelProps {
   contextSettings: ContextSettings;
   onContextSettingsChange: (settings: ContextSettings) => void;
   onStop?: () => void;
-  onOpenProjectConfigurator?: () => void;
-  isProjectConfiguratorOpen?: boolean;
   onApplyVerificationFixes: (messageId: string) => void;
   testerSkillIds: string[];
   onToggleTester: (id: string) => void;
@@ -105,8 +104,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onToggleWebSearch,
   contextSettings,
   onContextSettingsChange,
-  onOpenProjectConfigurator,
-  isProjectConfiguratorOpen,
   onApplyVerificationFixes,
   testerSkillIds,
   onToggleTester
@@ -1297,7 +1294,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               </AnimatePresence>
             </div>
 
-            <div className="relative flex items-center gap-1">
+            <div className="relative">
               <button 
                 onClick={() => {
                   setShowMultiChapter(!showMultiChapter);
@@ -1314,21 +1311,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <Book size={20} />
               </button>
 
-              <button 
-                onClick={() => {
-                  onOpenProjectConfigurator?.();
-                  setShowMultiChapter(false);
-                  setShowContext(false);
-                }}
-                className={cn(
-                  "p-2 rounded-lg transition-all",
-                  isProjectConfiguratorOpen ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
-                )}
-                title="Configure Project"
-              >
-                <Settings2 size={20} />
-              </button>
-
               <AnimatePresence>
                 {showMultiChapter && (
                   <motion.div 
@@ -1340,7 +1322,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     <div className="p-3 border-b border-zinc-100 bg-zinc-50/50">
                       <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Multi-Chapter Mode</h3>
                     </div>
-                    <div className="p-1.5 space-y-1">
+                    <div className="p-1.5 space-y-3">
                       <button 
                         onClick={() => toggleContextSetting('includeMultiChapter')}
                         className={cn(
@@ -1360,6 +1342,34 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                           <p className="text-[9px] text-zinc-400 leading-tight">Generate large documents iteratively</p>
                         </div>
                       </button>
+
+                      {contextSettings.includeMultiChapter && (
+                        <div className="px-2 pb-2 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                              <Target size={12} className="text-amber-500" />
+                              Target Depth
+                            </label>
+                            <span className="text-[11px] font-bold text-amber-600">{contextSettings.targetDepth}</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="1" 
+                            max="5" 
+                            step="1"
+                            value={contextSettings.targetDepth}
+                            onChange={(e) => onContextSettingsChange({ ...contextSettings, targetDepth: parseInt(e.target.value) })}
+                            className="w-full accent-amber-500 h-1.5 bg-zinc-100 rounded-lg appearance-none cursor-pointer"
+                          />
+                          <p className="text-[9px] text-zinc-400 italic leading-tight">
+                            {contextSettings.targetDepth === 1 && "Brief overview (1-3 chapters)"}
+                            {contextSettings.targetDepth === 2 && "Standard report (3-5 chapters)"}
+                            {contextSettings.targetDepth === 3 && "Detailed guide (5-8 chapters)"}
+                            {contextSettings.targetDepth === 4 && "Comprehensive book (8-12 chapters)"}
+                            {contextSettings.targetDepth === 5 && "Exhaustive documentation (12+ chapters)"}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}

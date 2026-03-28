@@ -180,6 +180,7 @@ export interface ContextSettings {
   includeSkills: boolean;
   includeMcp: boolean;
   includeMultiChapter: boolean;
+  targetDepth: number;
 }
 
 export interface Settings {

@@ -1,6 +1,7 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Message, Attachment, Artifact, OllamaConfig, ContextSettings, Skill, MCPConfig, VerificationReport } from "../types";
 import SYSTEM_PROMPT from "./systemPrompt.md?raw";
+import { MULTI_CHAPTER_PROMPT } from "./multiChapterPrompt";
 
 export async function verifyArtifact(
   artifact: Artifact,
@@ -92,8 +93,10 @@ export async function* streamGeminiResponse(
     includeAttachmentsHistory: true,
     includeArtifactContext: true,
     includeSkills: false,
-    includeMcp: false
-  };
+    includeMcp: false,
+    includeMultiChapter: false,
+    targetDepth: 3
+  } as ContextSettings;
 
   // Filter messages based on settings
   let processedMessages = [...messages];
@@ -165,7 +168,11 @@ export async function* streamGeminiResponse(
     const config: any = {};
 
     if (settings.includeSystemPrompt) {
-      config.systemInstruction = SYSTEM_PROMPT;
+      let systemInstruction = SYSTEM_PROMPT;
+      if (settings.includeMultiChapter) {
+        systemInstruction += `\n\n[MODE: Multi-Chapter Mode ENABLED]\nTarget Depth: ${settings.targetDepth || 3}\n${MULTI_CHAPTER_PROMPT}`;
+      }
+      config.systemInstruction = systemInstruction;
     }
 
     if (webSearchEnabled) {
@@ -257,8 +264,10 @@ export async function* streamOllamaResponse(
     includeAttachmentsHistory: true,
     includeArtifactContext: true,
     includeSkills: false,
-    includeMcp: false
-  };
+    includeMcp: false,
+    includeMultiChapter: false,
+    targetDepth: 3
+  } as ContextSettings;
 
   let processedMessages = [...messages];
   if (!settings.includeChatHistory && processedMessages.length > 1) {
@@ -315,7 +324,15 @@ export async function* streamOllamaResponse(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: model || 'llama3',
-        messages: settings.includeSystemPrompt ? [{ role: 'system', content: SYSTEM_PROMPT }, ...ollamaMessages] : ollamaMessages,
+        messages: settings.includeSystemPrompt ? [
+          { 
+            role: 'system', 
+            content: settings.includeMultiChapter 
+              ? `${SYSTEM_PROMPT}\n\n[MODE: Multi-Chapter Mode ENABLED]\nTarget Depth: ${settings.targetDepth || 3}\n${MULTI_CHAPTER_PROMPT}` 
+              : SYSTEM_PROMPT 
+          }, 
+          ...ollamaMessages
+        ] : ollamaMessages,
         stream: true
       }),
       signal: controller.signal
