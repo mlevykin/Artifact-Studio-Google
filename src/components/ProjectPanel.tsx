@@ -19,11 +19,9 @@ interface ProjectPanelProps {
   project: ProjectConfig;
   artifacts: Artifact[];
   onSelectArtifact: (id: string) => void;
-  onContinue?: () => void;
-  onAssemble?: () => void;
 }
 
-export const ProjectPanel: React.FC<ProjectPanelProps> = ({ project, artifacts, onSelectArtifact, onContinue, onAssemble }) => {
+export const ProjectPanel: React.FC<ProjectPanelProps> = ({ project, artifacts, onSelectArtifact }) => {
   const projectArtifacts = artifacts.filter(a => a.files?.some(f => f.path.startsWith(project.rootFolder)));
 
   return (
@@ -128,24 +126,6 @@ export const ProjectPanel: React.FC<ProjectPanelProps> = ({ project, artifacts, 
 
         {/* Storage Section */}
         <section className="pt-4 border-t border-zinc-100 space-y-4">
-          {projectArtifacts.length > 0 && onAssemble && (
-            <button
-              onClick={onAssemble}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Layers size={16} />
-              ASSEMBLE FINAL DOCUMENT
-            </button>
-          )}
-          {project.status !== 'completed' && onContinue && (
-            <button
-              onClick={onContinue}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-sm font-bold shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Play size={16} fill="currentColor" />
-              CONTINUE GENERATION
-            </button>
-          )}
           <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
             <FolderOpen size={12} />
             Root: {project.rootFolder}

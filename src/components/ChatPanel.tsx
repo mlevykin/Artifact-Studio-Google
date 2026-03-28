@@ -74,7 +74,6 @@ interface ChatPanelProps {
   onApplyVerificationFixes: (messageId: string) => void;
   testerSkillIds: string[];
   onToggleTester: (id: string) => void;
-  onAssembleProject?: () => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -108,8 +107,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onContextSettingsChange,
   onApplyVerificationFixes,
   testerSkillIds,
-  onToggleTester,
-  onAssembleProject
+  onToggleTester
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -892,32 +890,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         ))}
 
-        {!isStreaming && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && contextSettings.includeMultiChapter && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center gap-3 my-4"
-          >
-            {messages[messages.length - 1].content.includes('COMPLETED') ? (
-              <button
-                onClick={onAssembleProject}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all hover:scale-105 active:scale-95"
-              >
-                <Layers size={14} />
-                ASSEMBLE FINAL DOCUMENT
-              </button>
-            ) : (
-              <button
-                onClick={() => onSendMessage('Continue with the next chapter.', [])}
-                className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-full text-xs font-bold shadow-lg shadow-amber-500/20 transition-all hover:scale-105 active:scale-95"
-              >
-                <Play size={14} fill="currentColor" />
-                CONTINUE GENERATION
-              </button>
-            )}
-          </motion.div>
-        )}
-        
         {isStreaming && (
           <div className="mr-auto items-start max-w-[85%] flex flex-col">
             <div className="p-3 rounded-2xl text-sm bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm w-full min-h-[40px] flex items-center">

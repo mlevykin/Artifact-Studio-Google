@@ -1100,7 +1100,6 @@ ${activeMCPs.map(c => {
             contextSettings={contextSettings}
             onContextSettingsChange={setContextSettings}
             onApplyVerificationFixes={handleApplyVerificationFixes}
-            onAssembleProject={handleAssembleProject}
           />
         </div>
 
@@ -1134,8 +1133,6 @@ ${activeMCPs.map(c => {
             project={projects.find(p => p.id === currentSession?.activeProjectId)}
             includeMultiChapter={contextSettings.includeMultiChapter}
             targetDepth={contextSettings.targetDepth}
-            onContinue={() => handleSendMessage('Continue with the next chapter.', [])}
-            onAssemble={handleAssembleProject}
           />
           
           <AnimatePresence>
