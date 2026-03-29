@@ -28,6 +28,8 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
   // System TTS State
   const [systemChunks, setSystemChunks] = useState<string[]>([]);
   const [currentSystemChunkIndex, setCurrentSystemChunkIndex] = useState(0);
+  const systemChunksRef = useRef<string[]>([]);
+  const currentSystemChunkIndexRef = useRef(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
@@ -219,15 +221,14 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         const selectedVoice = systemVoices[voiceIndex];
         
         if (selectedVoice) {
-          let chunks = systemChunks;
-          if (chunks.length === 0) {
+          if (systemChunksRef.current.length === 0) {
             const rawChunks = text.split(/([.!?]+[\s\n]+)/).reduce((acc: string[], curr, i) => {
               if (i % 2 === 0) acc.push(curr);
               else acc[acc.length - 1] += curr;
               return acc;
             }, []).filter(c => c.trim().length > 0);
 
-            chunks = [];
+            const chunks: string[] = [];
             rawChunks.forEach(chunk => {
               if (chunk.length > 200) {
                 const words = chunk.split(/\s+/);
@@ -245,17 +246,22 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
                 chunks.push(chunk.trim());
               }
             });
+            systemChunksRef.current = chunks;
             setSystemChunks(chunks);
           }
 
-          let currentIdx = currentSystemChunkIndex;
           setIsPlaying(true);
 
           const speakNextChunk = () => {
+            const chunks = systemChunksRef.current;
+            const currentIdx = currentSystemChunkIndexRef.current;
+
             if (!synthRef.current || currentIdx >= chunks.length || !isSystemPlayingRef.current) {
               if (currentIdx >= chunks.length) {
                 setIsPlaying(false);
+                currentSystemChunkIndexRef.current = 0;
                 setCurrentSystemChunkIndex(0);
+                systemChunksRef.current = [];
                 setSystemChunks([]);
               }
               return;
@@ -286,8 +292,9 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
 
             utterance.onend = () => {
               if (heartbeat) clearInterval(heartbeat);
-              currentIdx++;
               if (isSystemPlayingRef.current) {
+                currentSystemChunkIndexRef.current++;
+                setCurrentSystemChunkIndex(currentSystemChunkIndexRef.current);
                 setTimeout(speakNextChunk, 100);
               }
             };
@@ -371,7 +378,9 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
       setGoogleAudioQueue({});
       cleanupAudioUrls();
     } else {
+      currentSystemChunkIndexRef.current = 0;
       setCurrentSystemChunkIndex(0);
+      systemChunksRef.current = [];
       setSystemChunks([]);
     }
   };
