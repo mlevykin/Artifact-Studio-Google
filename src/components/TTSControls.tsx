@@ -28,6 +28,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
   // System TTS State
   const [systemChunks, setSystemChunks] = useState<string[]>([]);
   const [currentSystemChunkIndex, setCurrentSystemChunkIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const systemChunksRef = useRef<string[]>([]);
   const currentSystemChunkIndexRef = useRef(0);
 
@@ -155,9 +156,12 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         return;
       }
 
-      if (audioRef.current && !isPlaying && googleAudioQueue[currentGoogleChunkIndex]) {
+      // Resume Google TTS
+      if (audioRef.current && !isPlaying && isPaused && googleAudioQueue[currentGoogleChunkIndex]) {
+        console.log("TTS: Resuming Google audio");
         audioRef.current.play();
         setIsPlaying(true);
+        setIsPaused(false);
         return;
       }
 
@@ -167,6 +171,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         const googleVoiceName = voice.split(':')[1];
         
         let chunks = googleChunks;
+        // Only re-chunk if we don't have chunks or if we are starting fresh
         if (chunks.length === 0) {
           chunks = splitTextForGoogle(text);
           if (chunks.length === 0) {
@@ -191,6 +196,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         
         setAudioUrl(url);
         setStatus(null);
+        setIsPaused(false);
         
         if (audioRef.current) {
           audioRef.current.src = url;
@@ -214,8 +220,23 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
           return;
         }
 
+        // Resume System TTS
+        if (isPaused) {
+          console.log("TTS: Resuming System voice");
+          isSystemPlayingRef.current = true;
+          synthRef.current.resume();
+          setIsPlaying(true);
+          setIsPaused(false);
+          return;
+        }
+
+        // Fresh start
         synthRef.current.cancel();
+        // Chrome bug: sometimes needs a resume after cancel to clear the queue
+        synthRef.current.resume();
+        
         isSystemPlayingRef.current = true;
+        setIsPaused(false);
 
         const voiceIndex = parseInt(voice.split(':')[1]);
         const selectedVoice = systemVoices[voiceIndex];
@@ -248,6 +269,8 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
             });
             systemChunksRef.current = chunks;
             setSystemChunks(chunks);
+            currentSystemChunkIndexRef.current = 0;
+            setCurrentSystemChunkIndex(0);
           }
 
           setIsPlaying(true);
@@ -281,10 +304,10 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
               setIsPlaying(true);
               setCurrentSystemChunkIndex(currentIdx);
               heartbeat = setInterval(() => {
-                if (synthRef.current?.speaking) {
+                if (synthRef.current?.speaking && !synthRef.current?.paused) {
                   synthRef.current.pause();
                   synthRef.current.resume();
-                } else {
+                } else if (!synthRef.current?.speaking) {
                   clearInterval(heartbeat);
                 }
               }, 10000);
@@ -356,33 +379,49 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
   }, [googleAudioQueue, status]);
 
   const handlePause = () => {
-    isSystemPlayingRef.current = false;
     if (voice.startsWith('google:')) {
       if (audioRef.current) {
         audioRef.current.pause();
         setIsPlaying(false);
+        setIsPaused(true);
       }
     } else {
       if (synthRef.current) {
-        synthRef.current.cancel();
+        // Use native pause for system voices to support true resume
+        synthRef.current.pause();
         setIsPlaying(false);
+        setIsPaused(true);
+        // Note: we don't set isSystemPlayingRef.current = false here
+        // because we want the loop to stay alive (just paused)
       }
     }
   };
 
   const handleStop = () => {
-    handlePause();
+    isSystemPlayingRef.current = false;
     if (voice.startsWith('google:')) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       setCurrentGoogleChunkIndex(0);
       setGoogleChunks([]);
       setGoogleAudioQueue({});
       cleanupAudioUrls();
     } else {
+      if (synthRef.current) {
+        synthRef.current.cancel();
+        // Chrome bug: sometimes needs a resume after cancel to clear the queue
+        synthRef.current.resume();
+      }
       currentSystemChunkIndexRef.current = 0;
       setCurrentSystemChunkIndex(0);
       systemChunksRef.current = [];
       setSystemChunks([]);
     }
+    setIsPlaying(false);
+    setIsPaused(false);
+    setStatus(null);
   };
 
   const handleDownload = () => {
