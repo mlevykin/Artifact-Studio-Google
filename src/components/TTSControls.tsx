@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { TTSService } from '../services/ttsService';
 import { Play, Pause, Download, Volume2, Loader2, StopCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../utils';
 
 interface TTSControlsProps {
   text: string;
@@ -16,6 +17,13 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
   const [voice, setVoice] = useState<string>('google:Kore');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [systemVoices, setSystemVoices] = useState<SpeechSynthesisVoice[]>([]);
+  
+  // Google TTS Queue State
+  const [googleChunks, setGoogleChunks] = useState<string[]>([]);
+  const [currentGoogleChunkIndex, setCurrentGoogleChunkIndex] = useState(0);
+  const [googleAudioQueue, setGoogleAudioQueue] = useState<Record<number, string>>({});
+  const [isPrefetching, setIsPrefetching] = useState(false);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -26,7 +34,6 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
       
       const loadVoices = () => {
         const voices = window.speechSynthesis.getVoices();
-        // Filter for relevant languages if needed, but here we show all
         setSystemVoices(voices);
       };
 
@@ -47,17 +54,71 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
 
   const osName = getOSName();
 
-  // Clean up audio URL and synthesis on unmount
+  // Clean up audio URLs on unmount or voice change
+  const cleanupAudioUrls = useCallback(() => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+      setAudioUrl(null);
+    }
+    Object.values(googleAudioQueue).forEach(url => URL.revokeObjectURL(url));
+    setGoogleAudioQueue({});
+  }, [audioUrl, googleAudioQueue]);
+
   useEffect(() => {
     return () => {
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
+      cleanupAudioUrls();
       if (synthRef.current) {
         synthRef.current.cancel();
       }
     };
-  }, [audioUrl]);
+  }, []);
+
+  // Helper to split text for Google TTS (approx 1 minute chunks ~ 1200 chars)
+  const splitTextForGoogle = (fullText: string) => {
+    const sentences = fullText.split(/([.!?]+[\s\n]+)/).reduce((acc: string[], curr, i) => {
+      if (i % 2 === 0) acc.push(curr);
+      else acc[acc.length - 1] += curr;
+      return acc;
+    }, []).filter(c => c.trim().length > 0);
+
+    const chunks: string[] = [];
+    let currentChunk = "";
+    
+    sentences.forEach(sentence => {
+      if ((currentChunk + sentence).length > 1200) {
+        if (currentChunk) chunks.push(currentChunk.trim());
+        currentChunk = sentence;
+      } else {
+        currentChunk += sentence;
+      }
+    });
+    
+    if (currentChunk.trim()) chunks.push(currentChunk.trim());
+    return chunks;
+  };
+
+  const prefetchNextGoogleChunk = async (index: number, chunks: string[], voiceName: any) => {
+    if (index >= chunks.length || googleAudioQueue[index] || isPrefetching) return;
+
+    try {
+      setIsPrefetching(true);
+      console.log(`TTS: Pre-fetching Google chunk ${index + 1}/${chunks.length}`);
+      
+      const base64Pcm = await TTSService.generateSpeech(chunks[index], { 
+        voiceName,
+        apiKey: geminiApiKey 
+      });
+      
+      const wavBlob = TTSService.pcmToWav(base64Pcm);
+      const url = URL.createObjectURL(wavBlob);
+      
+      setGoogleAudioQueue(prev => ({ ...prev, [index]: url }));
+    } catch (error) {
+      console.error(`TTS Pre-fetch Error for chunk ${index}:`, error);
+    } finally {
+      setIsPrefetching(false);
+    }
+  };
 
   const handlePlay = async () => {
     const isGoogleVoice = voice.startsWith('google:');
@@ -69,7 +130,8 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         return;
       }
 
-      if (audioRef.current && !isPlaying && audioUrl) {
+      // If we already have the current chunk ready, just play
+      if (audioRef.current && !isPlaying && googleAudioQueue[currentGoogleChunkIndex]) {
         audioRef.current.play();
         setIsPlaying(true);
         return;
@@ -79,16 +141,29 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         setIsLoading(true);
         setStatus("Generating...");
         const googleVoiceName = voice.split(':')[1];
-        console.log("TTS: Starting generation with Google voice:", googleVoiceName);
         
-        const base64Pcm = await TTSService.generateSpeech(text, { 
-          voiceName: googleVoiceName as any,
-          apiKey: geminiApiKey 
-        });
+        // Initialize chunks if not already done
+        let chunks = googleChunks;
+        if (chunks.length === 0) {
+          chunks = splitTextForGoogle(text);
+          setGoogleChunks(chunks);
+          setCurrentGoogleChunkIndex(0);
+        }
+
+        const index = currentGoogleChunkIndex;
+        console.log(`TTS: Starting Google playback for chunk ${index + 1}/${chunks.length}`);
         
-        console.log("TTS: Audio data received, converting to WAV...");
-        const wavBlob = TTSService.pcmToWav(base64Pcm);
-        const url = URL.createObjectURL(wavBlob);
+        // Fetch first chunk if not in queue
+        let url = googleAudioQueue[index];
+        if (!url) {
+          const base64Pcm = await TTSService.generateSpeech(chunks[index], { 
+            voiceName: googleVoiceName as any,
+            apiKey: geminiApiKey 
+          });
+          const wavBlob = TTSService.pcmToWav(base64Pcm);
+          url = URL.createObjectURL(wavBlob);
+          setGoogleAudioQueue(prev => ({ ...prev, [index]: url }));
+        }
         
         setAudioUrl(url);
         setStatus(null);
@@ -97,6 +172,9 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
           audioRef.current.src = url;
           audioRef.current.play();
           setIsPlaying(true);
+          
+          // Start pre-fetching next chunk immediately
+          prefetchNextGoogleChunk(index + 1, chunks, googleVoiceName);
         }
       } catch (error) {
         console.error("TTS Playback Error:", error);
@@ -107,7 +185,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         setIsLoading(false);
       }
     } else {
-      // System Voice logic
+      // System Voice logic (already has chunking)
       if (synthRef.current) {
         if (isPlaying) {
           synthRef.current.cancel();
@@ -119,15 +197,12 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         const selectedVoice = systemVoices[voiceIndex];
         
         if (selectedVoice) {
-          // Split text into smaller chunks to avoid length limits in some browsers
-          // We split by sentences but also ensure chunks aren't too long
           const rawChunks = text.split(/([.!?]+[\s\n]+)/).reduce((acc: string[], curr, i) => {
             if (i % 2 === 0) acc.push(curr);
             else acc[acc.length - 1] += curr;
             return acc;
           }, []).filter(c => c.trim().length > 0);
 
-          // If a single chunk is still too long (> 200 chars), split it further by words
           const chunks: string[] = [];
           rawChunks.forEach(chunk => {
             if (chunk.length > 200) {
@@ -161,7 +236,6 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
             utterance.onstart = () => setIsPlaying(true);
             utterance.onend = () => {
               currentChunkIndex++;
-              // Small delay to prevent browser issues with rapid sequential calls
               setTimeout(speakNextChunk, 50);
             };
             utterance.onerror = (event) => {
@@ -183,12 +257,59 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
     }
   };
 
+  const handleGoogleAudioEnded = () => {
+    const nextIndex = currentGoogleChunkIndex + 1;
+    const googleVoiceName = voice.split(':')[1];
+
+    if (nextIndex < googleChunks.length) {
+      const nextUrl = googleAudioQueue[nextIndex];
+      if (nextUrl) {
+        console.log(`TTS: Switching to next Google chunk ${nextIndex + 1}/${googleChunks.length}`);
+        setCurrentGoogleChunkIndex(nextIndex);
+        setAudioUrl(nextUrl);
+        if (audioRef.current) {
+          audioRef.current.src = nextUrl;
+          audioRef.current.play();
+          
+          // Pre-fetch the one after that
+          prefetchNextGoogleChunk(nextIndex + 1, googleChunks, googleVoiceName);
+        }
+      } else {
+        // Next chunk not ready yet
+        console.log(`TTS: Next chunk ${nextIndex + 1} not ready, buffering...`);
+        setStatus("Buffering...");
+        // The pre-fetcher is likely already working, but we can try to nudge it
+        prefetchNextGoogleChunk(nextIndex, googleChunks, googleVoiceName).then(() => {
+          // Once ready, this handler won't fire again automatically, 
+          // so we need a way to resume. 
+          // For simplicity, we'll use a useEffect to watch the queue.
+        });
+      }
+    } else {
+      setIsPlaying(false);
+      setCurrentGoogleChunkIndex(0);
+      setGoogleChunks([]);
+      setGoogleAudioQueue({});
+    }
+  };
+
+  // Effect to resume playback if buffering was active and chunk becomes available
+  useEffect(() => {
+    if (status === "Buffering..." && googleAudioQueue[currentGoogleChunkIndex + 1]) {
+      setStatus(null);
+      handleGoogleAudioEnded();
+    }
+  }, [googleAudioQueue, status]);
+
   const handleStop = () => {
     if (voice.startsWith('google:')) {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
         setIsPlaying(false);
+        setCurrentGoogleChunkIndex(0);
+        setGoogleChunks([]);
+        cleanupAudioUrls();
       }
     } else {
       if (synthRef.current) {
@@ -203,7 +324,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
       const googleVoiceName = voice.split(':')[1];
       const a = document.createElement('a');
       a.href = audioUrl;
-      a.download = `speech-${googleVoiceName}-${Date.now()}.wav`;
+      a.download = `speech-${googleVoiceName}-part${currentGoogleChunkIndex + 1}.wav`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -214,7 +335,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
     <div className={`flex items-center gap-1 bg-zinc-100 p-1 rounded-xl ${className}`}>
       <audio 
         ref={audioRef} 
-        onEnded={() => setIsPlaying(false)} 
+        onEnded={handleGoogleAudioEnded} 
         className="hidden"
       />
       
@@ -225,15 +346,8 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
           onChange={(e) => {
             const newVoice = e.target.value;
             setVoice(newVoice);
-            
-            // Stop current playback if voice changes
             handleStop();
-
-            // Reset audio if voice changes
-            if (audioUrl) {
-              URL.revokeObjectURL(audioUrl);
-              setAudioUrl(null);
-            }
+            cleanupAudioUrls();
           }}
           className="text-[11px] bg-transparent border-none focus:ring-0 cursor-pointer text-zinc-600 font-semibold p-0 h-auto leading-none max-w-[150px]"
           disabled={isLoading}
@@ -303,8 +417,17 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         </button>
       </div>
       
-      {status === "Error" && (
-        <span className="text-[9px] font-bold text-red-500 px-2 uppercase">Error</span>
+      {(status === "Error" || status === "Buffering...") && (
+        <span className={cn(
+          "text-[9px] font-bold px-2 uppercase",
+          status === "Error" ? "text-red-500" : "text-amber-600"
+        )}>{status}</span>
+      )}
+
+      {googleChunks.length > 1 && isPlaying && voice.startsWith('google:') && (
+        <span className="text-[9px] font-mono text-zinc-400 px-1">
+          {currentGoogleChunkIndex + 1}/{googleChunks.length}
+        </span>
       )}
     </div>
   );
