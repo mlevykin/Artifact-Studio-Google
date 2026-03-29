@@ -828,6 +828,8 @@ ${activeMCPs.map(c => {
 
         if (fullResponse.toUpperCase().includes('COMPLETED:')) {
           hasCompletedSignal = true;
+          console.log('COMPLETED signal detected. Breaking multi-turn loop.');
+          break;
         }
 
         if (!fullResponse.trim()) {
@@ -1005,7 +1007,18 @@ ${activeMCPs.map(c => {
           continue;
         } else if (contextSettings.includeMultiChapter && !hasCompletedSignal) {
           // Force next turn for multi-chapter mode if not completed
-          const resultsPrompt = "Please generate the next chapter according to the Table of Contents. Remember to generate ONLY ONE chapter and then stop.";
+          const currentSessionObj = sessionsRef.current.find(s => s.id === sessionId) || currentSession;
+          const artifacts = currentSessionObj?.artifacts || [];
+          const chapters = artifacts.filter(a => {
+            const title = a.title.toLowerCase();
+            const isToc = title.includes('table of contents') || title.includes('оглавление') || title.includes('содержание') || title === 'toc';
+            const isFinal = title.includes('final document') || title.includes('assembled document') || title.includes('итоговый документ');
+            const isSystem = a.id === 'workspace-explorer' || a.id === 'streaming';
+            return !isToc && !isFinal && !isSystem && (title.includes('chapter') || title.includes('глава'));
+          });
+          const nextChapterNum = chapters.length + 1;
+
+          const resultsPrompt = `Please generate Chapter ${nextChapterNum} according to the Table of Contents. Remember to generate ONLY ONE chapter and then stop.`;
           
           const resultsMessage: Message = {
             id: generateId(),
