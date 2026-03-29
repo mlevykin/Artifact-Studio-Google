@@ -242,10 +242,11 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
           });
 
           let currentIdx = 0;
+          let isStillPlaying = true;
           setIsPlaying(true);
 
           const speakNextChunk = () => {
-            if (!synthRef.current || currentIdx >= chunks.length || !isPlaying) {
+            if (!synthRef.current || currentIdx >= chunks.length || !isStillPlaying) {
               if (currentIdx >= chunks.length) setIsPlaying(false);
               return;
             }
@@ -255,38 +256,54 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
             utteranceRef.current = utterance;
             
             // Heartbeat hack for Chrome/Windows to prevent 15s timeout
-            const heartbeat = setInterval(() => {
-              if (synthRef.current?.speaking) {
-                synthRef.current.pause();
-                synthRef.current.resume();
-              } else {
-                clearInterval(heartbeat);
-              }
-            }, 10000);
+            let heartbeat: any = null;
+            
+            utterance.onstart = () => {
+              setIsPlaying(true);
+              heartbeat = setInterval(() => {
+                if (synthRef.current?.speaking) {
+                  synthRef.current.pause();
+                  synthRef.current.resume();
+                } else {
+                  clearInterval(heartbeat);
+                }
+              }, 10000);
+            };
 
             utterance.onend = () => {
-              clearInterval(heartbeat);
+              if (heartbeat) clearInterval(heartbeat);
               currentIdx++;
-              setTimeout(speakNextChunk, 100);
+              if (isStillPlaying) {
+                setTimeout(speakNextChunk, 100);
+              }
             };
 
             utterance.onerror = (event) => {
-              clearInterval(heartbeat);
+              if (heartbeat) clearInterval(heartbeat);
               if (event.error === 'interrupted') {
-                // If interrupted but we are still supposed to be playing, try to resume
                 console.log("SpeechSynthesis interrupted, attempting to continue...");
-                setTimeout(speakNextChunk, 100);
+                if (isStillPlaying) setTimeout(speakNextChunk, 100);
               } else if (event.error !== 'canceled') {
                 console.error("SpeechSynthesis Error:", event);
                 setStatus("Error");
                 setTimeout(() => setStatus(null), 3000);
                 setIsPlaying(false);
+                isStillPlaying = false;
               }
             };
 
             synthRef.current.speak(utterance);
           };
 
+          // Override handleStop to also stop our local loop
+          const originalStop = handleStop;
+          const newStop = () => {
+            isStillPlaying = false;
+            originalStop();
+          };
+          // We can't easily replace handleStop here, but we can rely on synth.cancel()
+          // which will trigger 'canceled' or 'interrupted' error.
+          
           speakNextChunk();
         }
       }
