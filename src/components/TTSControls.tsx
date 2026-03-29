@@ -28,6 +28,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const isSystemPlayingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -204,13 +205,13 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
       // System Voice logic with Windows resilience
       if (synthRef.current) {
         if (isPlaying) {
-          synthRef.current.cancel();
-          setIsPlaying(false);
+          handleStop();
           return;
         }
 
         // Clear any pending speech
         synthRef.current.cancel();
+        isSystemPlayingRef.current = true;
 
         const voiceIndex = parseInt(voice.split(':')[1]);
         const selectedVoice = systemVoices[voiceIndex];
@@ -242,11 +243,10 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
           });
 
           let currentIdx = 0;
-          let isStillPlaying = true;
           setIsPlaying(true);
 
           const speakNextChunk = () => {
-            if (!synthRef.current || currentIdx >= chunks.length || !isStillPlaying) {
+            if (!synthRef.current || currentIdx >= chunks.length || !isSystemPlayingRef.current) {
               if (currentIdx >= chunks.length) setIsPlaying(false);
               return;
             }
@@ -259,6 +259,10 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
             let heartbeat: any = null;
             
             utterance.onstart = () => {
+              if (!isSystemPlayingRef.current) {
+                synthRef.current?.cancel();
+                return;
+              }
               setIsPlaying(true);
               heartbeat = setInterval(() => {
                 if (synthRef.current?.speaking) {
@@ -273,7 +277,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
             utterance.onend = () => {
               if (heartbeat) clearInterval(heartbeat);
               currentIdx++;
-              if (isStillPlaying) {
+              if (isSystemPlayingRef.current) {
                 setTimeout(speakNextChunk, 100);
               }
             };
@@ -282,28 +286,19 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
               if (heartbeat) clearInterval(heartbeat);
               if (event.error === 'interrupted') {
                 console.log("SpeechSynthesis interrupted, attempting to continue...");
-                if (isStillPlaying) setTimeout(speakNextChunk, 100);
+                if (isSystemPlayingRef.current) setTimeout(speakNextChunk, 100);
               } else if (event.error !== 'canceled') {
                 console.error("SpeechSynthesis Error:", event);
                 setStatus("Error");
                 setTimeout(() => setStatus(null), 3000);
                 setIsPlaying(false);
-                isStillPlaying = false;
+                isSystemPlayingRef.current = false;
               }
             };
 
             synthRef.current.speak(utterance);
           };
 
-          // Override handleStop to also stop our local loop
-          const originalStop = handleStop;
-          const newStop = () => {
-            isStillPlaying = false;
-            originalStop();
-          };
-          // We can't easily replace handleStop here, but we can rely on synth.cancel()
-          // which will trigger 'canceled' or 'interrupted' error.
-          
           speakNextChunk();
         }
       }
@@ -355,6 +350,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
   }, [googleAudioQueue, status]);
 
   const handleStop = () => {
+    isSystemPlayingRef.current = false;
     if (voice.startsWith('google:')) {
       if (audioRef.current) {
         audioRef.current.pause();
