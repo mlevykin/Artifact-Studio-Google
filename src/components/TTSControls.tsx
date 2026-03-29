@@ -25,6 +25,10 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
   const [googleAudioQueue, setGoogleAudioQueue] = useState<Record<number, string>>({});
   const [isPrefetching, setIsPrefetching] = useState(false);
 
+  // System TTS State
+  const [systemChunks, setSystemChunks] = useState<string[]>([]);
+  const [currentSystemChunkIndex, setCurrentSystemChunkIndex] = useState(0);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -145,8 +149,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
 
     if (isGoogleVoice) {
       if (audioRef.current && isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
+        handlePause();
         return;
       }
 
@@ -202,14 +205,13 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         setIsLoading(false);
       }
     } else {
-      // System Voice logic with Windows resilience
+      // System Voice logic with Windows resilience and Resume support
       if (synthRef.current) {
         if (isPlaying) {
-          handleStop();
+          handlePause();
           return;
         }
 
-        // Clear any pending speech
         synthRef.current.cancel();
         isSystemPlayingRef.current = true;
 
@@ -217,37 +219,45 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         const selectedVoice = systemVoices[voiceIndex];
         
         if (selectedVoice) {
-          const rawChunks = text.split(/([.!?]+[\s\n]+)/).reduce((acc: string[], curr, i) => {
-            if (i % 2 === 0) acc.push(curr);
-            else acc[acc.length - 1] += curr;
-            return acc;
-          }, []).filter(c => c.trim().length > 0);
+          let chunks = systemChunks;
+          if (chunks.length === 0) {
+            const rawChunks = text.split(/([.!?]+[\s\n]+)/).reduce((acc: string[], curr, i) => {
+              if (i % 2 === 0) acc.push(curr);
+              else acc[acc.length - 1] += curr;
+              return acc;
+            }, []).filter(c => c.trim().length > 0);
 
-          const chunks: string[] = [];
-          rawChunks.forEach(chunk => {
-            if (chunk.length > 200) {
-              const words = chunk.split(/\s+/);
-              let current = "";
-              words.forEach(word => {
-                if ((current + word).length > 200) {
-                  chunks.push(current.trim());
-                  current = word + " ";
-                } else {
-                  current += word + " ";
-                }
-              });
-              if (current.trim()) chunks.push(current.trim());
-            } else {
-              chunks.push(chunk.trim());
-            }
-          });
+            chunks = [];
+            rawChunks.forEach(chunk => {
+              if (chunk.length > 200) {
+                const words = chunk.split(/\s+/);
+                let current = "";
+                words.forEach(word => {
+                  if ((current + word).length > 200) {
+                    chunks.push(current.trim());
+                    current = word + " ";
+                  } else {
+                    current += word + " ";
+                  }
+                });
+                if (current.trim()) chunks.push(current.trim());
+              } else {
+                chunks.push(chunk.trim());
+              }
+            });
+            setSystemChunks(chunks);
+          }
 
-          let currentIdx = 0;
+          let currentIdx = currentSystemChunkIndex;
           setIsPlaying(true);
 
           const speakNextChunk = () => {
             if (!synthRef.current || currentIdx >= chunks.length || !isSystemPlayingRef.current) {
-              if (currentIdx >= chunks.length) setIsPlaying(false);
+              if (currentIdx >= chunks.length) {
+                setIsPlaying(false);
+                setCurrentSystemChunkIndex(0);
+                setSystemChunks([]);
+              }
               return;
             }
 
@@ -255,7 +265,6 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
             utterance.voice = selectedVoice;
             utteranceRef.current = utterance;
             
-            // Heartbeat hack for Chrome/Windows to prevent 15s timeout
             let heartbeat: any = null;
             
             utterance.onstart = () => {
@@ -264,6 +273,7 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
                 return;
               }
               setIsPlaying(true);
+              setCurrentSystemChunkIndex(currentIdx);
               heartbeat = setInterval(() => {
                 if (synthRef.current?.speaking) {
                   synthRef.current.pause();
@@ -285,7 +295,6 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
             utterance.onerror = (event) => {
               if (heartbeat) clearInterval(heartbeat);
               if (event.error === 'interrupted') {
-                console.log("SpeechSynthesis interrupted, attempting to continue...");
                 if (isSystemPlayingRef.current) setTimeout(speakNextChunk, 100);
               } else if (event.error !== 'canceled') {
                 console.error("SpeechSynthesis Error:", event);
@@ -312,26 +321,16 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
     if (nextIndex < googleChunks.length) {
       const nextUrl = googleAudioQueue[nextIndex];
       if (nextUrl) {
-        console.log(`TTS: Switching to next Google chunk ${nextIndex + 1}/${googleChunks.length}`);
         setCurrentGoogleChunkIndex(nextIndex);
         setAudioUrl(nextUrl);
         if (audioRef.current) {
           audioRef.current.src = nextUrl;
           audioRef.current.play();
-          
-          // Pre-fetch the one after that
           prefetchNextGoogleChunk(nextIndex + 1, googleChunks, googleVoiceName);
         }
       } else {
-        // Next chunk not ready yet
-        console.log(`TTS: Next chunk ${nextIndex + 1} not ready, buffering...`);
         setStatus("Buffering...");
-        // The pre-fetcher is likely already working, but we can try to nudge it
-        prefetchNextGoogleChunk(nextIndex, googleChunks, googleVoiceName).then(() => {
-          // Once ready, this handler won't fire again automatically, 
-          // so we need a way to resume. 
-          // For simplicity, we'll use a useEffect to watch the queue.
-        });
+        prefetchNextGoogleChunk(nextIndex, googleChunks, googleVoiceName);
       }
     } else {
       setIsPlaying(false);
@@ -349,22 +348,31 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
     }
   }, [googleAudioQueue, status]);
 
-  const handleStop = () => {
+  const handlePause = () => {
     isSystemPlayingRef.current = false;
     if (voice.startsWith('google:')) {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
         setIsPlaying(false);
-        setCurrentGoogleChunkIndex(0);
-        setGoogleChunks([]);
-        cleanupAudioUrls();
       }
     } else {
       if (synthRef.current) {
         synthRef.current.cancel();
         setIsPlaying(false);
       }
+    }
+  };
+
+  const handleStop = () => {
+    handlePause();
+    if (voice.startsWith('google:')) {
+      setCurrentGoogleChunkIndex(0);
+      setGoogleChunks([]);
+      setGoogleAudioQueue({});
+      cleanupAudioUrls();
+    } else {
+      setCurrentSystemChunkIndex(0);
+      setSystemChunks([]);
     }
   };
 
