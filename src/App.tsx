@@ -494,8 +494,14 @@ export default function App() {
       return;
     }
     
-    // Sort chapters by title to get them in order (e.g., Chapter 1, Chapter 2)
-    const sortedChapters = [...chapters].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
+    // Helper to extract chapter number for reliable sorting
+    const getChapterNumber = (title: string) => {
+      const match = title.match(/(?:Chapter|Глава|Section|Part)\s*(\d+)/i) || title.match(/(\d+)/);
+      return match ? parseInt(match[1], 10) : 999;
+    };
+    
+    // Sort chapters by their numeric value to get them in order regardless of language (Chapter 1, Глава 2)
+    const sortedChapters = [...chapters].sort((a, b) => getChapterNumber(a.title) - getChapterNumber(b.title));
     
     let finalContent = '';
     
