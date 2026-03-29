@@ -689,7 +689,7 @@ ${activeMCPs.map(c => {
     let multiChapterInstruction = '';
     if (contextSettings.includeMultiChapter) {
       const artifacts = currentSession?.artifacts || [];
-      const hasToc = artifacts.some(a => {
+      const tocArtifact = artifacts.find(a => {
         const title = a.title.toLowerCase();
         return title.includes('table of contents') || 
                title.includes('оглавление') || 
@@ -697,8 +697,18 @@ ${activeMCPs.map(c => {
                title === 'toc';
       });
       
-      if (hasToc) {
-        multiChapterInstruction = `\n\n[INSTRUCTION: You are in Multi-Chapter Mode. Generate ONLY THE NEXT SINGLE CHAPTER from the Table of Contents. Do not combine multiple chapters in one response. Focus on maximum detail and depth for this specific section. Once the chapter is generated, end your response.]`;
+      if (tocArtifact) {
+        // Count existing chapters to determine the next one
+        const chapters = artifacts.filter(a => {
+          const title = a.title.toLowerCase();
+          const isToc = title.includes('table of contents') || title.includes('оглавление') || title.includes('содержание') || title === 'toc';
+          const isFinal = title.includes('final document') || title.includes('assembled document') || title.includes('итоговый документ');
+          const isSystem = a.id === 'workspace-explorer' || a.id === 'streaming';
+          return !isToc && !isFinal && !isSystem && (title.includes('chapter') || title.includes('глава'));
+        });
+        
+        const nextChapterNum = chapters.length + 1;
+        multiChapterInstruction = `\n\n[CRITICAL INSTRUCTION: You are in Multi-Chapter Mode. Generate ONLY Chapter ${nextChapterNum}. DO NOT generate any other chapters. Focus on maximum detail for this single section. Once Chapter ${nextChapterNum} is finished, STOP your response immediately. Do not combine multiple chapters.]`;
       }
     }
 
@@ -722,7 +732,7 @@ ${activeMCPs.map(c => {
     let turnCount = 0;
     let lastFullResponse = '';
     let hasCompletedSignal = false;
-    const maxTurns = 10;
+    const maxTurns = contextSettings.includeMultiChapter ? 30 : 10;
 
     try {
       while (turnCount < maxTurns) {
@@ -732,38 +742,89 @@ ${activeMCPs.map(c => {
         const activeSkillsData = skills.filter(s => currentSession?.activeSkills?.includes(s.id));
         const activeMcpData = mcpConfigs.filter(m => currentSession?.activeMcpIds?.includes(m.id));
 
-        const stream = streamResponse(
-          provider,
-          currentMessages,
-          ollamaConfig,
-          initialArtifact,
-          (controller) => { abortControllerRef.current = controller; },
-          (log) => {
-            console.log('Adding context log for turn:', turnCount + 1);
-            addContextLog(log, sessionId);
-          },
-          currentPrompt,
-          webSearchEnabled,
-          geminiApiKey,
-          geminiModel,
-          contextSettings,
-          activeSkillsData,
-          activeMcpData
-        );
-
-        for await (const chunk of stream) {
-          if (chunk.text) {
-            fullResponse = chunk.fullText;
-            lastFullResponse = fullResponse;
-            const displayResponse = truncateAfterToolCall(fullResponse);
-            setStreamingText(displayResponse);
-            
-            const partialArtifact = parsePartialArtifact(displayResponse);
-            if (partialArtifact) {
-              setStreamingArtifact(partialArtifact as any);
-            }
+        // Recalculate Multi-Chapter instruction for the current turn
+        let turnMultiChapterInstruction = '';
+        if (contextSettings.includeMultiChapter) {
+          const currentSessionObj = sessionsRef.current.find(s => s.id === sessionId) || currentSession;
+          const artifacts = currentSessionObj?.artifacts || [];
+          const tocArtifact = artifacts.find(a => {
+            const title = a.title.toLowerCase();
+            return title.includes('table of contents') || title.includes('оглавление') || title.includes('содержание') || title === 'toc';
+          });
+          
+          if (tocArtifact) {
+            const chapters = artifacts.filter(a => {
+              const title = a.title.toLowerCase();
+              const isToc = title.includes('table of contents') || title.includes('оглавление') || title.includes('содержание') || title === 'toc';
+              const isFinal = title.includes('final document') || title.includes('assembled document') || title.includes('итоговый документ');
+              const isSystem = a.id === 'workspace-explorer' || a.id === 'streaming';
+              return !isToc && !isFinal && !isSystem && (title.includes('chapter') || title.includes('глава'));
+            });
+            const nextChapterNum = chapters.length + 1;
+            turnMultiChapterInstruction = `\n\n[SYSTEM: Multi-Chapter Mode. Generate ONLY Chapter ${nextChapterNum}. Focus on maximum detail. Once finished, STOP. Do not combine chapters.]`;
           }
         }
+
+        let retryCount = 0;
+        const maxRetries = 3;
+        let success = false;
+
+        while (retryCount <= maxRetries) {
+          try {
+            const stream = streamResponse(
+              provider,
+              currentMessages,
+              ollamaConfig,
+              initialArtifact,
+              (controller) => { abortControllerRef.current = controller; },
+              (log) => {
+                console.log('Adding context log for turn:', turnCount + 1);
+                addContextLog(log, sessionId);
+              },
+              turnCount === 0 ? (fullPrompt + turnMultiChapterInstruction) : (currentPrompt + turnMultiChapterInstruction),
+              webSearchEnabled,
+              geminiApiKey,
+              geminiModel,
+              contextSettings,
+              activeSkillsData,
+              activeMcpData
+            );
+
+            for await (const chunk of stream) {
+              if (chunk.text) {
+                fullResponse = chunk.fullText;
+                lastFullResponse = fullResponse;
+                const displayResponse = truncateAfterToolCall(fullResponse);
+                setStreamingText(displayResponse);
+                
+                const partialArtifact = parsePartialArtifact(displayResponse);
+                if (partialArtifact) {
+                  setStreamingArtifact(partialArtifact as any);
+                }
+              }
+            }
+            success = true;
+            break;
+          } catch (error) {
+            const errorStr = JSON.stringify(error);
+            const is503 = errorStr.includes('503') || String(error).includes('503') || errorStr.includes('UNAVAILABLE');
+            
+            if (is503 && retryCount < maxRetries) {
+              retryCount++;
+              const delay = 2000 * Math.pow(2, retryCount - 1); // 2s, 4s, 8s
+              console.warn(`Turn ${turnCount + 1}, Retry ${retryCount}/${maxRetries} after 503 error. Waiting ${delay}ms...`);
+              
+              // Show a temporary status message in the chat
+              setStreamingText(`⚠️ Model is busy (503). Retrying in ${delay/1000}s... (Attempt ${retryCount}/${maxRetries})`);
+              
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+            throw error;
+          }
+        }
+
+        if (!success) break;
 
         if (fullResponse.toUpperCase().includes('COMPLETED:')) {
           hasCompletedSignal = true;
@@ -901,7 +962,7 @@ ${activeMCPs.map(c => {
 
           // If ONLY skills were invoked (no MCP calls), we don't need a next turn 
           // because the model already continued its response in the same turn
-          if (executedMcpCalls.length === 0 && invokedSkills.length > 0) {
+          if (executedMcpCalls.length === 0 && invokedSkills.length > 0 && !contextSettings.includeMultiChapter) {
             // We still need to update the history with the assistant message
             // but we don't 'continue' the loop
             break;
@@ -911,7 +972,9 @@ ${activeMCPs.map(c => {
             ? executedMcpCalls.map(c => 
                 `<response>\n${JSON.stringify(c.response, null, 2)}\n</response>`
               ).join('\n\n')
-            : "The requested skills have been added to your context. Please continue your task and generate the requested output (e.g., artifacts, code, or documentation).";
+            : (contextSettings.includeMultiChapter && !hasCompletedSignal 
+                ? "Please generate the next chapter according to the Table of Contents. Remember to generate ONLY ONE chapter and then stop."
+                : "The requested skills have been added to your context. Please continue your task and generate the requested output.");
           
           // Add the results as a new user message for the next turn
           const resultsMessage: Message = {
@@ -925,7 +988,7 @@ ${activeMCPs.map(c => {
           addMessage(resultsMessage, sessionId);
           currentMessages.push(resultsMessage);
 
-          // Re-calculate context for the next turn to include newly activated skills
+          // Re-calculate context for the next turn
           const updatedActiveSkills = skills.filter(s => sessionActiveSkills.includes(s.id));
           const updatedActiveMCPs = mcpConfigs.filter(c => sessionActiveMcpIds.includes(c.id));
           
@@ -937,6 +1000,24 @@ ${activeMCPs.map(c => {
             : (updatedActiveMCPs.length > 0 ? `ACTIVE MCP SERVERS:\n${updatedActiveMCPs.map(c => `Server: ${c.name}`).join('\n')}` : '');
 
           currentPrompt = `${nextSkillsContext}\n\n${nextMcpContext}\n\n${resultsPrompt}`;
+          
+          turnCount++;
+          continue;
+        } else if (contextSettings.includeMultiChapter && !hasCompletedSignal) {
+          // Force next turn for multi-chapter mode if not completed
+          const resultsPrompt = "Please generate the next chapter according to the Table of Contents. Remember to generate ONLY ONE chapter and then stop.";
+          
+          const resultsMessage: Message = {
+            id: generateId(),
+            role: 'user',
+            content: resultsPrompt,
+            isSystemGenerated: true,
+            timestamp: Date.now()
+          };
+          
+          addMessage(resultsMessage, sessionId);
+          currentMessages.push(resultsMessage);
+          currentPrompt = resultsPrompt;
           
           turnCount++;
           continue;

@@ -10,12 +10,12 @@ export const MULTI_CHAPTER_PROMPT = `
 3. **Process & Thought Sequence**:
    - **MANDATORY**: For the Table of Contents, generate a markdown artifact with the title "Table of Contents".
    - **MANDATORY**: For EVERY chapter or section, you MUST generate it as a SEPARATE markdown artifact.
-   - **STRICT RULE**: Generate ONLY ONE chapter per response. This is critical to ensure maximum detail and quality for each section.
+   - **STRICT RULE**: Generate ONLY ONE chapter per response. This is a hard constraint to ensure maximum detail and quality for each section.
      - **Title Format**: "Chapter X: [Title]" (e.g., "Chapter 1: Introduction").
      - **CRITICAL**: Do NOT include the word "TOC" or "Table of Contents" in the title of chapter artifacts.
    - **Thought Sequence**:
-     - After generating the TOC, you MUST stop and ask the user for permission to proceed.
-     - Once permitted, generate the chapters. You MUST generate ONLY ONE chapter per response to maximize the output context and detail for each section.
+     - After generating the TOC, you MUST stop.
+     - For each subsequent response, you MUST generate ONLY ONE chapter to maximize the output context and detail for each section.
      - For each chapter, use a <thought> tag to describe your progress (e.g., "<thought>Generating Chapter 1: Introduction...</thought>").
 4. **Completion**:
    - Finish each response by stating your current progress and what's next.
