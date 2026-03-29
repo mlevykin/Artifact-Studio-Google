@@ -735,6 +735,7 @@ ${activeMCPs.map(c => {
     setStreamingArtifact(null);
 
     let currentMessages = [...initialMessages, userMessage];
+    let currentArtifacts = [...(currentSession?.artifacts || [])];
     let currentPrompt = fullPrompt;
     let turnCount = 0;
     let lastFullResponse = '';
@@ -752,15 +753,13 @@ ${activeMCPs.map(c => {
         // Recalculate Multi-Chapter instruction for the current turn
         let turnMultiChapterInstruction = '';
         if (contextSettings.includeMultiChapter) {
-          const currentSessionObj = sessionsRef.current.find(s => s.id === sessionId) || currentSession;
-          const artifacts = currentSessionObj?.artifacts || [];
-          const tocArtifact = artifacts.find(a => {
+          const tocArtifact = currentArtifacts.find(a => {
             const title = a.title.toLowerCase();
             return title.includes('table of contents') || title.includes('оглавление') || title.includes('содержание') || title === 'toc';
           });
           
           if (tocArtifact) {
-            const chapters = artifacts.filter(a => {
+            const chapters = currentArtifacts.filter(a => {
               const title = a.title.toLowerCase();
               const isToc = title.includes('table of contents') || title.includes('оглавление') || title.includes('содержание') || title === 'toc';
               const isFinal = title.includes('final document') || title.includes('assembled document') || title.includes('итоговый документ');
@@ -902,9 +901,6 @@ ${activeMCPs.map(c => {
 
         // Handle patches for artifacts within this turn
         if (patches.length > 0) {
-          const currentSessionObj = sessions.find(s => s.id === sessionId);
-          const sessionArtifacts = currentSessionObj?.artifacts || [];
-          
           // Group patches by target
           const patchesByTarget = new Map<string, Patch[]>();
           const untargetedPatches: Patch[] = [];
@@ -925,7 +921,7 @@ ${activeMCPs.map(c => {
 
           // Apply targeted patches
           patchesByTarget.forEach((targetPatches, targetIdOrTitle) => {
-            const targetArtifact = sessionArtifacts.find(a => a.id === targetIdOrTitle || a.title === targetIdOrTitle);
+            const targetArtifact = currentArtifacts.find(a => a.id === targetIdOrTitle || a.title === targetIdOrTitle);
             if (targetArtifact) {
               const { content: patchedContent, successCount } = applyPatches(targetArtifact.content, targetPatches);
               if (successCount > 0) {
@@ -937,6 +933,7 @@ ${activeMCPs.map(c => {
                   timestamp: Date.now()
                 };
                 addArtifact(updatedArtifact, sessionId);
+                currentArtifacts.push(updatedArtifact);
                 if (initialArtifact?.id === targetArtifact.id) initialArtifact = updatedArtifact;
               }
             }
@@ -954,6 +951,7 @@ ${activeMCPs.map(c => {
                 timestamp: Date.now()
               };
               addArtifact(updatedArtifact, sessionId);
+              currentArtifacts.push(updatedArtifact);
               initialArtifact = updatedArtifact;
             }
           }
@@ -963,8 +961,7 @@ ${activeMCPs.map(c => {
         const newArtifacts = parseArtifacts(truncatedResponse);
         newArtifacts.forEach(newArtifactData => {
           // Find if this artifact already exists in the session (by ID or Title+Type)
-          const currentSessionObj = sessions.find(s => s.id === sessionId);
-          const existingArtifact = currentSessionObj?.artifacts.find(a => 
+          const existingArtifact = currentArtifacts.find(a => 
             (newArtifactData.id && a.id === newArtifactData.id) || 
             (!newArtifactData.id && a.title === newArtifactData.title && a.type === newArtifactData.type)
           );
@@ -979,6 +976,7 @@ ${activeMCPs.map(c => {
               timestamp: Date.now()
             };
             addArtifact(updatedArtifact, sessionId);
+            currentArtifacts.push(updatedArtifact);
             initialArtifact = updatedArtifact; // Update for verification
           } else {
             // Create new artifact
@@ -991,6 +989,7 @@ ${activeMCPs.map(c => {
               timestamp: Date.now()
             };
             addArtifact(newArtifact, sessionId);
+            currentArtifacts.push(newArtifact);
             initialArtifact = newArtifact; // Update for verification
           }
         });
@@ -1054,9 +1053,7 @@ ${activeMCPs.map(c => {
           continue;
         } else if (contextSettings.includeMultiChapter && !hasCompletedSignal) {
           // Force next turn for multi-chapter mode if not completed
-          const currentSessionObj = sessionsRef.current.find(s => s.id === sessionId) || currentSession;
-          const artifacts = currentSessionObj?.artifacts || [];
-          const chapters = artifacts.filter(a => {
+          const chapters = currentArtifacts.filter(a => {
             const title = a.title.toLowerCase();
             const isToc = title.includes('table of contents') || title.includes('оглавление') || title.includes('содержание') || title === 'toc';
             const isFinal = title.includes('final document') || title.includes('assembled document') || title.includes('итоговый документ');
