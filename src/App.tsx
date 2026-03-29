@@ -39,6 +39,7 @@ import {
   loadAppState,
   storeDirectoryHandle,
   clearStoredDirectoryHandle,
+  saveArtifact,
   getWorkspaceTree
 } from './services/fileSystemService';
 
@@ -290,6 +291,25 @@ export default function App() {
           console.log(`App: Saving ${key} to disk...`);
           await saveAppState(workspaceHandle, key, data);
           lastSavedRef.current[key] = serialized;
+        }
+      }
+
+      // Save individual artifacts to the artifacts/ directory
+      for (const session of sessions) {
+        if (!session.artifacts) continue;
+        for (const artifact of session.artifacts) {
+          const artKey = `artifact-${session.id}-${artifact.id}`;
+          const artVersionKey = `${artKey}-v${artifact.version}`;
+          
+          if (lastSavedRef.current[artVersionKey] !== artifact.content) {
+            console.log(`App: Saving artifact ${artifact.title} (v${artifact.version}) to disk...`);
+            await saveArtifact(workspaceHandle, session.id, artifact);
+            lastSavedRef.current[artVersionKey] = artifact.content;
+            // Also update the base key to avoid redundant saves if content is same across versions (though version usually changes)
+            lastSavedRef.current[artKey] = artifact.content;
+            // Refresh the workspace tree to show the new/updated file
+            await updateWorkspaceTree(workspaceHandle);
+          }
         }
       }
     };

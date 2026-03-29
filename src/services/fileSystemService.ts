@@ -203,6 +203,22 @@ export async function loadAppState(rootHandle: any, key: string): Promise<any | 
   }
 }
 
+export async function saveArtifact(rootHandle: any, sessionId: string, artifact: any) {
+  try {
+    const artifactsDir = await rootHandle.getDirectoryHandle('artifacts', { create: true });
+    const sessionDir = await artifactsDir.getDirectoryHandle(sessionId, { create: true });
+    
+    const filename = `${sanitizeFilename(artifact.title)}.${artifact.type === 'markdown' ? 'md' : artifact.type}`;
+    
+    const fileHandle = await sessionDir.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(artifact.content);
+    await writable.close();
+  } catch (err) {
+    console.error(`Failed to save artifact ${artifact.id} to disk:`, err);
+  }
+}
+
 export async function deleteSessionFolder(rootHandle: any, sessionId: string) {
   try {
     const artifactsDir = await rootHandle.getDirectoryHandle('artifacts', { create: true });
