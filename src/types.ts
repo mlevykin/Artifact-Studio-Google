@@ -165,6 +165,8 @@ export interface Session {
 export interface Patch {
   old: string;
   new: string;
+  artifactId?: string;
+  title?: string;
 }
 
 export interface OllamaConfig {

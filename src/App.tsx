@@ -25,7 +25,7 @@ import {
   truncateAfterToolCall,
   parseMessageSteps
 } from './engines/responseParser';
-import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings, ProjectConfig } from './types';
+import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings, ProjectConfig, Patch } from './types';
 import { generateId } from './utils';
 import { MCPService } from './services/mcpService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -651,6 +651,7 @@ CRITICAL RULES FOR CONTENT:
 6. If you are generating a document, use <artifact type="markdown" title="Document Title">...</artifact>.
 7. In a new chat (no previous messages), assume you are starting from scratch unless the user provides context or attachments.
 8. RESPECT INTENT: NEVER generate an artifact or modify code unless the user explicitly asks for changes, improvements, or bug fixes. If the user is just asking a question or providing feedback, respond with text only.
+9. **STRICT ARTIFACT RULE**: If you are providing content that belongs in a document (like a chapter, a section, or a diagram), you MUST use <artifact> or <patch>. NEVER output this content as plain text in the chat.
 `;
 
     const skillReportingInstruction = `
@@ -899,22 +900,62 @@ ${activeMCPs.map(c => {
         addMessage(assistantMessage, sessionId);
         currentMessages.push(assistantMessage);
 
-        // Handle patches for the current artifact within this turn
-        if (initialArtifact && patches.length > 0) {
-          const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, patches);
-          if (successCount > 0) {
-            const updatedArtifact: Artifact = {
-              ...initialArtifact,
-              id: generateId(),
-              content: patchedContent,
-              version: initialArtifact.version + 1,
-              timestamp: Date.now()
-            };
-            addArtifact(updatedArtifact, sessionId);
-            // Update initialArtifact for next potential turn's patches
-            initialArtifact = updatedArtifact;
-          } else {
-            console.warn('Failed to apply any patches to the current artifact. Patches received:', patches);
+        // Handle patches for artifacts within this turn
+        if (patches.length > 0) {
+          const currentSessionObj = sessions.find(s => s.id === sessionId);
+          const sessionArtifacts = currentSessionObj?.artifacts || [];
+          
+          // Group patches by target
+          const patchesByTarget = new Map<string, Patch[]>();
+          const untargetedPatches: Patch[] = [];
+          
+          patches.forEach(p => {
+            if (p.artifactId) {
+              const target = patchesByTarget.get(p.artifactId) || [];
+              target.push(p);
+              patchesByTarget.set(p.artifactId, target);
+            } else if (p.title) {
+              const target = patchesByTarget.get(p.title) || [];
+              target.push(p);
+              patchesByTarget.set(p.title, target);
+            } else {
+              untargetedPatches.push(p);
+            }
+          });
+
+          // Apply targeted patches
+          patchesByTarget.forEach((targetPatches, targetIdOrTitle) => {
+            const targetArtifact = sessionArtifacts.find(a => a.id === targetIdOrTitle || a.title === targetIdOrTitle);
+            if (targetArtifact) {
+              const { content: patchedContent, successCount } = applyPatches(targetArtifact.content, targetPatches);
+              if (successCount > 0) {
+                const updatedArtifact: Artifact = {
+                  ...targetArtifact,
+                  id: generateId(),
+                  content: patchedContent,
+                  version: targetArtifact.version + 1,
+                  timestamp: Date.now()
+                };
+                addArtifact(updatedArtifact, sessionId);
+                if (initialArtifact?.id === targetArtifact.id) initialArtifact = updatedArtifact;
+              }
+            }
+          });
+
+          // Apply untargeted patches to initialArtifact
+          if (initialArtifact && untargetedPatches.length > 0) {
+            const { content: patchedContent, successCount } = applyPatches(initialArtifact.content, untargetedPatches);
+            if (successCount > 0) {
+              const updatedArtifact: Artifact = {
+                ...initialArtifact,
+                id: generateId(),
+                content: patchedContent,
+                version: initialArtifact.version + 1,
+                timestamp: Date.now()
+              };
+              addArtifact(updatedArtifact, sessionId);
+              initialArtifact = updatedArtifact;
+            }
           }
         }
 

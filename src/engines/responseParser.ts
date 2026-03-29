@@ -6,13 +6,22 @@ import { Patch, MessageStep } from '../types';
 export function parsePatches(text: string): Patch[] {
   const patches: Patch[] = [];
   // Allow attributes in <patch> tag and be more flexible with whitespace
-  const patchRegex = /<patch[^>]*>[\s\S]*?<old>([\s\S]*?)<\/old>[\s\S]*?<new>([\s\S]*?)<\/new>[\s\S]*?<\/patch>/g;
+  const patchRegex = /<patch\s*([^>]*?)>[\s\S]*?<old>([\s\S]*?)<\/old>[\s\S]*?<new>([\s\S]*?)<\/new>[\s\S]*?<\/patch>/g;
   
   let match;
   while ((match = patchRegex.exec(text)) !== null) {
+    const attrString = match[1];
+    const old = match[2].trim();
+    const newText = match[3].trim();
+    
+    const idMatch = attrString.match(/id="([^"]+)"/);
+    const titleMatch = attrString.match(/title="([^"]+)"/);
+    
     patches.push({
-      old: match[1].trim(),
-      new: match[2].trim()
+      old,
+      new: newText,
+      artifactId: idMatch ? idMatch[1] : undefined,
+      title: titleMatch ? titleMatch[1] : undefined
     });
   }
   
@@ -22,15 +31,20 @@ export function parsePatches(text: string): Patch[] {
 /**
  * Parses <patch> blocks from LLM response, including partial ones
  */
-export function parsePartialPatches(text: string): { old: string; new: string; isComplete: boolean }[] {
-  const patches: { old: string; new: string; isComplete: boolean }[] = [];
-  const patchRegex = /<patch[^>]*>([\s\S]*?)(?:<\/patch>|$)/g;
+export function parsePartialPatches(text: string): { old: string; new: string; isComplete: boolean; artifactId?: string; title?: string }[] {
+  const patches: { old: string; new: string; isComplete: boolean; artifactId?: string; title?: string }[] = [];
+  const patchRegex = /<patch\s*([^>]*?)>([\s\S]*?)(?:<\/patch>|$)/g;
   
   let match;
   while ((match = patchRegex.exec(text)) !== null) {
-    if (match[0] === '<patch>') continue; // Skip empty match at the very end
+    const attrString = match[1];
+    const patchContent = match[2];
     
-    const patchContent = match[1];
+    if (!attrString && !patchContent) continue;
+    
+    const idMatch = attrString.match(/id="([^"]*)"?/);
+    const titleMatch = attrString.match(/title="([^"]*)"?/);
+    
     const oldMatch = patchContent.match(/<old>([\s\S]*?)(?:<\/old>|$)/);
     const newMatch = patchContent.match(/<new>([\s\S]*?)(?:<\/new>|$)/);
     
@@ -38,7 +52,9 @@ export function parsePartialPatches(text: string): { old: string; new: string; i
       patches.push({
         old: oldMatch ? oldMatch[1].trim() : '',
         new: newMatch ? newMatch[1].trim() : '',
-        isComplete: match[0].endsWith('</patch>')
+        isComplete: match[0].endsWith('</patch>'),
+        artifactId: idMatch ? idMatch[1] : undefined,
+        title: titleMatch ? titleMatch[1] : undefined
       });
     }
   }

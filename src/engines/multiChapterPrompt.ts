@@ -23,7 +23,10 @@ export const MULTI_CHAPTER_PROMPT = `
    - **CRITICAL**: You MUST only state "COMPLETED: All chapters have been generated according to the target depth." in the response that contains the ACTUAL CONTENT of the very last chapter. 
    - **STRICT RULE**: Do NOT state "COMPLETED" if you are announcing a "Next Step" that involves generating another chapter. If there is a "Next Step" chapter, the project is NOT completed.
 5. **Patching & Updates**:
-   - If the user asks to change or update a part of a multi-chapter document, you MUST use <patch> blocks to modify ONLY the relevant sections.
+   - **CRITICAL**: If the user asks to change or update a part of a multi-chapter document, you MUST use <patch> blocks to modify ONLY the relevant sections.
+   - **Targeting**: You can target specific artifacts by adding a "title" attribute to the <patch> tag.
+     - Example: <patch title="Chapter 1: Introduction"> ... </patch>
+   - **NO CHAT OUTPUT**: NEVER write chapter content or document updates directly in the chat text. ALL structured content MUST be in <artifact> or <patch> tags.
 6. **Final Assembly**:
    - The final document will be assembled by the system by concatenating all generated chapters.
    - You do not need to generate the "final version" yourself unless specifically asked.

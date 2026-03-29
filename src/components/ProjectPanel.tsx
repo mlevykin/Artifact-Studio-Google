@@ -23,7 +23,17 @@ interface ProjectPanelProps {
 }
 
 export const ProjectPanel: React.FC<ProjectPanelProps> = ({ project, artifacts, onSelectArtifact, onAssemble }) => {
-  const projectArtifacts = artifacts.filter(a => a.files?.some(f => f.path.startsWith(project.rootFolder)));
+  const projectArtifacts = artifacts.filter(a => {
+    const title = a.title.toLowerCase();
+    const isToc = title.includes('table of contents') || title.includes('оглавление') || title.includes('содержание') || title === 'toc';
+    const isFinal = title.includes('final document') || title.includes('assembled document') || title.includes('итоговый документ');
+    const isSystem = a.id === 'workspace-explorer' || a.id === 'streaming';
+    
+    // In multi-chapter mode, chapters usually have "Chapter" or "Глава" in the title
+    const isChapter = title.includes('chapter') || title.includes('глава');
+    
+    return !isToc && !isFinal && !isSystem && isChapter;
+  });
 
   return (
     <div className="h-full flex flex-col bg-white">
