@@ -258,16 +258,20 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
             
             utterance.onstart = () => setIsPlaying(true);
             utterance.onend = () => {
-              currentChunkIndex++;
-              setTimeout(speakNextChunk, 50);
+              if (isPlaying) {
+                currentChunkIndex++;
+                setTimeout(speakNextChunk, 100); // Slightly longer delay for stability
+              }
             };
             utterance.onerror = (event) => {
-              console.error("SpeechSynthesis Error:", event);
               if (event.error !== 'interrupted' && event.error !== 'canceled') {
+                console.error("SpeechSynthesis Error:", event);
                 setStatus("Error");
                 setTimeout(() => setStatus(null), 3000);
+                setIsPlaying(false);
+              } else {
+                console.log(`SpeechSynthesis ${event.error} (expected)`);
               }
-              setIsPlaying(false);
             };
 
             utteranceRef.current = utterance;
@@ -354,126 +358,126 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
     }
   };
 
-  if (!isExpanded) {
-    return (
-      <button 
-        onClick={() => setIsExpanded(true)}
-        className={cn("p-2 bg-zinc-100 hover:bg-zinc-200 rounded-xl text-zinc-600 transition-all", className)}
-        title="Show TTS Controls"
-      >
-        <Volume2 size={18} />
-      </button>
-    );
-  }
-
   return (
-    <div className={cn("flex items-center gap-1 bg-zinc-100 p-1 rounded-xl", className)}>
+    <div className={cn("flex items-center transition-all duration-200", className)}>
       <audio 
         ref={audioRef} 
         onEnded={handleGoogleAudioEnded} 
         className="hidden"
       />
-      
-      <div className="flex items-center gap-1 px-2">
-        <Volume2 size={14} className="text-zinc-500" />
-        <select 
-          value={voice} 
-          onChange={(e) => {
-            const newVoice = e.target.value;
-            setVoice(newVoice);
-            handleStop();
-            cleanupAudioUrls();
-          }}
-          className="text-[11px] bg-transparent border-none focus:ring-0 cursor-pointer text-zinc-600 font-semibold p-0 h-auto leading-none max-w-[150px]"
-          disabled={isLoading}
-        >
-          <optgroup label="Google Cloud (Gemini)">
-            <option value="google:Kore">Kore (Google)</option>
-            <option value="google:Fenrir">Fenrir (Google)</option>
-            <option value="google:Puck">Puck (Google)</option>
-            <option value="google:Charon">Charon (Google)</option>
-            <option value="google:Zephyr">Zephyr (Google)</option>
-          </optgroup>
-          {systemVoices.length > 0 && (
-            <optgroup label={`System Voices (${osName})`}>
-              {systemVoices.map((v, i) => (
-                <option key={i} value={`system:${i}`}>
-                  {v.name} ({osName})
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-      </div>
 
-      <div className="h-4 w-[1px] bg-zinc-300 mx-0.5" />
-
-      <div className="flex items-center gap-0.5">
-        <button
-          onClick={handlePlay}
-          disabled={isLoading || !text}
-          className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all disabled:opacity-50"
-          title={isPlaying ? "Pause/Stop" : "Play"}
+      {!isExpanded ? (
+        <button 
+          onClick={() => setIsExpanded(true)}
+          className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-xl text-zinc-600 transition-all shadow-sm border border-zinc-200/50"
+          title="Show TTS Controls"
         >
-          {isLoading ? (
-            <div className="flex items-center gap-1.5">
-              <Loader2 size={14} className="animate-spin text-amber-600" />
-              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">Gen...</span>
-            </div>
-          ) : isPlaying ? (
-            <Pause size={14} className="text-amber-600 fill-amber-600" />
-          ) : (
-            <Play size={14} className="text-zinc-600 fill-zinc-600" />
-          )}
+          <Volume2 size={18} />
         </button>
-
-        <AnimatePresence>
-          {isPlaying && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              onClick={handleStop}
-              className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all"
-              title="Stop"
+      ) : (
+        <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl border border-zinc-200 shadow-sm animate-in fade-in zoom-in duration-200">
+          <div className="flex items-center gap-1 px-2">
+            <Volume2 size={14} className="text-zinc-500" />
+            <select 
+              value={voice} 
+              onChange={(e) => {
+                const newVoice = e.target.value;
+                setVoice(newVoice);
+                handleStop();
+                cleanupAudioUrls();
+              }}
+              className="text-[11px] bg-transparent border-none focus:ring-0 cursor-pointer text-zinc-600 font-semibold p-0 h-auto leading-none max-w-[150px]"
+              disabled={isLoading}
             >
-              <StopCircle size={14} className="text-zinc-600" />
-            </motion.button>
+              <optgroup label="Google Cloud (Gemini)">
+                <option value="google:Kore">Kore (Google)</option>
+                <option value="google:Fenrir">Fenrir (Google)</option>
+                <option value="google:Puck">Puck (Google)</option>
+                <option value="google:Charon">Charon (Google)</option>
+                <option value="google:Zephyr">Zephyr (Google)</option>
+              </optgroup>
+              {systemVoices.length > 0 && (
+                <optgroup label={`System Voices (${osName})`}>
+                  {systemVoices.map((v, i) => (
+                    <option key={i} value={`system:${i}`}>
+                      {v.name} ({osName})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </div>
+
+          <div className="h-4 w-[1px] bg-zinc-300 mx-0.5" />
+
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={handlePlay}
+              disabled={isLoading || !text}
+              className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all disabled:opacity-50"
+              title={isPlaying ? "Pause/Stop" : "Play"}
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 size={14} className="animate-spin text-amber-600" />
+                  <span className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">Gen...</span>
+                </div>
+              ) : isPlaying ? (
+                <Pause size={14} className="text-amber-600 fill-amber-600" />
+              ) : (
+                <Play size={14} className="text-zinc-600 fill-zinc-600" />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {isPlaying && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  onClick={handleStop}
+                  className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+                  title="Stop"
+                >
+                  <StopCircle size={14} className="text-zinc-600" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            <button
+              onClick={handleDownload}
+              disabled={!audioUrl || isLoading || !voice.startsWith('google:')}
+              className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all disabled:opacity-50"
+              title={voice.startsWith('google:') ? "Download WAV" : "Download not available for system voices"}
+            >
+              <Download size={14} className={audioUrl && voice.startsWith('google:') ? "text-zinc-700" : "text-zinc-400"} />
+            </button>
+          </div>
+          
+          {(status === "Error" || status === "Buffering...") && (
+            <span className={cn(
+              "text-[9px] font-bold px-2 uppercase",
+              status === "Error" ? "text-red-500" : "text-amber-600"
+            )}>{status}</span>
           )}
-        </AnimatePresence>
 
-        <button
-          onClick={handleDownload}
-          disabled={!audioUrl || isLoading || !voice.startsWith('google:')}
-          className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all disabled:opacity-50"
-          title={voice.startsWith('google:') ? "Download WAV" : "Download not available for system voices"}
-        >
-          <Download size={14} className={audioUrl && voice.startsWith('google:') ? "text-zinc-700" : "text-zinc-400"} />
-        </button>
-      </div>
-      
-      {(status === "Error" || status === "Buffering...") && (
-        <span className={cn(
-          "text-[9px] font-bold px-2 uppercase",
-          status === "Error" ? "text-red-500" : "text-amber-600"
-        )}>{status}</span>
+          {googleChunks.length > 1 && isPlaying && voice.startsWith('google:') && (
+            <span className="text-[9px] font-mono text-zinc-400 px-1">
+              {currentGoogleChunkIndex + 1}/{googleChunks.length}
+            </span>
+          )}
+
+          <div className="h-4 w-[1px] bg-zinc-300 mx-0.5" />
+
+          <button 
+            onClick={() => setIsExpanded(false)}
+            className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-white rounded-lg transition-all"
+            title="Collapse"
+          >
+            <X size={14} />
+          </button>
+        </div>
       )}
-
-      {googleChunks.length > 1 && isPlaying && voice.startsWith('google:') && (
-        <span className="text-[9px] font-mono text-zinc-400 px-1">
-          {currentGoogleChunkIndex + 1}/{googleChunks.length}
-        </span>
-      )}
-
-      <div className="h-4 w-[1px] bg-zinc-300 mx-0.5" />
-
-      <button 
-        onClick={() => setIsExpanded(false)}
-        className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-white rounded-lg transition-all"
-        title="Collapse"
-      >
-        <X size={14} />
-      </button>
     </div>
   );
 };
