@@ -797,6 +797,15 @@ ${activeMCPs.map(c => {
 
         while (retryCount <= maxRetries) {
           try {
+            // For multi-chapter mode, we want to minimize context after the first turn
+            // to avoid sending full text of previous chapters.
+            const turnContextSettings = {
+              ...contextSettings,
+              includeChatHistory: contextSettings.includeMultiChapter && turnCount > 0 ? false : contextSettings.includeChatHistory,
+              // Also exclude artifact context if we are in multi-chapter mode to avoid sending the TOC/previous artifacts repeatedly
+              includeArtifactContext: contextSettings.includeMultiChapter && turnCount > 0 ? false : contextSettings.includeArtifactContext
+            };
+
             const stream = streamResponse(
               provider,
               currentMessages,
@@ -811,7 +820,7 @@ ${activeMCPs.map(c => {
               webSearchEnabled,
               geminiApiKey,
               geminiModel,
-              contextSettings,
+              turnContextSettings,
               activeSkillsData,
               activeMcpData
             );
@@ -1038,12 +1047,19 @@ ${activeMCPs.map(c => {
             break;
           }
 
+          // For multi-chapter mode, we want to provide the current Glossary and Summary for context
+          const glossary = currentArtifacts.find(a => a.title === 'Glossary');
+          const summary = currentArtifacts.find(a => a.title === 'Cumulative Summary');
+          let contextInfo = '';
+          if (glossary) contextInfo += `\n\nCURRENT GLOSSARY:\n${glossary.content}`;
+          if (summary) contextInfo += `\n\nCURRENT CUMULATIVE SUMMARY:\n${summary.content}`;
+
           const resultsPrompt = executedMcpCalls.length > 0 
             ? executedMcpCalls.map(c => 
                 `<response>\n${JSON.stringify(c.response, null, 2)}\n</response>`
               ).join('\n\n')
             : (contextSettings.includeMultiChapter && !hasCompletedSignal 
-                ? "Please generate the next chapter according to the Table of Contents. Remember to generate ONLY ONE chapter and then stop."
+                ? `Please generate the next chapter according to the Table of Contents. Remember to generate ONLY ONE chapter and then stop.${contextInfo}`
                 : "The requested skills have been added to your context. Please continue your task and generate the requested output.");
           
           // Add the results as a new user message for the next turn
@@ -1080,11 +1096,19 @@ ${activeMCPs.map(c => {
             const isToc = title.includes('table of contents') || title.includes('оглавление') || title.includes('содержание') || title === 'toc';
             const isFinal = title.includes('final document') || title.includes('assembled document') || title.includes('итоговый документ');
             const isSystem = a.id === 'workspace-explorer' || a.id === 'streaming';
-            return !isToc && !isFinal && !isSystem && (title.includes('chapter') || title.includes('глава'));
+            const isContext = title === 'glossary' || title === 'cumulative summary';
+            return !isToc && !isFinal && !isSystem && !isContext && (title.includes('chapter') || title.includes('глава'));
           });
           const nextChapterNum = chapters.length + 1;
 
-          const resultsPrompt = `Please generate Chapter ${nextChapterNum} according to the Table of Contents. Remember to generate ONLY ONE chapter and then stop.`;
+          // For multi-chapter mode, we want to provide the current Glossary and Summary for context
+          const glossary = currentArtifacts.find(a => a.title === 'Glossary');
+          const summary = currentArtifacts.find(a => a.title === 'Cumulative Summary');
+          let contextInfo = '';
+          if (glossary) contextInfo += `\n\nCURRENT GLOSSARY:\n${glossary.content}`;
+          if (summary) contextInfo += `\n\nCURRENT CUMULATIVE SUMMARY:\n${summary.content}`;
+
+          const resultsPrompt = `Please generate Chapter ${nextChapterNum} according to the Table of Contents. Remember to generate ONLY ONE chapter and then stop.${contextInfo}`;
           
           const resultsMessage: Message = {
             id: generateId(),

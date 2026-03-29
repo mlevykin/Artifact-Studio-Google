@@ -208,9 +208,27 @@ export async function saveArtifact(rootHandle: any, sessionId: string, artifact:
     const artifactsDir = await rootHandle.getDirectoryHandle('artifacts', { create: true });
     const sessionDir = await artifactsDir.getDirectoryHandle(sessionId, { create: true });
     
-    const filename = `${sanitizeFilename(artifact.title)}.${artifact.type === 'markdown' ? 'md' : artifact.type}`;
+    let targetDir = sessionDir;
+    const title = artifact.title.toLowerCase();
+    let filename = `${sanitizeFilename(artifact.title)}.${artifact.type === 'markdown' ? 'md' : artifact.type}`;
+
+    if (title === 'glossary') {
+      filename = 'glossary.md';
+    } else if (title === 'cumulative summary') {
+      filename = 'summary.md';
+    } else if (title === 'table of contents' || title === 'toc') {
+      filename = 'manifest.md';
+    } else if (title.includes('chapter') || title.includes('глава')) {
+      targetDir = await sessionDir.getDirectoryHandle('chapters', { create: true });
+      // Normalize chapter filename: "Chapter 1: Title" -> "chapter_01.md"
+      const match = artifact.title.match(/(?:Chapter|Глава)\s*(\d+)/i);
+      if (match) {
+        const num = match[1].padStart(2, '0');
+        filename = `chapter_${num}.md`;
+      }
+    }
     
-    const fileHandle = await sessionDir.getFileHandle(filename, { create: true });
+    const fileHandle = await targetDir.getFileHandle(filename, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(artifact.content);
     await writable.close();

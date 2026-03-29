@@ -28,7 +28,16 @@ export const MULTI_CHAPTER_PROMPT = `
    - **Targeting**: You can target specific artifacts by adding a "title" attribute to the <patch> tag.
      - Example: <patch title="Chapter 1: Introduction"> ... </patch>
    - **NO CHAT OUTPUT**: NEVER write chapter content or document updates directly in the chat text. ALL structured content MUST be in <artifact> or <patch> tags.
-6. **Final Assembly**:
+6. **Context Management & Continuity**:
+   - **Compressed Knowledge Graph (Glossary)**: After generating the TOC, you MUST generate a markdown artifact titled "Glossary".
+     - It should contain key terms, definitions, and technical decisions.
+   - **Cumulative Summary**: After generating the TOC, you MUST generate a markdown artifact titled "Cumulative Summary".
+     - It should contain a high-level overview of the project's progress.
+   - **Iterative Updates**: After generating EACH chapter, you MUST also generate UPDATED versions of the "Glossary" and "Cumulative Summary" in the SAME response.
+     - The "Glossary" should be updated with new entities or facts introduced in the chapter.
+     - The "Cumulative Summary" should be updated with a 1-2 sentence summary of the chapter just generated.
+   - **Context Awareness**: Use the current "Glossary" and "Cumulative Summary" (which will be provided in the context) to ensure consistency and avoid contradictions.
+7. **Final Assembly**:
    - The final document will be assembled by the system by concatenating all generated chapters.
    - You do not need to generate the "final version" yourself unless specifically asked.
 `;
