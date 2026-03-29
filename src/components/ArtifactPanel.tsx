@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { TTSControls } from './TTSControls';
 import { 
   Code, 
   Eye, 
@@ -59,6 +60,7 @@ interface ArtifactPanelProps {
   includeMultiChapter?: boolean;
   targetDepth?: number;
   onAssemble?: () => void;
+  geminiApiKey?: string;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -83,7 +85,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   project = null,
   includeMultiChapter = false,
   targetDepth = 3,
-  onAssemble
+  onAssemble,
+  geminiApiKey
 }) => {
   const [view, setView] = useState<'preview' | 'code' | 'log'>('preview');
   const [isEditing, setIsEditing] = useState(false);
@@ -625,6 +628,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {!isStreaming && artifact && artifact.type === 'markdown' && (
+            <TTSControls 
+              text={pContent} 
+              geminiApiKey={geminiApiKey} 
+              className="mr-2"
+            />
+          )}
           {(pType === 'mermaid' || pType === 'markdown') && !isStreaming && onUpdateArtifact && (
             <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
               <div className="flex items-center gap-1 px-2 text-zinc-500">

@@ -1341,6 +1341,7 @@ ${activeMCPs.map(c => {
             currentIndex={currentIndex}
             onSave={handleSaveArtifact}
             isStreaming={isStreaming}
+            geminiApiKey={geminiApiKey}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             isSidebarOpen={isSidebarOpen}
             workspaceHandle={workspaceHandle}
