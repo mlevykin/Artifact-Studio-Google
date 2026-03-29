@@ -994,7 +994,9 @@ ${activeMCPs.map(c => {
           }
         });
 
-        if (fullResponse.toUpperCase().includes('COMPLETED:')) {
+        // Check for the specific completion signal for Multi-Chapter Mode
+        // It must be the full phrase to prevent false positives from intermediate steps
+        if (fullResponse.toUpperCase().includes('COMPLETED: ALL CHAPTERS HAVE BEEN GENERATED')) {
           hasCompletedSignal = true;
           console.log('COMPLETED signal detected. Ending multi-turn loop after processing.');
           break;
