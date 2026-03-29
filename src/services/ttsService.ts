@@ -12,19 +12,31 @@ export const TTSService = {
   /**
    * Generates speech from text using Gemini 2.5 Flash Preview TTS
    * Returns a base64 encoded PCM string
+   * Includes retry logic for 500 errors
    */
-  async generateSpeech(text: string, options: TTSOptions = {}): Promise<string> {
+  async generateSpeech(text: string, options: TTSOptions = {}, retries: number = 2): Promise<string> {
     const apiKey = options.apiKey || process.env.GEMINI_API_KEY || "";
     if (!apiKey) {
       throw new Error("Gemini API Key is required for TTS");
     }
+
+    // Basic text cleaning to remove markdown that might confuse the TTS model
+    const cleanText = text
+      .replace(/#{1,6}\s/g, '') // Remove headers
+      .replace(/\*\*/g, '')     // Remove bold
+      .replace(/\*/g, '')      // Remove italics
+      .replace(/`{1,3}.*?`{1,3}/gs, '') // Remove code blocks
+      .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links but keep text
+      .trim();
+
+    if (!cleanText) return "";
 
     const ai = new GoogleGenAI({ apiKey });
     
     try {
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text }] }],
+        contents: [{ parts: [{ text: cleanText }] }],
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
@@ -44,7 +56,16 @@ export const TTSService = {
       }
 
       return base64Audio;
-    } catch (error) {
+    } catch (error: any) {
+      // If it's a 500 error and we have retries left, wait and try again
+      const is500 = error?.message?.includes('500') || error?.status === 500;
+      if (is500 && retries > 0) {
+        const delay = (3 - retries) * 1000; // 1s, 2s delay
+        console.warn(`TTS: 500 error, retrying in ${delay}ms... (${retries} left)`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.generateSpeech(text, options, retries - 1);
+      }
+
       console.error("TTS Generation Error:", error);
       throw error;
     }

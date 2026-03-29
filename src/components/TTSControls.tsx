@@ -75,6 +75,8 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
 
   // Helper to split text for Google TTS (approx 1 minute chunks ~ 1200 chars)
   const splitTextForGoogle = (fullText: string) => {
+    if (!fullText.trim()) return [];
+
     const sentences = fullText.split(/([.!?]+[\s\n]+)/).reduce((acc: string[], curr, i) => {
       if (i % 2 === 0) acc.push(curr);
       else acc[acc.length - 1] += curr;
@@ -85,7 +87,23 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
     let currentChunk = "";
     
     sentences.forEach(sentence => {
-      if ((currentChunk + sentence).length > 1200) {
+      // If a single sentence is already too long, split it by words
+      if (sentence.length > 1200) {
+        if (currentChunk) chunks.push(currentChunk.trim());
+        currentChunk = "";
+        
+        const words = sentence.split(/\s+/);
+        let temp = "";
+        words.forEach(word => {
+          if ((temp + word).length > 1200) {
+            chunks.push(temp.trim());
+            temp = word + " ";
+          } else {
+            temp += word + " ";
+          }
+        });
+        if (temp.trim()) currentChunk = temp;
+      } else if ((currentChunk + sentence).length > 1200) {
         if (currentChunk) chunks.push(currentChunk.trim());
         currentChunk = sentence;
       } else {
@@ -146,6 +164,10 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         let chunks = googleChunks;
         if (chunks.length === 0) {
           chunks = splitTextForGoogle(text);
+          if (chunks.length === 0) {
+            setIsLoading(false);
+            return;
+          }
           setGoogleChunks(chunks);
           setCurrentGoogleChunkIndex(0);
         }
