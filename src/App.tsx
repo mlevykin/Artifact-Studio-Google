@@ -686,7 +686,23 @@ ${activeMCPs.map(c => {
         : '';
     }
 
-    const fullPrompt = `${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}`;
+    let multiChapterInstruction = '';
+    if (contextSettings.includeMultiChapter) {
+      const artifacts = currentSession?.artifacts || [];
+      const hasToc = artifacts.some(a => {
+        const title = a.title.toLowerCase();
+        return title.includes('table of contents') || 
+               title.includes('оглавление') || 
+               title.includes('содержание') || 
+               title === 'toc';
+      });
+      
+      if (hasToc) {
+        multiChapterInstruction = `\n\n[INSTRUCTION: You are in Multi-Chapter Mode. Generate ONLY THE NEXT SINGLE CHAPTER from the Table of Contents. Do not combine multiple chapters in one response. Focus on maximum detail and depth for this specific section. Once the chapter is generated, end your response.]`;
+      }
+    }
+
+    const fullPrompt = `${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}${multiChapterInstruction}`;
 
     const userMessage: Message = {
       id: generateId(),
