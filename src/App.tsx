@@ -826,12 +826,6 @@ ${activeMCPs.map(c => {
 
         if (!success) break;
 
-        if (fullResponse.toUpperCase().includes('COMPLETED:')) {
-          hasCompletedSignal = true;
-          console.log('COMPLETED signal detected. Breaking multi-turn loop.');
-          break;
-        }
-
         if (!fullResponse.trim()) {
           setIsStreaming(false);
           setStreamingText('');
@@ -953,6 +947,12 @@ ${activeMCPs.map(c => {
             initialArtifact = newArtifact; // Update for verification
           }
         });
+
+        if (fullResponse.toUpperCase().includes('COMPLETED:')) {
+          hasCompletedSignal = true;
+          console.log('COMPLETED signal detected. Ending multi-turn loop after processing.');
+          break;
+        }
 
         if (needsNextTurn) {
           // Update active skills in session if any were invoked
