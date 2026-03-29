@@ -714,7 +714,7 @@ ${activeMCPs.map(c => {
         });
         
         const nextChapterNum = chapters.length + 1;
-        multiChapterInstruction = `\n\n[CRITICAL INSTRUCTION: You are in Multi-Chapter Mode. Generate ONLY Chapter ${nextChapterNum}. DO NOT generate any other chapters. Focus on maximum detail for this single section. Once Chapter ${nextChapterNum} is finished, STOP your response immediately. Do not combine multiple chapters.]`;
+        multiChapterInstruction = `\n\n[CRITICAL INSTRUCTION: You are in Multi-Chapter Mode. Generate ONLY Chapter ${nextChapterNum}. DO NOT generate any other chapters. Focus on maximum detail for this single section. Within this chapter, use hierarchical numbering for sub-sections (e.g., ${nextChapterNum}.1, ${nextChapterNum}.2, etc.). Once Chapter ${nextChapterNum} is finished, STOP your response immediately. Do not combine multiple chapters.]`;
       }
     }
 
@@ -1318,6 +1318,7 @@ ${activeMCPs.map(c => {
             project={projects.find(p => p.id === currentSession?.activeProjectId)}
             includeMultiChapter={contextSettings.includeMultiChapter}
             targetDepth={contextSettings.targetDepth}
+            onAssemble={() => handleAssembleProject(currentSession?.id || undefined)}
           />
           
           <AnimatePresence>

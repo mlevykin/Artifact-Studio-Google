@@ -19,9 +19,10 @@ interface ProjectPanelProps {
   project: ProjectConfig;
   artifacts: Artifact[];
   onSelectArtifact: (id: string) => void;
+  onAssemble?: () => void;
 }
 
-export const ProjectPanel: React.FC<ProjectPanelProps> = ({ project, artifacts, onSelectArtifact }) => {
+export const ProjectPanel: React.FC<ProjectPanelProps> = ({ project, artifacts, onSelectArtifact, onAssemble }) => {
   const projectArtifacts = artifacts.filter(a => a.files?.some(f => f.path.startsWith(project.rootFolder)));
 
   return (
@@ -92,6 +93,16 @@ export const ProjectPanel: React.FC<ProjectPanelProps> = ({ project, artifacts, 
               {projectArtifacts.length} GENERATED
             </span>
           </div>
+
+          {onAssemble && projectArtifacts.length > 0 && (
+            <button 
+              onClick={onAssemble}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95 group mb-4"
+            >
+              <Layers size={18} className="group-hover:rotate-12 transition-transform" />
+              Assemble Final Document
+            </button>
+          )}
           
           <div className="space-y-2">
             {projectArtifacts.length === 0 ? (

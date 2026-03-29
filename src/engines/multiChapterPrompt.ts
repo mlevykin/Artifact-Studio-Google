@@ -12,6 +12,7 @@ export const MULTI_CHAPTER_PROMPT = `
    - **MANDATORY**: For EVERY chapter or section, you MUST generate it as a SEPARATE markdown artifact.
    - **STRICT RULE**: Generate ONLY ONE chapter per response. This is a hard constraint to ensure maximum detail and quality for each section.
      - **Title Format**: "Chapter X: [Title]" (e.g., "Chapter 1: Introduction").
+     - **Sub-section Numbering**: Within each chapter, you MUST use hierarchical numbering for sub-sections. Instead of "1.", "2.", "3.", use "[Chapter Number].[Section Number]" (e.g., "4.1", "4.2", "4.3" for Chapter 4).
      - **CRITICAL**: Do NOT include the word "TOC" or "Table of Contents" in the title of chapter artifacts.
    - **Thought Sequence**:
      - After generating the TOC, you MUST stop.
