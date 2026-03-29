@@ -66,6 +66,11 @@ export default function App() {
     setSessions
   } = useSessions();
 
+  const sessionsRef = useRef(sessions);
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
   const [provider, setProvider] = useState<'gemini' | 'ollama'>(() => {
     return (localStorage.getItem('provider') as 'gemini' | 'ollama') || 'gemini';
   });
@@ -433,6 +438,94 @@ export default function App() {
     updateSession({ autoSelectSkills: !currentSession.autoSelectSkills });
   };
 
+  const handleAssembleProject = (sessionId?: string) => {
+    const latestSessions = sessionsRef.current;
+    
+    // Try to find the session by ID, or fallback to current session
+    let targetSession = sessionId 
+      ? latestSessions.find(s => s.id === sessionId) 
+      : latestSessions.find(s => s.id === currentSessionId);
+    
+    // If not found in ref yet (e.g. new session), try to use currentSession from props/state
+    if (!targetSession && currentSession && (!sessionId || currentSession.id === sessionId)) {
+      targetSession = currentSession;
+    }
+    
+    if (!targetSession) {
+      console.warn('handleAssembleProject: Target session not found', { sessionId, currentSessionId });
+      return;
+    }
+    
+    const artifacts = targetSession.artifacts || [];
+    if (artifacts.length === 0) return;
+    
+    console.log('Assembling project from artifacts:', artifacts.map(a => a.title));
+    
+    // Find TOC if it exists
+    const tocArtifact = artifacts.find(a => {
+      const title = a.title.toLowerCase();
+      return title.includes('table of contents') || 
+             title.includes('оглавление') || 
+             title.includes('содержание') || 
+             title === 'toc' || 
+             title.startsWith('toc:');
+    });
+
+    // Filter out TOC and existing Final Documents for the chapters list
+    const chapters = artifacts.filter(a => {
+      const title = a.title.toLowerCase();
+      const isToc = title.includes('table of contents') || 
+                    title.includes('оглавление') || 
+                    title.includes('содержание') || 
+                    title === 'toc' || 
+                    title.startsWith('toc:');
+      const isFinal = title.includes('final document') || 
+                      title.includes('assembled document') ||
+                      title.includes('итоговый документ');
+      const isSystem = a.id === 'workspace-explorer' || a.id === 'streaming';
+      
+      return !isToc && !isFinal && !isSystem;
+    });
+    
+    console.log('Found chapters:', chapters.map(a => a.title));
+    
+    if (chapters.length === 0) {
+      console.warn('No chapters found to assemble.');
+      return;
+    }
+    
+    // Sort chapters by title to get them in order (e.g., Chapter 1, Chapter 2)
+    const sortedChapters = [...chapters].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
+    
+    let finalContent = '';
+    
+    // Prepend TOC if found
+    if (tocArtifact) {
+      finalContent += `# ${tocArtifact.title}\n\n${tocArtifact.content}\n\n---\n\n`;
+    }
+    
+    finalContent += sortedChapters.map(c => `## ${c.title}\n\n${c.content}`).join('\n\n---\n\n');
+    
+    const finalArtifact: Artifact = {
+      id: generateId(),
+      title: 'Final Document',
+      type: 'markdown',
+      content: finalContent,
+      version: 1,
+      timestamp: Date.now()
+    };
+    
+    addArtifact(finalArtifact, targetSession.id);
+    
+    addMessage({
+      id: generateId(),
+      role: 'system',
+      content: `✅ Final document assembled from ${sortedChapters.length} chapters${tocArtifact ? ' (including Table of Contents)' : ''}.`,
+      timestamp: Date.now(),
+      isSystemGenerated: true
+    }, targetSession.id);
+  };
+
   const handleAddSkill = (skill: Skill) => {
     setSkills(prev => [skill, ...prev]);
   };
@@ -611,6 +704,8 @@ ${activeMCPs.map(c => {
     let currentMessages = [...initialMessages, userMessage];
     let currentPrompt = fullPrompt;
     let turnCount = 0;
+    let lastFullResponse = '';
+    let hasCompletedSignal = false;
     const maxTurns = 10;
 
     try {
@@ -627,7 +722,10 @@ ${activeMCPs.map(c => {
           ollamaConfig,
           initialArtifact,
           (controller) => { abortControllerRef.current = controller; },
-          (log) => addContextLog(log, sessionId),
+          (log) => {
+            console.log('Adding context log for turn:', turnCount + 1);
+            addContextLog(log, sessionId);
+          },
           currentPrompt,
           webSearchEnabled,
           geminiApiKey,
@@ -640,6 +738,7 @@ ${activeMCPs.map(c => {
         for await (const chunk of stream) {
           if (chunk.text) {
             fullResponse = chunk.fullText;
+            lastFullResponse = fullResponse;
             const displayResponse = truncateAfterToolCall(fullResponse);
             setStreamingText(displayResponse);
             
@@ -648,6 +747,10 @@ ${activeMCPs.map(c => {
               setStreamingArtifact(partialArtifact as any);
             }
           }
+        }
+
+        if (fullResponse.toUpperCase().includes('COMPLETED:')) {
+          hasCompletedSignal = true;
         }
 
         if (!fullResponse.trim()) {
@@ -865,6 +968,14 @@ ${activeMCPs.map(c => {
 
       if (initialMessages.length === 0) {
         updateSession({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') }, sessionId);
+      }
+
+      // Auto-assemble if completed signal was detected in any turn
+      if (hasCompletedSignal) {
+        // Use a slightly longer timeout to ensure state updates have propagated
+        setTimeout(() => {
+          handleAssembleProject(sessionId);
+        }, 1000);
       }
 
     } catch (error: any) {

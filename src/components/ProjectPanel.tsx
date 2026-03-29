@@ -9,7 +9,8 @@ import {
   ChevronRight, 
   BookOpen, 
   History,
-  Info
+  Info,
+  Play
 } from 'lucide-react';
 import { cn } from '../utils';
 import { motion } from 'motion/react';
@@ -124,7 +125,7 @@ export const ProjectPanel: React.FC<ProjectPanelProps> = ({ project, artifacts, 
         </section>
 
         {/* Storage Section */}
-        <section className="pt-4 border-t border-zinc-100">
+        <section className="pt-4 border-t border-zinc-100 space-y-4">
           <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
             <FolderOpen size={12} />
             Root: {project.rootFolder}
