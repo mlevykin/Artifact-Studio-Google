@@ -88,6 +88,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   onAssemble,
   geminiApiKey
 }) => {
+  const [isStyleExpanded, setIsStyleExpanded] = useState(false);
   const [view, setView] = useState<'preview' | 'code' | 'log'>('preview');
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
@@ -636,22 +637,40 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             />
           )}
           {(pType === 'mermaid' || pType === 'markdown') && !isStreaming && onUpdateArtifact && (
-            <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
-              <div className="flex items-center gap-1 px-2 text-zinc-500">
-                <Palette size={14} />
-              </div>
-              <select 
-                value={artifact.mermaidStyleId || 'minimalist'}
-                onChange={(e) => onUpdateArtifact({ mermaidStyleId: e.target.value })}
-                className="bg-transparent text-xs font-medium text-zinc-700 outline-none pr-2 py-1 cursor-pointer"
+            !isStyleExpanded ? (
+              <button 
+                onClick={() => setIsStyleExpanded(true)}
+                className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-xl text-zinc-600 transition-all mr-2"
+                title="Show Style Selection"
               >
-                {MERMAID_STYLES.map(style => (
-                  <option key={style.id} value={style.id}>
-                    {style.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <Palette size={18} />
+              </button>
+            ) : (
+              <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
+                <div className="flex items-center gap-1 px-2 text-zinc-500">
+                  <Palette size={14} />
+                </div>
+                <select 
+                  value={artifact.mermaidStyleId || 'minimalist'}
+                  onChange={(e) => onUpdateArtifact({ mermaidStyleId: e.target.value })}
+                  className="bg-transparent text-xs font-medium text-zinc-700 outline-none pr-2 py-1 cursor-pointer"
+                >
+                  {MERMAID_STYLES.map(style => (
+                    <option key={style.id} value={style.id}>
+                      {style.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="h-4 w-[1px] bg-zinc-300 mx-0.5" />
+                <button 
+                  onClick={() => setIsStyleExpanded(false)}
+                  className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-white rounded-lg transition-all"
+                  title="Collapse"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )
           )}
 
           {view === 'code' && (

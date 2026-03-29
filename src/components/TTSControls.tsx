@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { TTSService } from '../services/ttsService';
-import { Play, Pause, Download, Volume2, Loader2, StopCircle } from 'lucide-react';
+import { Play, Pause, Download, Volume2, Loader2, StopCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils';
 
@@ -11,6 +11,7 @@ interface TTSControlsProps {
 }
 
 export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, className = "" }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -353,8 +354,20 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
     }
   };
 
+  if (!isExpanded) {
+    return (
+      <button 
+        onClick={() => setIsExpanded(true)}
+        className={cn("p-2 bg-zinc-100 hover:bg-zinc-200 rounded-xl text-zinc-600 transition-all", className)}
+        title="Show TTS Controls"
+      >
+        <Volume2 size={18} />
+      </button>
+    );
+  }
+
   return (
-    <div className={`flex items-center gap-1 bg-zinc-100 p-1 rounded-xl ${className}`}>
+    <div className={cn("flex items-center gap-1 bg-zinc-100 p-1 rounded-xl", className)}>
       <audio 
         ref={audioRef} 
         onEnded={handleGoogleAudioEnded} 
@@ -451,6 +464,16 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
           {currentGoogleChunkIndex + 1}/{googleChunks.length}
         </span>
       )}
+
+      <div className="h-4 w-[1px] bg-zinc-300 mx-0.5" />
+
+      <button 
+        onClick={() => setIsExpanded(false)}
+        className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-white rounded-lg transition-all"
+        title="Collapse"
+      >
+        <X size={14} />
+      </button>
     </div>
   );
 };
