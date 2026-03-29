@@ -12,6 +12,7 @@ interface TTSControlsProps {
 export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, className = "" }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [voice, setVoice] = useState<'Kore' | 'Fenrir' | 'Puck' | 'Charon' | 'Zephyr'>('Kore');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -40,15 +41,20 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
 
     try {
       setIsLoading(true);
+      setStatus("Generating...");
+      console.log("TTS: Starting generation with voice:", voice);
+      
       const base64Pcm = await TTSService.generateSpeech(text, { 
         voiceName: voice,
         apiKey: geminiApiKey 
       });
       
+      console.log("TTS: Audio data received, converting to WAV...");
       const wavBlob = TTSService.pcmToWav(base64Pcm);
       const url = URL.createObjectURL(wavBlob);
       
       setAudioUrl(url);
+      setStatus(null);
       
       if (audioRef.current) {
         audioRef.current.src = url;
@@ -57,7 +63,9 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
       }
     } catch (error) {
       console.error("TTS Playback Error:", error);
+      setStatus("Error");
       alert("Failed to generate speech. Please check your API key and network.");
+      setTimeout(() => setStatus(null), 3000);
     } finally {
       setIsLoading(false);
     }
@@ -83,15 +91,15 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
   };
 
   return (
-    <div className={`flex items-center gap-2 p-2 bg-zinc-50 rounded-lg border border-zinc-200 ${className}`}>
+    <div className={`flex items-center gap-1 bg-zinc-100 p-1 rounded-xl ${className}`}>
       <audio 
         ref={audioRef} 
         onEnded={() => setIsPlaying(false)} 
         className="hidden"
       />
       
-      <div className="flex items-center gap-1 mr-2">
-        <Volume2 size={16} className="text-zinc-500" />
+      <div className="flex items-center gap-1 px-2">
+        <Volume2 size={14} className="text-zinc-500" />
         <select 
           value={voice} 
           onChange={(e) => {
@@ -102,52 +110,66 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
               setAudioUrl(null);
             }
           }}
-          className="text-xs bg-transparent border-none focus:ring-0 cursor-pointer text-zinc-600 font-medium"
+          className="text-[11px] bg-transparent border-none focus:ring-0 cursor-pointer text-zinc-600 font-semibold p-0 h-auto leading-none"
           disabled={isLoading}
         >
-          <option value="Kore">Kore (Male)</option>
-          <option value="Fenrir">Fenrir (Male)</option>
-          <option value="Puck">Puck (Male)</option>
-          <option value="Charon">Charon (Male)</option>
-          <option value="Zephyr">Zephyr (Female)</option>
+          <option value="Kore">Kore</option>
+          <option value="Fenrir">Fenrir</option>
+          <option value="Puck">Puck</option>
+          <option value="Charon">Charon</option>
+          <option value="Zephyr">Zephyr</option>
         </select>
       </div>
 
-      <div className="h-4 w-[1px] bg-zinc-200 mx-1" />
+      <div className="h-4 w-[1px] bg-zinc-300 mx-0.5" />
 
-      <button
-        onClick={handlePlay}
-        disabled={isLoading || !text}
-        className="p-1.5 hover:bg-zinc-200 rounded-md transition-colors disabled:opacity-50"
-        title={isPlaying ? "Pause" : "Play"}
-      >
-        {isLoading ? (
-          <Loader2 size={18} className="animate-spin text-amber-600" />
-        ) : isPlaying ? (
-          <Pause size={18} className="text-amber-600 fill-amber-600" />
-        ) : (
-          <Play size={18} className="text-zinc-600 fill-zinc-600" />
-        )}
-      </button>
-
-      {isPlaying && (
+      <div className="flex items-center gap-0.5">
         <button
-          onClick={handleStop}
-          className="p-1.5 hover:bg-zinc-200 rounded-md transition-colors"
-          title="Stop"
+          onClick={handlePlay}
+          disabled={isLoading || !text}
+          className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all disabled:opacity-50"
+          title={isPlaying ? "Pause" : "Play"}
         >
-          <StopCircle size={18} className="text-zinc-600" />
+          {isLoading ? (
+            <div className="flex items-center gap-1.5">
+              <Loader2 size={14} className="animate-spin text-amber-600" />
+              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">Gen...</span>
+            </div>
+          ) : isPlaying ? (
+            <Pause size={14} className="text-amber-600 fill-amber-600" />
+          ) : (
+            <Play size={14} className="text-zinc-600 fill-zinc-600" />
+          )}
         </button>
-      )}
 
-      <button
-        onClick={handleDownload}
-        disabled={!audioUrl || isLoading}
-        className="p-1.5 hover:bg-zinc-200 rounded-md transition-colors disabled:opacity-50"
-        title="Download WAV"
-      >
-        <Download size={18} className={audioUrl ? "text-zinc-700" : "text-zinc-400"} />
-      </button>
+        <AnimatePresence>
+          {isPlaying && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={handleStop}
+              className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+              title="Stop"
+            >
+              <StopCircle size={14} className="text-zinc-600" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        <button
+          onClick={handleDownload}
+          disabled={!audioUrl || isLoading}
+          className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all disabled:opacity-50"
+          title="Download WAV"
+        >
+          <Download size={14} className={audioUrl ? "text-zinc-700" : "text-zinc-400"} />
+        </button>
+      </div>
+      
+      {status === "Error" && (
+        <span className="text-[9px] font-bold text-red-500 px-2 uppercase">Error</span>
+      )}
     </div>
   );
 };
