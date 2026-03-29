@@ -20,7 +20,8 @@ export const MULTI_CHAPTER_PROMPT = `
      - For each chapter, use a <thought> tag to describe your progress (e.g., "<thought>Generating Chapter 1: Introduction...</thought>").
 4. **Completion**:
    - Finish each response by stating your current progress and what's next.
-   - **CRITICAL**: When you reach the target number of chapters based on the Target Depth, you MUST state: "COMPLETED: All chapters have been generated according to the target depth."
+   - **CRITICAL**: You MUST only state "COMPLETED: All chapters have been generated according to the target depth." in the response that contains the ACTUAL CONTENT of the very last chapter. 
+   - **STRICT RULE**: Do NOT state "COMPLETED" if you are announcing a "Next Step" that involves generating another chapter. If there is a "Next Step" chapter, the project is NOT completed.
 5. **Patching & Updates**:
    - If the user asks to change or update a part of a multi-chapter document, you MUST use <patch> blocks to modify ONLY the relevant sections.
 6. **Final Assembly**:
