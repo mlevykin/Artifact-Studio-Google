@@ -149,7 +149,6 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         return;
       }
 
-      // If we already have the current chunk ready, just play
       if (audioRef.current && !isPlaying && googleAudioQueue[currentGoogleChunkIndex]) {
         audioRef.current.play();
         setIsPlaying(true);
@@ -161,7 +160,6 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         setStatus("Generating...");
         const googleVoiceName = voice.split(':')[1];
         
-        // Initialize chunks if not already done
         let chunks = googleChunks;
         if (chunks.length === 0) {
           chunks = splitTextForGoogle(text);
@@ -174,9 +172,6 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         }
 
         const index = currentGoogleChunkIndex;
-        console.log(`TTS: Starting Google playback for chunk ${index + 1}/${chunks.length}`);
-        
-        // Fetch first chunk if not in queue
         let url = googleAudioQueue[index];
         if (!url) {
           const base64Pcm = await TTSService.generateSpeech(chunks[index], { 
@@ -195,8 +190,6 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
           audioRef.current.src = url;
           audioRef.current.play();
           setIsPlaying(true);
-          
-          // Start pre-fetching next chunk immediately
           prefetchNextGoogleChunk(index + 1, chunks, googleVoiceName);
         }
       } catch (error) {
@@ -208,13 +201,16 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         setIsLoading(false);
       }
     } else {
-      // System Voice logic (already has chunking)
+      // System Voice logic with Windows resilience
       if (synthRef.current) {
         if (isPlaying) {
           synthRef.current.cancel();
           setIsPlaying(false);
           return;
         }
+
+        // Clear any pending speech
+        synthRef.current.cancel();
 
         const voiceIndex = parseInt(voice.split(':')[1]);
         const selectedVoice = systemVoices[voiceIndex];
@@ -245,36 +241,49 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
             }
           });
 
-          let currentChunkIndex = 0;
+          let currentIdx = 0;
+          setIsPlaying(true);
 
           const speakNextChunk = () => {
-            if (!synthRef.current || currentChunkIndex >= chunks.length) {
-              setIsPlaying(false);
+            if (!synthRef.current || currentIdx >= chunks.length || !isPlaying) {
+              if (currentIdx >= chunks.length) setIsPlaying(false);
               return;
             }
 
-            const utterance = new SpeechSynthesisUtterance(chunks[currentChunkIndex]);
+            const utterance = new SpeechSynthesisUtterance(chunks[currentIdx]);
             utterance.voice = selectedVoice;
+            utteranceRef.current = utterance;
             
-            utterance.onstart = () => setIsPlaying(true);
-            utterance.onend = () => {
-              if (isPlaying) {
-                currentChunkIndex++;
-                setTimeout(speakNextChunk, 100); // Slightly longer delay for stability
+            // Heartbeat hack for Chrome/Windows to prevent 15s timeout
+            const heartbeat = setInterval(() => {
+              if (synthRef.current?.speaking) {
+                synthRef.current.pause();
+                synthRef.current.resume();
+              } else {
+                clearInterval(heartbeat);
               }
+            }, 10000);
+
+            utterance.onend = () => {
+              clearInterval(heartbeat);
+              currentIdx++;
+              setTimeout(speakNextChunk, 100);
             };
+
             utterance.onerror = (event) => {
-              if (event.error !== 'interrupted' && event.error !== 'canceled') {
+              clearInterval(heartbeat);
+              if (event.error === 'interrupted') {
+                // If interrupted but we are still supposed to be playing, try to resume
+                console.log("SpeechSynthesis interrupted, attempting to continue...");
+                setTimeout(speakNextChunk, 100);
+              } else if (event.error !== 'canceled') {
                 console.error("SpeechSynthesis Error:", event);
                 setStatus("Error");
                 setTimeout(() => setStatus(null), 3000);
                 setIsPlaying(false);
-              } else {
-                console.log(`SpeechSynthesis ${event.error} (expected)`);
               }
             };
 
-            utteranceRef.current = utterance;
             synthRef.current.speak(utterance);
           };
 
