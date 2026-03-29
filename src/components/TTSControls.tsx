@@ -119,18 +119,65 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ text, geminiApiKey, cl
         const selectedVoice = systemVoices[voiceIndex];
         
         if (selectedVoice) {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.voice = selectedVoice;
-          
-          utterance.onstart = () => setIsPlaying(true);
-          utterance.onend = () => setIsPlaying(false);
-          utterance.onerror = (event) => {
-            console.error("SpeechSynthesis Error:", event);
-            setIsPlaying(false);
+          // Split text into smaller chunks to avoid length limits in some browsers
+          // We split by sentences but also ensure chunks aren't too long
+          const rawChunks = text.split(/([.!?]+[\s\n]+)/).reduce((acc: string[], curr, i) => {
+            if (i % 2 === 0) acc.push(curr);
+            else acc[acc.length - 1] += curr;
+            return acc;
+          }, []).filter(c => c.trim().length > 0);
+
+          // If a single chunk is still too long (> 200 chars), split it further by words
+          const chunks: string[] = [];
+          rawChunks.forEach(chunk => {
+            if (chunk.length > 200) {
+              const words = chunk.split(/\s+/);
+              let current = "";
+              words.forEach(word => {
+                if ((current + word).length > 200) {
+                  chunks.push(current.trim());
+                  current = word + " ";
+                } else {
+                  current += word + " ";
+                }
+              });
+              if (current.trim()) chunks.push(current.trim());
+            } else {
+              chunks.push(chunk.trim());
+            }
+          });
+
+          let currentChunkIndex = 0;
+
+          const speakNextChunk = () => {
+            if (!synthRef.current || currentChunkIndex >= chunks.length) {
+              setIsPlaying(false);
+              return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(chunks[currentChunkIndex]);
+            utterance.voice = selectedVoice;
+            
+            utterance.onstart = () => setIsPlaying(true);
+            utterance.onend = () => {
+              currentChunkIndex++;
+              // Small delay to prevent browser issues with rapid sequential calls
+              setTimeout(speakNextChunk, 50);
+            };
+            utterance.onerror = (event) => {
+              console.error("SpeechSynthesis Error:", event);
+              if (event.error !== 'interrupted' && event.error !== 'canceled') {
+                setStatus("Error");
+                setTimeout(() => setStatus(null), 3000);
+              }
+              setIsPlaying(false);
+            };
+
+            utteranceRef.current = utterance;
+            synthRef.current.speak(utterance);
           };
 
-          utteranceRef.current = utterance;
-          synthRef.current.speak(utterance);
+          speakNextChunk();
         }
       }
     }
