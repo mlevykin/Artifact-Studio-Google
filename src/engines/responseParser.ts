@@ -79,8 +79,11 @@ export function parseArtifacts(text: string): { type: string; title: string; con
     const idMatch = attrString.match(/id="([^"]+)"/);
     
     if (typeMatch && titleMatch) {
+      let type = typeMatch[1].toLowerCase();
+      if (type === 'text/markdown') type = 'markdown';
+      
       artifacts.push({
-        type: typeMatch[1],
+        type,
         title: titleMatch[1],
         id: idMatch ? idMatch[1] : undefined,
         content
@@ -104,26 +107,29 @@ export function parsePartialArtifact(text: string): { type: string; title: strin
     lastMatch = match;
   }
   
-  if (lastMatch) {
-    const attrString = lastMatch[1];
-    const typeMatch = attrString.match(/type="([^"]*)"?/);
-    const titleMatch = attrString.match(/title="([^"]*)"?/);
-    const idMatch = attrString.match(/id="([^"]*)"?/);
+    if (lastMatch) {
+      const attrString = lastMatch[1];
+      const typeMatch = attrString.match(/type="([^"]*)"?/);
+      const titleMatch = attrString.match(/title="([^"]*)"?/);
+      const idMatch = attrString.match(/id="([^"]*)"?/);
 
-    const startIndex = lastMatch.index + lastMatch[0].length;
-    const remaining = text.substring(startIndex);
-    const endIndex = remaining.indexOf('</artifact>');
-    
-    const content = endIndex !== -1 ? remaining.substring(0, endIndex) : remaining;
-    
-    return {
-      type: typeMatch ? typeMatch[1] : '',
-      title: titleMatch ? titleMatch[1] : '',
-      id: idMatch ? idMatch[1] : undefined,
-      content: content,
-      isComplete: endIndex !== -1
-    };
-  }
+      let type = typeMatch ? typeMatch[1].toLowerCase() : '';
+      if (type === 'text/markdown') type = 'markdown';
+
+      const startIndex = lastMatch.index + lastMatch[0].length;
+      const remaining = text.substring(startIndex);
+      const endIndex = remaining.indexOf('</artifact>');
+      
+      const content = endIndex !== -1 ? remaining.substring(0, endIndex) : remaining;
+      
+      return {
+        type,
+        title: titleMatch ? titleMatch[1] : '',
+        id: idMatch ? idMatch[1] : undefined,
+        content: content,
+        isComplete: endIndex !== -1
+      };
+    }
   
   return null;
 }

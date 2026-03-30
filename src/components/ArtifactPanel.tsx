@@ -133,8 +133,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       return 'text';
     }
     if (!artifact) return 'text';
-    const type = artifact.type;
-    if (type === 'markdown') return 'markdown';
+    const type = artifact.type.toLowerCase();
+    if (type === 'markdown' || type === 'text/markdown') return 'markdown';
     return type || 'text';
   };
   const pType = getPreviewType();
@@ -236,7 +236,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       
       if (artifact) {
         // For single artifacts, save them in an 'artifacts' folder
-        const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
+        const type = artifact.type.toLowerCase();
+        const ext = (type === 'markdown' || type === 'text/markdown' || type === 'md') ? 'md' : type === 'mermaid' ? 'mmd' : type;
         const path = sessionId 
           ? `artifacts/${sessionId}/${artifact.title}.${ext}` 
           : `artifacts/${artifact.title}.${ext}`;
@@ -381,7 +382,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
   React.useEffect(() => {
     if (artifact) {
-      const ext = artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type;
+      const type = artifact.type.toLowerCase();
+      const ext = (type === 'markdown' || type === 'text/markdown' || type === 'md') ? 'md' : type === 'mermaid' ? 'mmd' : type;
       const defaultPath = sessionId ? `artifacts/${sessionId}/${artifact.title}.${ext}` : `artifacts/${artifact.title}.${ext}`;
 
       // If we already have a selection that is part of this artifact, update its content
@@ -789,9 +791,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 kind: 'directory',
                 path: '',
                 children: [{ 
-                      name: `${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`, 
+                      name: `${artifact.title}.${(artifact.type.toLowerCase() === 'markdown' || artifact.type.toLowerCase() === 'text/markdown' || artifact.type.toLowerCase() === 'md') ? 'md' : artifact.type.toLowerCase() === 'mermaid' ? 'mmd' : artifact.type.toLowerCase()}`, 
                       kind: 'file',
-                      path: `artifacts/${artifact.title}.${artifact.type === 'mermaid' ? 'mmd' : artifact.type === 'markdown' ? 'md' : artifact.type}`
+                      path: `artifacts/${artifact.title}.${(artifact.type.toLowerCase() === 'markdown' || artifact.type.toLowerCase() === 'text/markdown' || artifact.type.toLowerCase() === 'md') ? 'md' : artifact.type.toLowerCase() === 'mermaid' ? 'mmd' : artifact.type.toLowerCase()}`
                     }]
               }}
               selectedFile={selectedFilePath}

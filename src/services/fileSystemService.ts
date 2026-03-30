@@ -216,7 +216,9 @@ export async function saveArtifact(rootHandle: any, sessionId: string, artifact:
 
     let targetDir = sessionDir;
     const title = artifact.title.trim().toLowerCase();
-    let filename = `${sanitizeFilename(artifact.title)}.${artifact.type === 'markdown' ? 'md' : artifact.type}`;
+    const type = artifact.type.toLowerCase();
+    const extension = (type === 'markdown' || type === 'text/markdown' || type === 'md') ? 'md' : type;
+    let filename = `${sanitizeFilename(artifact.title)}.${extension}`;
 
     // Map technical artifacts to standard filenames
     if (title === 'glossary' || title.includes('глоссарий')) {

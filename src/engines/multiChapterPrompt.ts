@@ -8,8 +8,8 @@ export const MULTI_CHAPTER_PROMPT = `
    - 4: Comprehensive book (8-12 chapters)
    - 5: Exhaustive documentation (12+ chapters)
 3. **Process & Thought Sequence**:
-   - **MANDATORY**: For the Table of Contents, generate a markdown artifact with the title "Table of Contents".
-   - **MANDATORY**: For EVERY chapter or section, you MUST generate it as a SEPARATE markdown artifact.
+   - **MANDATORY**: For the Table of Contents, generate a markdown artifact (type="markdown") with the title "Table of Contents".
+   - **MANDATORY**: For EVERY chapter or section, you MUST generate it as a SEPARATE markdown artifact (type="markdown").
    - **STRICT RULE**: Generate ONLY ONE chapter per response. This is a hard constraint to ensure maximum detail and quality for each section.
      - **Title Format**: "Chapter X: [Title]" (e.g., "Chapter 1: Introduction").
      - **Sub-section Numbering**: Within each chapter, you MUST use hierarchical numbering for sub-sections. Instead of "1.", "2.", "3.", use "[Chapter Number].[Section Number]" (e.g., "4.1", "4.2", "4.3" for Chapter 4).
@@ -29,9 +29,9 @@ export const MULTI_CHAPTER_PROMPT = `
      - Example: <patch title="Chapter 1: Introduction"> ... </patch>
    - **NO CHAT OUTPUT**: NEVER write chapter content or document updates directly in the chat text. ALL structured content MUST be in <artifact> or <patch> tags.
 6. **Context Management & Continuity**:
-   - **Compressed Knowledge Graph (Glossary)**: After generating the TOC, you MUST generate a markdown artifact titled "Glossary".
+   - **Compressed Knowledge Graph (Glossary)**: After generating the TOC, you MUST generate a markdown artifact titled "Glossary" (type="markdown").
      - It should contain key terms, definitions, and technical decisions.
-   - **Cumulative Summary**: After generating the TOC, you MUST generate a markdown artifact titled "Cumulative Summary".
+   - **Cumulative Summary**: After generating the TOC, you MUST generate a markdown artifact titled "Cumulative Summary" (type="markdown").
      - It should contain a high-level overview of the project's progress.
    - **Iterative Updates**: After generating EACH chapter, you MUST also generate UPDATED versions of the "Glossary" and "Cumulative Summary" in the SAME response.
      - The "Glossary" should be updated with new entities or facts introduced in the chapter.
