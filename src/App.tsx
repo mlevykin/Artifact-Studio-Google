@@ -491,7 +491,7 @@ export default function App() {
              title.startsWith('toc:');
     });
 
-    // Filter out TOC and existing Final Documents for the chapters list
+    // Filter out TOC, technical artifacts, and existing Final Documents for the chapters list
     const chapters = artifacts.filter(a => {
       const title = a.title.toLowerCase();
       const isToc = title.includes('table of contents') || 
@@ -503,13 +503,29 @@ export default function App() {
                       title.includes('assembled document') ||
                       title.includes('итоговый документ');
       const isSystem = a.id === 'workspace-explorer' || a.id === 'streaming';
+      const isTechnical = title === 'glossary' || 
+                          title === 'cumulative summary' || 
+                          title === 'summary' ||
+                          title === 'style guide' ||
+                          title === 'manifest';
       
-      return !isToc && !isFinal && !isSystem;
+      return !isToc && !isFinal && !isSystem && !isTechnical;
     });
     
-    console.log('Found chapters:', chapters.map(a => a.title));
+    // Group chapters by title and take the latest version/timestamp
+    const latestChaptersMap = new Map<string, Artifact>();
+    chapters.forEach(chapter => {
+      const existing = latestChaptersMap.get(chapter.title);
+      if (!existing || (chapter.version > existing.version) || (chapter.version === existing.version && chapter.timestamp > existing.timestamp)) {
+        latestChaptersMap.set(chapter.title, chapter);
+      }
+    });
     
-    if (chapters.length === 0) {
+    const uniqueChapters = Array.from(latestChaptersMap.values());
+    
+    console.log('Found unique chapters:', uniqueChapters.map(a => a.title));
+    
+    if (uniqueChapters.length === 0) {
       console.warn('No chapters found to assemble.');
       return;
     }
@@ -521,7 +537,7 @@ export default function App() {
     };
     
     // Sort chapters by their numeric value to get them in order regardless of language (Chapter 1, Глава 2)
-    const sortedChapters = [...chapters].sort((a, b) => getChapterNumber(a.title) - getChapterNumber(b.title));
+    const sortedChapters = [...uniqueChapters].sort((a, b) => getChapterNumber(a.title) - getChapterNumber(b.title));
     
     let finalContent = '';
     
