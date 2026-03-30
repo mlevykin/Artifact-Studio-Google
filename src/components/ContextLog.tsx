@@ -111,6 +111,12 @@ export const ContextLog: React.FC<ContextLogProps> = ({ logs }) => {
                         <Hash size={10} />
                         {log.response.usageMetadata?.totalTokenCount || 'N/A'} tokens
                       </div>
+                      {log.response.text && (
+                        <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+                          <MessageSquare size={10} />
+                          {log.response.text.length} chars
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -217,7 +223,7 @@ export const ContextLog: React.FC<ContextLogProps> = ({ logs }) => {
                             >
                               <div className="p-2 space-y-2 bg-white">
                                 <div className="space-y-1">
-                                  <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-tighter">Generated Text</div>
+                                  <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-tighter">Generated Text ({log.response.text?.length || 0} chars)</div>
                                   <pre className="p-2 bg-zinc-50 text-[10px] font-mono text-zinc-600 rounded border border-zinc-100 whitespace-pre-wrap max-h-80 overflow-y-auto">
                                     {log.response.text}
                                   </pre>
