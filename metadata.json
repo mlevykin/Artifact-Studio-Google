@@ -1,5 +1,5 @@
 {
   "name": "AI Artifact Studio",
-  "description": "A professional environment for generating, editing, and versioning artifacts (Mermaid, HTML, Markdown, SVG) using LLMs with real-time streaming and fuzzy patching.",
+  "description": "A professional environment for generating, editing, and versioning artifacts (Excalidraw, Mermaid, HTML, Markdown, SVG) using LLMs with real-time streaming and fuzzy patching.",
   "requestFramePermissions": []
 }
