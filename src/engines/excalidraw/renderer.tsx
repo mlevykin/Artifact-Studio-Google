@@ -81,17 +81,29 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
         svg.appendChild(img);
       }
 
-      // Add text with better centering
+      // Add text with better centering and multi-line support
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', textX.toString());
-      text.setAttribute('y', (y + 4).toString());
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'middle');
       text.setAttribute('font-family', '"Inter", sans-serif');
       text.setAttribute('font-size', '14px');
       text.setAttribute('font-weight', '500');
       text.setAttribute('fill', style.stroke ?? '#18181b');
-      text.textContent = label;
+      
+      const lines = label.split('\n');
+      const lineHeight = 18;
+      const startY = y - ((lines.length - 1) * lineHeight) / 2;
+      
+      lines.forEach((line, i) => {
+        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        tspan.setAttribute('x', textX.toString());
+        tspan.setAttribute('dy', i === 0 ? '0' : lineHeight.toString());
+        tspan.textContent = line;
+        text.appendChild(tspan);
+      });
+      
+      text.setAttribute('y', (startY + 4).toString());
       svg.appendChild(text);
     }
 

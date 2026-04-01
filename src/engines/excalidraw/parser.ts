@@ -56,7 +56,7 @@ export function parseExcalidraw(text: string): Graph {
     const nodeMatch = line.match(nodeDefRegex);
     if (nodeMatch) {
       const [, id, rectLabel, ellipseLabel, diamondLabel, styleStr] = nodeMatch;
-      let label = rectLabel || ellipseLabel || diamondLabel || '';
+      let label = (rectLabel || ellipseLabel || diamondLabel || '').replace(/\\n/g, '\n');
       let type: NodeType = 'rectangle';
       if (diamondLabel !== undefined) type = 'diamond';
       if (ellipseLabel !== undefined) type = 'ellipse';

@@ -5,21 +5,25 @@ export function layoutGraph(graph: Graph): Graph {
   const g = new dagre.graphlib.Graph();
   g.setGraph({ 
     rankdir: graph.direction || 'TB', 
-    marginx: 40, 
-    marginy: 40,
-    nodesep: 120,
-    ranksep: 140
+    marginx: 20, 
+    marginy: 20,
+    nodesep: 100,
+    ranksep: 120
   });
   g.setDefaultEdgeLabel(() => ({}));
 
   // Add nodes to dagre
   for (const node of graph.nodes) {
-    // Better width calculation to avoid text touching borders
-    let width = Math.max(120, node.label.length * 12 + 40);
+    const lines = node.label.split('\n');
+    const maxLineLength = Math.max(...lines.map(l => l.length));
+    
+    // Aim for more square-like proportions
+    let width = Math.max(100, maxLineLength * 10 + 40);
     if (node.style?.icon) {
       width += 30; // Extra space for icon
     }
-    const height = 60;
+    
+    const height = Math.max(60, lines.length * 20 + 30);
     g.setNode(node.id, { width, height });
   }
 
