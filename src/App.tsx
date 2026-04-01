@@ -1491,6 +1491,7 @@ ${activeMCPs.map(c => {
             selectedFilePath={currentSession?.selectedFilePath || null}
             onFileSelect={(path) => updateSession({ selectedFilePath: path })}
             sessionId={currentSession?.id}
+            folderName={folders.find(f => f.id === currentSession?.folderId)?.name}
             streamingText={streamingText}
             onUpdateArtifact={(updates) => displayArtifact && displayArtifact.id !== 'workspace-explorer' && displayArtifact.id !== 'streaming' && updateArtifact(displayArtifact.id, updates)}
             contextLogs={currentSession?.contextLogs || []}

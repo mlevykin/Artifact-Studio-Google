@@ -99,9 +99,16 @@ async function ensureMetadataDir(rootHandle: any) {
 }
 
 function sanitizeFilename(name: string): string {
-  // Allow Cyrillic, spaces, dots, and common symbols, but remove illegal filesystem characters
-  // Illegal: \ / : * ? " < > |
-  return name.replace(/[\\/:*?"<>|]/g, '_').trim();
+  if (!name) return 'unnamed';
+  // Remove illegal filesystem characters: \ / : * ? " < > |
+  // Also remove control characters and other problematic symbols
+  // eslint-disable-next-line no-control-regex
+  return name
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/[\x00-\x1f\x80-\x9f]/g, '_')
+    .replace(/^\.+|\.+$/g, '') // Remove leading/trailing dots
+    .trim()
+    .slice(0, 255) || 'unnamed'; // Max filename length, fallback if empty
 }
 
 export async function saveAppState(rootHandle: any, key: string, data: any) {
@@ -275,6 +282,8 @@ export async function saveArtifact(rootHandle: any, sessionId: string, artifact:
 
 export async function moveSessionArtifacts(rootHandle: any, sessionId: string, oldFolderName: string | null, newFolderName: string | null) {
   try {
+    console.log(`FS: Moving session ${sessionId} from "${oldFolderName || 'root'}" to "${newFolderName || 'root'}"`);
+
     const artifactsDir = await rootHandle.getDirectoryHandle('artifacts', { create: true });
     
     let oldBaseDir = artifactsDir;
@@ -282,7 +291,7 @@ export async function moveSessionArtifacts(rootHandle: any, sessionId: string, o
       try {
         oldBaseDir = await artifactsDir.getDirectoryHandle(sanitizeFilename(oldFolderName));
       } catch (e) {
-        // Old folder might not exist if no artifacts were saved yet
+        console.warn(`FS: Old folder "${oldFolderName}" not found, skipping move for session ${sessionId}`);
         return;
       }
     }
@@ -291,7 +300,7 @@ export async function moveSessionArtifacts(rootHandle: any, sessionId: string, o
     try {
       sessionDir = await oldBaseDir.getDirectoryHandle(sessionId);
     } catch (e) {
-      // Session folder might not exist yet
+      console.warn(`FS: Session directory ${sessionId} not found in "${oldFolderName || 'root'}", skipping move`);
       return;
     }
 
@@ -301,10 +310,6 @@ export async function moveSessionArtifacts(rootHandle: any, sessionId: string, o
     }
 
     // Move the session directory
-    // Since we can't move directories easily, we'll just leave it for now or implement recursive copy
-    // For simplicity in this environment, let's just create the new one and the next save will go there.
-    // Actually, the user wants it to move.
-    
     async function copyDir(src: any, dest: any) {
       // @ts-ignore
       for await (const entry of src.values()) {
@@ -324,6 +329,25 @@ export async function moveSessionArtifacts(rootHandle: any, sessionId: string, o
     const newSessionDir = await newBaseDir.getDirectoryHandle(sessionId, { create: true });
     await copyDir(sessionDir, newSessionDir);
     await oldBaseDir.removeEntry(sessionId, { recursive: true });
+    console.log(`FS: Successfully moved session ${sessionId} to "${newFolderName || 'root'}"`);
+
+    // If oldBaseDir is now empty and it's not the root artifacts dir, remove it
+    if (oldFolderName) {
+      try {
+        let isEmpty = true;
+        // @ts-ignore
+        for await (const _ of oldBaseDir.values()) {
+          isEmpty = false;
+          break;
+        }
+        if (isEmpty) {
+          console.log(`FS: Removing now-empty folder "${oldFolderName}"`);
+          await artifactsDir.removeEntry(sanitizeFilename(oldFolderName));
+        }
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+    }
 
   } catch (err) {
     console.error(`Failed to move session artifacts for ${sessionId}:`, err);
@@ -421,17 +445,20 @@ export async function writeProjectToDirectory(
       const fileName = pathParts.pop()!;
       let currentDir = directoryHandle;
 
-      const sanitizeName = (name: string) => name.replace(/[<>:"/\\|?*]/g, '_');
-
       // Create subdirectories if they don't exist
       for (const part of pathParts) {
-        if (!part || part === '.') continue;
-        const sanitizedPart = sanitizeName(part);
+        if (!part || part === '.' || part === '..') continue;
+        const sanitizedPart = sanitizeFilename(part);
+        if (!sanitizedPart || sanitizedPart === '.' || sanitizedPart === '..') continue;
         currentDir = await currentDir.getDirectoryHandle(sanitizedPart, { create: true });
       }
 
       // Write the file
-      const sanitizedFileName = sanitizeName(fileName);
+      const sanitizedFileName = sanitizeFilename(fileName);
+      if (!sanitizedFileName) {
+        console.warn(`FS: Skipping file with empty sanitized name: ${file.path}`);
+        continue;
+      }
       const fileHandle = await currentDir.getFileHandle(sanitizedFileName, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(file.content);

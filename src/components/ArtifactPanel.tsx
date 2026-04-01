@@ -54,6 +54,7 @@ interface ArtifactPanelProps {
   selectedFilePath: string | null;
   onFileSelect: (path: string) => void;
   sessionId?: string | null;
+  folderName?: string | null;
   onUpdateArtifact?: (updates: Partial<Artifact>) => void;
   contextLogs?: ContextLogEntry[];
   project?: ProjectConfig | null;
@@ -80,6 +81,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   selectedFilePath,
   onFileSelect,
   sessionId,
+  folderName,
   onUpdateArtifact,
   contextLogs = [],
   project = null,
@@ -238,9 +240,16 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         // For single artifacts, save them in an 'artifacts' folder
         const type = artifact.type.toLowerCase();
         const ext = (type === 'markdown' || type === 'text/markdown' || type === 'md') ? 'md' : type === 'mermaid' ? 'mmd' : type;
-        const path = sessionId 
-          ? `artifacts/${sessionId}/${artifact.title}.${ext}` 
-          : `artifacts/${artifact.title}.${ext}`;
+        
+        let path = '';
+        if (sessionId) {
+          path = folderName 
+            ? `artifacts/${folderName}/${sessionId}/${artifact.title}.${ext}`
+            : `artifacts/${sessionId}/${artifact.title}.${ext}`;
+        } else {
+          path = `artifacts/${artifact.title}.${ext}`;
+        }
+
         filesToSync = [{ 
           path, 
           content: artifact.content 
