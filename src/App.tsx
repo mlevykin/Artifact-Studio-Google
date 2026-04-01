@@ -247,6 +247,17 @@ export default function App() {
         setCurrentSessionId(savedSessions[0].id);
       }
       lastSavedRef.current['sessions'] = JSON.stringify(savedSessions, null, 2);
+      
+      // Populate lastSavedRef for individual artifacts to prevent redundant saves on startup
+      for (const session of savedSessions) {
+        if (!session.artifacts) continue;
+        for (const artifact of session.artifacts) {
+          const artKey = `artifact-${session.id}-${artifact.id}`;
+          const artVersionKey = `${artKey}-v${artifact.version}`;
+          lastSavedRef.current[artKey] = artifact.content;
+          lastSavedRef.current[artVersionKey] = artifact.content;
+        }
+      }
     }
 
     const savedSkills = await loadAppState(handle, 'skills');
