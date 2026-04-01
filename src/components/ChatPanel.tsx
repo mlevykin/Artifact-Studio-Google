@@ -31,6 +31,7 @@ import { Message, Attachment, Skill, MCPConfig, ContextSettings } from '../types
 import { cn, generateId } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { MermaidPreview } from './MermaidPreview';
+import { ExcalidrawDiagram } from './ExcalidrawDiagram';
 import { 
   stripArtifactsAndPatches, 
   parseThought, 
@@ -557,6 +558,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                               code({ node, inline, className, children, ...props }: any) {
                                 const match = /language-(\w+)/.exec(className || '');
                                 const isMermaid = match && match[1] === 'mermaid';
+                                const isExcalidraw = match && match[1] === 'excalidraw';
                                 
                                 if (!inline && isMermaid) {
                                   return (
@@ -564,6 +566,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                       <MermaidPreview 
                                         content={String(children).replace(/\n$/, '')} 
                                         className="w-fit max-w-full mx-auto !p-4 !shadow-none !rounded-none !min-h-0"
+                                      />
+                                    </div>
+                                  );
+                                }
+
+                                if (!inline && isExcalidraw) {
+                                  return (
+                                    <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                                      <ExcalidrawDiagram 
+                                        code={String(children).replace(/\n$/, '')} 
                                       />
                                     </div>
                                   );
@@ -745,6 +757,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                         code({ node, inline, className, children, ...props }: any) {
                           const match = /language-(\w+)/.exec(className || '');
                           const isMermaid = match && match[1] === 'mermaid';
+                          const isExcalidraw = match && match[1] === 'excalidraw';
                           
                           if (!inline && isMermaid) {
                             return (
@@ -752,6 +765,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                 <MermaidPreview 
                                   content={String(children).replace(/\n$/, '')} 
                                   className="w-fit max-w-full mx-auto !p-4 !shadow-none !rounded-none !min-h-0"
+                                />
+                              </div>
+                            );
+                          }
+
+                          if (!inline && isExcalidraw) {
+                            return (
+                              <div className="my-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                                <ExcalidrawDiagram 
+                                  code={String(children).replace(/\n$/, '')} 
                                 />
                               </div>
                             );

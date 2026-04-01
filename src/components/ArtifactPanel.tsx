@@ -26,6 +26,7 @@ import { Artifact, ProjectFile, ContextLogEntry, ProjectConfig } from '../types'
 import { ProjectPanel } from './ProjectPanel';
 import { cn } from '../utils';
 import { MermaidPreview } from './MermaidPreview';
+import { ExcalidrawDiagram } from './ExcalidrawDiagram';
 import { MERMAID_STYLES } from '../constants/mermaidStyles';
 import { HtmlPreview } from './HtmlPreview';
 import { ZoomableContainer } from './ZoomableContainer';
@@ -155,6 +156,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     code({ node, inline, className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || '');
       const isMermaid = match && match[1] === 'mermaid';
+      const isExcalidraw = match && match[1] === 'excalidraw';
       
       if (!inline && isMermaid) {
         return (
@@ -163,6 +165,16 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
               content={children ? String(children).replace(/\n$/, '') : ''} 
               className="w-fit max-w-full mx-auto !p-4 !shadow-none !rounded-none !min-h-0"
               styleId={artifact?.mermaidStyleId}
+            />
+          </div>
+        );
+      }
+
+      if (!inline && isExcalidraw) {
+        return (
+          <div className="my-6 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+            <ExcalidrawDiagram 
+              code={children ? String(children).replace(/\n$/, '') : ''} 
             />
           </div>
         );
