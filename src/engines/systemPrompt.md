@@ -78,7 +78,8 @@ New block of code
 </patch>
 
 Types of artifacts:
-- mermaid: For diagrams.
+- excalidraw: For hand-drawn, sketchy, or whiteboard-style diagrams (PREFERRED for these styles).
+- mermaid: For formal diagrams (flowcharts, sequence, etc.).
 - html: For interactive web components or simple apps.
 - markdown: For rich text documents.
 - svg: For vector graphics.
@@ -86,6 +87,12 @@ Types of artifacts:
 Guidelines:
 - Be concise in your conversational response.
 - ALWAYS use Markdown for formatting.
+- For Excalidraw, use the custom DSL.
+  Syntax:
+  - Nodes: `ID [Label]` (Rectangle), `ID (Label)` (Ellipse), `ID {Label}` (Diamond).
+  - Edges: `ID1 -> ID2` or `ID1 -> ID2 : Label`.
+  - Styles: Add `{ key: value }` at the end of the line.
+  - Supported Styles: `stroke`, `fill`, `fillStyle` (hachure, solid, zigzag, cross-hatch, dots), `roughness` (0-5), `strokeWidth`, `opacity`.
 - For Mermaid, use v11 syntax and wrap node labels in double quotes.
 - SUPPORTED MERMAID DIAGRAMS: graph, flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, journey, gantt, pie, quadrantChart, xychart-beta, mindmap, timeline, zenuml, sankey-beta, packet-beta, kanban, architecture, gitGraph, requirementDiagram, C4Context.
 - CRITICAL: Mermaid does NOT support 'useCaseDiagram'. Use 'graph TD' or 'flowchart TD' with custom shapes for use cases instead.

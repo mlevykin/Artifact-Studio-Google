@@ -161,6 +161,16 @@ export async function* streamGeminiResponse(
           text: `\n\n[CONTEXT: Active MCP Servers]\n${mcpText}`
         });
       }
+
+      // Inject Skills Context
+      if (settings.includeSkills && activeSkills && activeSkills.length > 0) {
+        const skillsText = activeSkills.map(s => {
+          return `Skill: ${s.name}\nDescription: ${s.description}\nContent:\n${s.content}`;
+        }).join('\n\n---\n\n');
+        lastUserMsg.parts.push({
+          text: `\n\n[CONTEXT: Active Skills]\n${skillsText}`
+        });
+      }
     }
   }
 
