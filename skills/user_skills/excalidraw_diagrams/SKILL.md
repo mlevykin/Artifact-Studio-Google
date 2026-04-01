@@ -3,9 +3,9 @@ name: Excalidraw Diagrams
 description: Guidelines for creating hand-drawn style diagrams using a custom text-based DSL within excalidraw code blocks. Use this for architectural schemas, flowcharts, and diagrams that require a sketchy, hand-drawn aesthetic.
 ---
 
-# Excalidraw Diagram DSL
+# Excalidraw Diagram DSL (NATIVE SUPPORT ENABLED)
 
-Use the `excalidraw` language identifier in Markdown code blocks to render hand-drawn style diagrams.
+**IMPORTANT:** This environment HAS a custom renderer for `excalidraw` code blocks. You MUST use `excalidraw` instead of `mermaid` when the user asks for Excalidraw, hand-drawn, or sketchy diagrams. DO NOT fallback to Mermaid.
 
 ## Syntax
 
