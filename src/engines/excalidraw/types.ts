@@ -1,5 +1,14 @@
 export type NodeType = 'rectangle' | 'diamond' | 'ellipse';
 
+export interface NodeStyle {
+  stroke?: string;
+  fill?: string;
+  fillStyle?: 'hachure' | 'solid' | 'zigzag' | 'cross-hatch' | 'dots' | 'dashed';
+  strokeWidth?: number;
+  roughness?: number;
+  opacity?: number;
+}
+
 export interface Node {
   id: string;
   label: string;
@@ -8,6 +17,7 @@ export interface Node {
   y?: number;
   width?: number;
   height?: number;
+  style?: NodeStyle;
 }
 
 export interface Edge {
@@ -15,6 +25,12 @@ export interface Edge {
   to: string;
   label?: string;
   points?: { x: number; y: number }[];
+  style?: {
+    stroke?: string;
+    strokeWidth?: number;
+    roughness?: number;
+    strokeLineDash?: number[];
+  };
 }
 
 export interface Graph {

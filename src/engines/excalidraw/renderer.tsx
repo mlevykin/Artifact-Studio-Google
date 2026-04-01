@@ -25,7 +25,7 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
 
     // Draw nodes
     for (const node of graph.nodes) {
-      const { x = 0, y = 0, width = 100, height = 50, label, type } = node;
+      const { x = 0, y = 0, width = 100, height = 50, label, type, style = {} } = node;
       const left = x - width / 2;
       const top = y - height / 2;
 
@@ -34,6 +34,15 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
       maxX = Math.max(maxX, left + width);
       maxY = Math.max(maxY, top + height);
 
+      const options = {
+        roughness: style.roughness ?? 1.5,
+        stroke: style.stroke ?? '#3f3f46',
+        strokeWidth: style.strokeWidth ?? 1.5,
+        fill: style.fill,
+        fillStyle: style.fillStyle ?? 'hachure',
+        opacity: style.opacity ?? 1
+      };
+
       let shape;
       if (type === 'diamond') {
         shape = rc.polygon([
@@ -41,22 +50,22 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
           [left + width, y],
           [x, top + height],
           [left, y]
-        ], { roughness: 1.5, stroke: '#3f3f46', strokeWidth: 1.5 });
+        ], options);
       } else if (type === 'ellipse') {
-        shape = rc.ellipse(x, y, width, height, { roughness: 1.5, stroke: '#3f3f46', strokeWidth: 1.5 });
+        shape = rc.ellipse(x, y, width, height, options);
       } else {
-        shape = rc.rectangle(left, top, width, height, { roughness: 1.5, stroke: '#3f3f46', strokeWidth: 1.5 });
+        shape = rc.rectangle(left, top, width, height, options);
       }
       svg.appendChild(shape);
 
-      // Add text (using standard SVG text for now)
+      // Add text
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', x.toString());
       text.setAttribute('y', (y + 5).toString());
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('font-family', 'Inter, sans-serif');
       text.setAttribute('font-size', '14px');
-      text.setAttribute('fill', '#18181b');
+      text.setAttribute('fill', style.stroke ?? '#18181b');
       text.textContent = label;
       svg.appendChild(text);
     }
@@ -66,8 +75,16 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
       const points = edge.points || [];
       if (points.length < 2) continue;
 
+      const style = edge.style || {};
+      const options = {
+        roughness: style.roughness ?? 1.2,
+        stroke: style.stroke ?? '#71717a',
+        strokeWidth: style.strokeWidth ?? 1.2,
+        strokeLineDash: style.strokeLineDash
+      };
+
       const pathPoints: [number, number][] = points.map(p => [p.x, p.y]);
-      const shape = rc.curve(pathPoints, { roughness: 1.2, stroke: '#71717a', strokeWidth: 1.2 });
+      const shape = rc.curve(pathPoints, options);
       svg.appendChild(shape);
 
       // Draw arrow head
@@ -80,7 +97,7 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
         [last.x, last.y],
         [last.x - arrowSize * Math.cos(angle + Math.PI / 6), last.y - arrowSize * Math.sin(angle + Math.PI / 6)]
       ];
-      const arrow = rc.linearPath(arrowPoints, { roughness: 1, stroke: '#71717a', strokeWidth: 1.2 });
+      const arrow = rc.linearPath(arrowPoints, options);
       svg.appendChild(arrow);
 
       // Edge label
