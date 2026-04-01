@@ -5,7 +5,7 @@ description: Guidelines for creating hand-drawn style diagrams using a custom te
 
 # Excalidraw Diagram DSL (NATIVE SUPPORT ENABLED)
 
-**IMPORTANT:** This environment HAS a custom renderer for `excalidraw` code blocks. You MUST use `excalidraw` instead of `mermaid` when the user asks for Excalidraw, hand-drawn, or sketchy diagrams. DO NOT fallback to Mermaid.
+**NOTE:** This environment has a custom renderer for `excalidraw` code blocks. You can use `excalidraw` for hand-drawn, sketchy, or whiteboard-style diagrams. For formal diagrams, you may still use `mermaid`.
 
 ## Syntax
 
@@ -68,5 +68,4 @@ API -> Service : Process
 ## Best Practices
 - Keep IDs short and alphanumeric (e.g., `User`, `AuthSvc`, `db1`).
 - Use labels for human-readable text.
-- Prefer `excalidraw` over `mermaid` when the user asks for "Excalidraw style", "hand-drawn", or "sketchy" diagrams.
 - The layout engine (dagre) automatically positions nodes, so you don't need to specify coordinates.

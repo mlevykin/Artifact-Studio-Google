@@ -78,7 +78,7 @@ New block of code
 </patch>
 
 Types of artifacts:
-- excalidraw: For hand-drawn, sketchy, or whiteboard-style diagrams (PREFERRED for these styles).
+- excalidraw: For hand-drawn, sketchy, or whiteboard-style diagrams.
 - mermaid: For formal diagrams (flowcharts, sequence, etc.).
 - html: For interactive web components or simple apps.
 - markdown: For rich text documents.

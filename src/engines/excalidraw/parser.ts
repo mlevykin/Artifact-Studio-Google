@@ -26,14 +26,16 @@ export function parseExcalidraw(text: string): Graph {
   const nodes: Map<string, Node> = new Map();
   const edges: Edge[] = [];
   let direction: 'TB' | 'LR' | 'BT' | 'RL' = 'TB';
+  let defaultStyle: any = {};
 
   // Improved regex: 
   // 1. ID
   // 2. Label in [], (), or {}
   // 3. Optional style block { key: value }
   const nodeDefRegex = /^(\w+)\s*(?:\[(.*?)\]|\((.*?)\)|\{(.*?)\})(?:\s*\{(.*)\})?$/;
-  const edgeRegex = /^(\w+)\s*->\s*(\w+)(?:\s*[:]\s*([^{]*))?(?:\s*\{(.*)\})?$/;
+  const edgeRegex = /^(\w+)\s*->\s*(.*)$/;
   const directionRegex = /^direction\s*:\s*(TB|LR|BT|RL)$/i;
+  const standaloneStyleRegex = /^\{(.*)\}$/;
 
   for (let line of lines) {
     line = line.trim();
@@ -42,6 +44,12 @@ export function parseExcalidraw(text: string): Graph {
     const dirMatch = line.match(directionRegex);
     if (dirMatch) {
       direction = dirMatch[1].toUpperCase() as any;
+      continue;
+    }
+
+    const styleMatch = line.match(standaloneStyleRegex);
+    if (styleMatch) {
+      defaultStyle = { ...defaultStyle, ...parseStyles(styleMatch[1]) };
       continue;
     }
 
@@ -57,25 +65,50 @@ export function parseExcalidraw(text: string): Graph {
         id, 
         label: label.trim(), 
         type,
-        style: parseStyles(styleStr)
+        style: { ...defaultStyle, ...parseStyles(styleStr) }
       });
       continue;
     }
 
     const edgeMatch = line.match(edgeRegex);
     if (edgeMatch) {
-      const [, from, to, label, styleStr] = edgeMatch;
+      const [, from, rest] = edgeMatch;
       
-      // Ensure nodes exist
-      if (!nodes.has(from)) nodes.set(from, { id: from, label: from, type: 'rectangle' });
-      if (!nodes.has(to)) nodes.set(to, { id: to, label: to, type: 'rectangle' });
+      // Handle chains: A -> B -> C : Label { style }
+      // Split rest by -> but be careful with labels
+      const parts = rest.split('->').map(p => p.trim());
+      let currentFrom = from;
       
-      edges.push({ 
-        from, 
-        to, 
-        label: label?.trim(),
-        style: parseStyles(styleStr)
-      });
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        // The last part might have a label and style: "C : Label { style }"
+        if (i === parts.length - 1) {
+          const labelStyleMatch = part.match(/^(\w+)(?:\s*[:]\s*([^{]*))?(?:\s*\{(.*)\})?$/);
+          if (labelStyleMatch) {
+            const [, to, label, styleStr] = labelStyleMatch;
+            if (!nodes.has(currentFrom)) nodes.set(currentFrom, { id: currentFrom, label: currentFrom, type: 'rectangle', style: defaultStyle });
+            if (!nodes.has(to)) nodes.set(to, { id: to, label: to, type: 'rectangle', style: defaultStyle });
+            
+            edges.push({ 
+              from: currentFrom, 
+              to, 
+              label: label?.trim(),
+              style: { ...defaultStyle, ...parseStyles(styleStr) }
+            });
+          }
+        } else {
+          const to = part;
+          if (!nodes.has(currentFrom)) nodes.set(currentFrom, { id: currentFrom, label: currentFrom, type: 'rectangle', style: defaultStyle });
+          if (!nodes.has(to)) nodes.set(to, { id: to, label: to, type: 'rectangle', style: defaultStyle });
+          
+          edges.push({ 
+            from: currentFrom, 
+            to,
+            style: defaultStyle
+          });
+          currentFrom = to;
+        }
+      }
     }
   }
 
