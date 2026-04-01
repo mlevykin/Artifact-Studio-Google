@@ -23,8 +23,13 @@ export function parseExcalidraw(text: string): Graph {
   const nodes: Map<string, Node> = new Map();
   const edges: Edge[] = [];
 
-  // Updated regex to capture optional style block at the end
-  const nodeDefRegex = /^(\w+)\s*([\[\{\(])(.*)([\]\}\)])(?:\s*\{(.*)\})?$/;
+  // Improved regex: 
+  // 1. ID
+  // 2. Opening bracket [({
+  // 3. Label (everything until the closing bracket)
+  // 4. Closing bracket ])}
+  // 5. Optional style block { key: value }
+  const nodeDefRegex = /^(\w+)\s*([\[\{\(])(.*?)([\]\}\)])(?:\s*\{(.*)\})?$/;
   const edgeRegex = /^(\w+)\s*->\s*(\w+)(?:\s*[:]\s*([^{]*))?(?:\s*\{(.*)\})?$/;
 
   for (let line of lines) {

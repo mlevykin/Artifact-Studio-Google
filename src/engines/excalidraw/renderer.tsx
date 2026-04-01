@@ -40,6 +40,9 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
         strokeWidth: style.strokeWidth ?? 1.5,
         fill: style.fill,
         fillStyle: style.fillStyle ?? 'hachure',
+        fillWeight: 1.5,
+        hachureAngle: 60,
+        hachureGap: 4,
         opacity: style.opacity ?? 1
       };
 
@@ -58,13 +61,15 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
       }
       svg.appendChild(shape);
 
-      // Add text
+      // Add text with better centering
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', x.toString());
-      text.setAttribute('y', (y + 5).toString());
+      text.setAttribute('y', (y + 4).toString());
       text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('font-family', 'Inter, sans-serif');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('font-family', '"Inter", sans-serif');
       text.setAttribute('font-size', '14px');
+      text.setAttribute('font-weight', '500');
       text.setAttribute('fill', style.stroke ?? '#18181b');
       text.textContent = label;
       svg.appendChild(text);
