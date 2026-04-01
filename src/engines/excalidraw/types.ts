@@ -37,4 +37,5 @@ export interface Edge {
 export interface Graph {
   nodes: Node[];
   edges: Edge[];
+  direction?: 'TB' | 'LR' | 'BT' | 'RL';
 }

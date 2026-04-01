@@ -4,7 +4,7 @@ import { Graph, Node, Edge } from './types';
 export function layoutGraph(graph: Graph): Graph {
   const g = new dagre.graphlib.Graph();
   g.setGraph({ 
-    rankdir: 'TB', 
+    rankdir: graph.direction || 'TB', 
     marginx: 40, 
     marginy: 40,
     nodesep: 120,

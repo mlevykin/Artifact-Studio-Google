@@ -20,7 +20,14 @@ Edges define connections between nodes:
 - `ID1 -> ID2` -> Simple arrow
 - `ID1 -> ID2 : Label` -> Arrow with a text label
 
-### 3. Styling (Optional)
+### 3. Layout Direction (Optional)
+You can specify the layout direction at the top of the file:
+- `direction: LR` -> **Left to Right** (Horizontal)
+- `direction: TB` -> **Top to Bottom** (Vertical, default)
+- `direction: RL` -> **Right to Left**
+- `direction: BT` -> **Bottom to Top**
+
+### 4. Styling (Optional)
 You can add styling attributes in curly braces `{}` at the end of any line. Attributes are comma-separated `key: value` pairs.
 
 **Supported Attributes:**
@@ -47,14 +54,15 @@ Check -> End : No
 Process -> End
 ```
 
-### Styled Architecture with Icons
+### Horizontal Diagram (Left-to-Right)
 ```excalidraw
-Client [User Browser] { icon: user, stroke: #2563eb, fill: #dbeafe }
-API [Gateway] { icon: shield, stroke: #4f46e5, fill: #e0e7ff, fillStyle: solid }
-DB (PostgreSQL) { icon: database, stroke: #dc2626, fill: #fee2e2, fillStyle: cross-hatch, roughness: 2 }
+direction: LR
+User [Пользователь] { icon: user }
+API [API Gateway] { icon: shield }
+Service [Backend] { icon: server }
 
-Client -> API : HTTPS Request { strokeWidth: 2 }
-API -> DB : SQL Query { roughness: 0.5 }
+User -> API : Request
+API -> Service : Process
 ```
 
 ## Best Practices

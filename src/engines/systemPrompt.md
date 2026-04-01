@@ -91,6 +91,7 @@ Guidelines:
   Syntax:
   - Nodes: `ID [Label]` (Rectangle), `ID (Label)` (Ellipse), `ID {Label}` (Diamond).
   - Edges: `ID1 -> ID2` or `ID1 -> ID2 : Label`.
+  - Direction: `direction: LR` (Left-to-Right) or `direction: TB` (Top-to-Bottom, default).
   - Styles: Add `{ key: value }` at the end of the line.
   - Supported Styles: `stroke`, `fill`, `fillStyle` (hachure, solid, zigzag, cross-hatch, dots), `roughness` (0-5), `strokeWidth`, `opacity`, `icon` (Lucide icon name).
 - For Mermaid, use v11 syntax and wrap node labels in double quotes.

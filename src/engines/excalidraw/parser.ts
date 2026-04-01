@@ -25,6 +25,7 @@ export function parseExcalidraw(text: string): Graph {
   const lines = text.split('\n');
   const nodes: Map<string, Node> = new Map();
   const edges: Edge[] = [];
+  let direction: 'TB' | 'LR' | 'BT' | 'RL' = 'TB';
 
   // Improved regex: 
   // 1. ID
@@ -32,10 +33,17 @@ export function parseExcalidraw(text: string): Graph {
   // 3. Optional style block { key: value }
   const nodeDefRegex = /^(\w+)\s*(?:\[(.*?)\]|\((.*?)\)|\{(.*?)\})(?:\s*\{(.*)\})?$/;
   const edgeRegex = /^(\w+)\s*->\s*(\w+)(?:\s*[:]\s*([^{]*))?(?:\s*\{(.*)\})?$/;
+  const directionRegex = /^direction\s*:\s*(TB|LR|BT|RL)$/i;
 
   for (let line of lines) {
     line = line.trim();
     if (!line || line.startsWith('#') || line.startsWith('//')) continue;
+
+    const dirMatch = line.match(directionRegex);
+    if (dirMatch) {
+      direction = dirMatch[1].toUpperCase() as any;
+      continue;
+    }
 
     const nodeMatch = line.match(nodeDefRegex);
     if (nodeMatch) {
@@ -73,6 +81,7 @@ export function parseExcalidraw(text: string): Graph {
 
   return {
     nodes: Array.from(nodes.values()),
-    edges
+    edges,
+    direction
   };
 }
