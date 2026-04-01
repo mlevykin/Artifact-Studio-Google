@@ -25,7 +25,7 @@ import {
   truncateAfterToolCall,
   parseMessageSteps
 } from './engines/responseParser';
-import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings, ProjectConfig, Patch } from './types';
+import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings, ProjectConfig, Patch, ChatFolder } from './types';
 import { generateId } from './utils';
 import { MCPService } from './services/mcpService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -52,6 +52,7 @@ export default function App() {
 
   const {
     sessions,
+    folders,
     currentSession,
     currentSessionId,
     setCurrentSessionId,
@@ -64,7 +65,11 @@ export default function App() {
     updateMessage,
     removeMessage,
     addContextLog,
-    setSessions
+    setSessions,
+    setFolders,
+    createFolder,
+    updateFolder,
+    deleteFolder
   } = useSessions();
 
   const sessionsRef = useRef(sessions);
@@ -256,6 +261,12 @@ export default function App() {
       lastSavedRef.current['mcp'] = JSON.stringify(savedMcp, null, 2);
     }
 
+    const savedFolders = await loadAppState(handle, 'folders');
+    if (savedFolders) {
+      setFolders(savedFolders);
+      lastSavedRef.current['folders'] = JSON.stringify(savedFolders, null, 2);
+    }
+
     const savedProvider = await loadAppState(handle, 'provider');
     if (savedProvider) {
       setProvider(savedProvider);
@@ -279,6 +290,7 @@ export default function App() {
       console.log('App: Checking for state changes to save...');
       const states = [
         { key: 'sessions', data: sessions },
+        { key: 'folders', data: folders },
         { key: 'skills', data: skills },
         { key: 'mcp', data: mcpConfigs },
         { key: 'provider', data: provider },
@@ -297,13 +309,16 @@ export default function App() {
       // Save individual artifacts to the artifacts/ directory
       for (const session of sessions) {
         if (!session.artifacts) continue;
+        const folder = folders.find(f => f.id === session.folderId);
+        const folderName = folder ? folder.name : null;
+
         for (const artifact of session.artifacts) {
           const artKey = `artifact-${session.id}-${artifact.id}`;
           const artVersionKey = `${artKey}-v${artifact.version}`;
           
           if (lastSavedRef.current[artVersionKey] !== artifact.content) {
             console.log(`App: Saving artifact ${artifact.title} (v${artifact.version}) to disk...`);
-            await saveArtifact(workspaceHandle, session.id, artifact);
+            await saveArtifact(workspaceHandle, session.id, artifact, folderName);
             lastSavedRef.current[artVersionKey] = artifact.content;
             // Also update the base key to avoid redundant saves if content is same across versions (though version usually changes)
             lastSavedRef.current[artKey] = artifact.content;
@@ -582,12 +597,70 @@ export default function App() {
 
   const handleDeleteSession = async (id: string) => {
     if (workspaceHandle) {
+      const session = sessions.find(s => s.id === id);
+      const folder = folders.find(f => f.id === session?.folderId);
       const { deleteSessionFolder } = await import('./services/fileSystemService');
-      await deleteSessionFolder(workspaceHandle, id);
+      await deleteSessionFolder(workspaceHandle, id, folder?.name);
       // Refresh tree to show folder is gone
       updateWorkspaceTree(workspaceHandle);
     }
     deleteSession(id);
+  };
+
+  const handleMoveSessionToFolder = async (sessionId: string, folderId: string | null) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const oldFolder = folders.find(f => f.id === session.folderId);
+    const newFolder = folders.find(f => f.id === folderId);
+
+    if (workspaceHandle) {
+      const { moveSessionArtifacts } = await import('./services/fileSystemService');
+      await moveSessionArtifacts(workspaceHandle, sessionId, oldFolder?.name || null, newFolder?.name || null);
+      updateWorkspaceTree(workspaceHandle);
+    }
+
+    updateSession({ folderId }, sessionId);
+  };
+
+  const handleUpdateFolder = async (folderId: string, updates: Partial<ChatFolder>) => {
+    if (updates.name) {
+      const folder = folders.find(f => f.id === folderId);
+      if (folder && folder.name !== updates.name) {
+        // Rename folder on disk for all sessions in it
+        const folderSessions = sessions.filter(s => s.folderId === folderId);
+        if (workspaceHandle) {
+          const { moveSessionArtifacts } = await import('./services/fileSystemService');
+          for (const session of folderSessions) {
+            try {
+              await moveSessionArtifacts(workspaceHandle, session.id, folder.name, updates.name);
+            } catch (error) {
+              console.error(`Failed to move artifacts for session ${session.id} during folder rename:`, error);
+            }
+          }
+          updateWorkspaceTree(workspaceHandle);
+        }
+      }
+    }
+    updateFolder(folderId, updates);
+  };
+
+  const handleDeleteFolder = async (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (folder && workspaceHandle) {
+      const folderSessions = sessions.filter(s => s.folderId === folderId);
+      const { moveSessionArtifacts } = await import('./services/fileSystemService');
+      for (const session of folderSessions) {
+        try {
+          // Move artifacts to root
+          await moveSessionArtifacts(workspaceHandle, session.id, folder.name, null);
+        } catch (error) {
+          console.error(`Failed to move artifacts for session ${session.id} to root during folder deletion:`, error);
+        }
+      }
+      updateWorkspaceTree(workspaceHandle);
+    }
+    deleteFolder(folderId);
   };
 
   const handleAddMCP = (config: MCPConfig) => {
@@ -1275,10 +1348,15 @@ ${activeMCPs.map(c => {
       )}
       <Sidebar 
         sessions={sessions}
+        folders={folders}
         currentSessionId={currentSessionId}
         onSessionSelect={setCurrentSessionId}
         onNewSession={createSession}
         onDeleteSession={handleDeleteSession}
+        onMoveSession={handleMoveSessionToFolder}
+        onCreateFolder={createFolder}
+        onUpdateFolder={handleUpdateFolder}
+        onDeleteFolder={handleDeleteFolder}
         provider={provider}
         onProviderChange={setProvider}
         isOpen={isSidebarOpen}

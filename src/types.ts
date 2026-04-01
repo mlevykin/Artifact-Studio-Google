@@ -145,6 +145,13 @@ export interface ProjectConfig {
   knowledgeGraph?: string; // Compressed knowledge graph
 }
 
+export interface ChatFolder {
+  id: string;
+  name: string;
+  isExpanded: boolean;
+  lastUpdated: number;
+}
+
 export interface Session {
   id: string;
   name?: string; // Optional name for the session
@@ -160,6 +167,7 @@ export interface Session {
   selectedFilePath?: string | null; // Currently selected file in the workspace
   contextLogs?: ContextLogEntry[];
   activeProjectId?: string | null; // Currently active project for multi-chapter generation
+  folderId?: string | null; // ID of the folder this session belongs to
 }
 
 export interface Patch {

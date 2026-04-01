@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Session, Message, Artifact, Attachment, ContextLogEntry } from '../types';
+import { Session, Message, Artifact, Attachment, ContextLogEntry, ChatFolder } from '../types';
 import { generateId } from '../utils';
 
 export function useSessions() {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [folders, setFolders] = useState<ChatFolder[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   const currentSession = sessions.find(s => s.id === currentSessionId) || null;
@@ -13,7 +14,7 @@ export function useSessions() {
     currentSessionRef.current = currentSessionId;
   }, [currentSessionId]);
 
-  const createSession = () => {
+  const createSession = (folderId?: string | null) => {
     const newSession: Session = {
       id: generateId(),
       title: 'New Chat',
@@ -23,11 +24,37 @@ export function useSessions() {
       lastUpdated: Date.now(),
       activeSkills: [],
       selectedFilePath: null,
-      contextLogs: []
+      contextLogs: [],
+      folderId: folderId || null
     };
     setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);
     return newSession;
+  };
+
+  const createFolder = (name: string) => {
+    const newFolder: ChatFolder = {
+      id: generateId(),
+      name,
+      isExpanded: true,
+      lastUpdated: Date.now()
+    };
+    setFolders(prev => [newFolder, ...prev]);
+    return newFolder;
+  };
+
+  const updateFolder = (id: string, updates: Partial<ChatFolder>) => {
+    setFolders(prev => prev.map(f => 
+      f.id === id ? { ...f, ...updates, lastUpdated: Date.now() } : f
+    ));
+  };
+
+  const deleteFolder = (id: string) => {
+    setFolders(prev => prev.filter(f => f.id !== id));
+    // Move sessions from this folder to root
+    setSessions(prev => prev.map(s => 
+      s.folderId === id ? { ...s, folderId: null, lastUpdated: Date.now() } : s
+    ));
   };
 
   const addContextLog = (log: ContextLogEntry, sessionId?: string) => {
@@ -110,6 +137,7 @@ export function useSessions() {
 
   return {
     sessions,
+    folders,
     currentSession,
     currentSessionId,
     setCurrentSessionId,
@@ -122,6 +150,10 @@ export function useSessions() {
     updateMessage,
     removeMessage,
     addContextLog,
-    setSessions
+    setSessions,
+    setFolders,
+    createFolder,
+    updateFolder,
+    deleteFolder
   };
 }

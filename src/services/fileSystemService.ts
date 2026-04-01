@@ -153,6 +153,14 @@ export async function saveAppState(rootHandle: any, key: string, data: any) {
       return;
     }
 
+    if (key === 'folders') {
+      const fileHandle = await metaDir.getFileHandle(`folders.json`, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(data, null, 2));
+      await writable.close();
+      return;
+    }
+
     const fileHandle = await metaDir.getFileHandle(`${key}.json`, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(JSON.stringify(data, null, 2));
@@ -194,6 +202,17 @@ export async function loadAppState(rootHandle: any, key: string): Promise<any | 
       return sessions.length > 0 ? sessions.sort((a, b) => b.lastUpdated - a.lastUpdated) : null;
     }
 
+    if (key === 'folders') {
+      try {
+        const fileHandle = await metaDir.getFileHandle(`folders.json`);
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        return JSON.parse(text);
+      } catch (e) {
+        return null;
+      }
+    }
+
     const fileHandle = await metaDir.getFileHandle(`${key}.json`);
     const file = await fileHandle.getFile();
     const text = await file.text();
@@ -203,10 +222,16 @@ export async function loadAppState(rootHandle: any, key: string): Promise<any | 
   }
 }
 
-export async function saveArtifact(rootHandle: any, sessionId: string, artifact: any) {
+export async function saveArtifact(rootHandle: any, sessionId: string, artifact: any, folderName?: string | null) {
   try {
     const artifactsDir = await rootHandle.getDirectoryHandle('artifacts', { create: true });
-    const sessionDir = await artifactsDir.getDirectoryHandle(sessionId, { create: true });
+    let sessionBaseDir = artifactsDir;
+    
+    if (folderName) {
+      sessionBaseDir = await artifactsDir.getDirectoryHandle(sanitizeFilename(folderName), { create: true });
+    }
+    
+    const sessionDir = await sessionBaseDir.getDirectoryHandle(sessionId, { create: true });
     
     // Skip system artifacts
     const isSystem = artifact.id === 'workspace-explorer' || 
@@ -248,11 +273,76 @@ export async function saveArtifact(rootHandle: any, sessionId: string, artifact:
   }
 }
 
-export async function deleteSessionFolder(rootHandle: any, sessionId: string) {
+export async function moveSessionArtifacts(rootHandle: any, sessionId: string, oldFolderName: string | null, newFolderName: string | null) {
   try {
     const artifactsDir = await rootHandle.getDirectoryHandle('artifacts', { create: true });
+    
+    let oldBaseDir = artifactsDir;
+    if (oldFolderName) {
+      try {
+        oldBaseDir = await artifactsDir.getDirectoryHandle(sanitizeFilename(oldFolderName));
+      } catch (e) {
+        // Old folder might not exist if no artifacts were saved yet
+        return;
+      }
+    }
+
+    let sessionDir;
     try {
-      await artifactsDir.removeEntry(sessionId, { recursive: true });
+      sessionDir = await oldBaseDir.getDirectoryHandle(sessionId);
+    } catch (e) {
+      // Session folder might not exist yet
+      return;
+    }
+
+    let newBaseDir = artifactsDir;
+    if (newFolderName) {
+      newBaseDir = await artifactsDir.getDirectoryHandle(sanitizeFilename(newFolderName), { create: true });
+    }
+
+    // Move the session directory
+    // Since we can't move directories easily, we'll just leave it for now or implement recursive copy
+    // For simplicity in this environment, let's just create the new one and the next save will go there.
+    // Actually, the user wants it to move.
+    
+    async function copyDir(src: any, dest: any) {
+      // @ts-ignore
+      for await (const entry of src.values()) {
+        if (entry.kind === 'file') {
+          const file = await entry.getFile();
+          const newFile = await dest.getFileHandle(entry.name, { create: true });
+          const writable = await newFile.createWritable();
+          await writable.write(await file.arrayBuffer());
+          await writable.close();
+        } else if (entry.kind === 'directory') {
+          const newDir = await dest.getDirectoryHandle(entry.name, { create: true });
+          await copyDir(entry, newDir);
+        }
+      }
+    }
+
+    const newSessionDir = await newBaseDir.getDirectoryHandle(sessionId, { create: true });
+    await copyDir(sessionDir, newSessionDir);
+    await oldBaseDir.removeEntry(sessionId, { recursive: true });
+
+  } catch (err) {
+    console.error(`Failed to move session artifacts for ${sessionId}:`, err);
+  }
+}
+
+export async function deleteSessionFolder(rootHandle: any, sessionId: string, folderName?: string | null) {
+  try {
+    const artifactsDir = await rootHandle.getDirectoryHandle('artifacts', { create: true });
+    let baseDir = artifactsDir;
+    if (folderName) {
+      try {
+        baseDir = await artifactsDir.getDirectoryHandle(sanitizeFilename(folderName));
+      } catch (e) {
+        return;
+      }
+    }
+    try {
+      await baseDir.removeEntry(sessionId, { recursive: true });
     } catch (e) {
       // Ignore if folder doesn't exist
     }
