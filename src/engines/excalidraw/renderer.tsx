@@ -61,27 +61,34 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
       }
       svg.appendChild(shape);
 
-      // Add icon if present
-      let textX = x;
+      // Add icon and text with better centering
+      const iconSize = 18;
+      const iconPadding = 8;
+      const lines = label.split('\n');
+      const maxLineLength = Math.max(...lines.map(l => l.length));
+      const estimatedTextWidth = maxLineLength * 8;
+      
+      let totalContentWidth = estimatedTextWidth;
       if (style.icon) {
-        const iconSize = 18;
-        const iconPadding = 8;
-        const totalWidth = iconSize + iconPadding + (label.length * 8); // Approximate label width
-        
-        const iconX = x - totalWidth / 2;
-        textX = iconX + iconSize + iconPadding + (label.length * 4); // Center text in remaining space
+        totalContentWidth += iconSize + iconPadding;
+      }
+
+      const startX = x - totalContentWidth / 2;
+      let textX = x;
+
+      if (style.icon) {
+        const iconX = startX;
+        textX = startX + iconSize + iconPadding + estimatedTextWidth / 2;
 
         const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        img.setAttribute('x', (iconX).toString());
+        img.setAttribute('x', iconX.toString());
         img.setAttribute('y', (y - iconSize / 2).toString());
         img.setAttribute('width', iconSize.toString());
         img.setAttribute('height', iconSize.toString());
-        // Use lucide icons via unpkg
-        img.setAttribute('href', `https://unpkg.com/lucide-static/icons/${style.icon}.svg`);
+        img.setAttribute('href', `https://unpkg.com/lucide-static@latest/icons/${style.icon}.svg`);
         svg.appendChild(img);
       }
 
-      // Add text with better centering and multi-line support
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', textX.toString());
       text.setAttribute('text-anchor', 'middle');
@@ -91,7 +98,6 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
       text.setAttribute('font-weight', '500');
       text.setAttribute('fill', style.stroke ?? '#18181b');
       
-      const lines = label.split('\n');
       const lineHeight = 18;
       const startY = y - ((lines.length - 1) * lineHeight) / 2;
       
