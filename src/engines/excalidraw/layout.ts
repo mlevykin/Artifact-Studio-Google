@@ -15,7 +15,10 @@ export function layoutGraph(graph: Graph): Graph {
   // Add nodes to dagre
   for (const node of graph.nodes) {
     // Better width calculation to avoid text touching borders
-    const width = Math.max(120, node.label.length * 12 + 40);
+    let width = Math.max(120, node.label.length * 12 + 40);
+    if (node.style?.icon) {
+      width += 30; // Extra space for icon
+    }
     const height = 60;
     g.setNode(node.id, { width, height });
   }

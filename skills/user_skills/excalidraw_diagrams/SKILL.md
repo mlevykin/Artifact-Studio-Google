@@ -30,6 +30,7 @@ You can add styling attributes in curly braces `{}` at the end of any line. Attr
 - `roughness`: Sketchiness level (0 to 5, default 1.5)
 - `strokeWidth`: Thickness of the line (default 1.5)
 - `opacity`: Transparency (0.0 to 1.0)
+- `icon`: Name of a Lucide icon (e.g., `user`, `database`, `server`, `shield`, `lock`, `cloud`, `mail`, `settings`)
 
 ## Examples
 
@@ -46,11 +47,11 @@ Check -> End : No
 Process -> End
 ```
 
-### Styled Architecture
+### Styled Architecture with Icons
 ```excalidraw
-Client [User Browser] { stroke: #2563eb, fill: #dbeafe }
-API [Gateway] { stroke: #4f46e5, fill: #e0e7ff, fillStyle: solid }
-DB (PostgreSQL) { stroke: #dc2626, fill: #fee2e2, fillStyle: cross-hatch, roughness: 2 }
+Client [User Browser] { icon: user, stroke: #2563eb, fill: #dbeafe }
+API [Gateway] { icon: shield, stroke: #4f46e5, fill: #e0e7ff, fillStyle: solid }
+DB (PostgreSQL) { icon: database, stroke: #dc2626, fill: #fee2e2, fillStyle: cross-hatch, roughness: 2 }
 
 Client -> API : HTTPS Request { strokeWidth: 2 }
 API -> DB : SQL Query { roughness: 0.5 }

@@ -61,9 +61,29 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
       }
       svg.appendChild(shape);
 
+      // Add icon if present
+      let textX = x;
+      if (style.icon) {
+        const iconSize = 18;
+        const iconPadding = 8;
+        const totalWidth = iconSize + iconPadding + (label.length * 8); // Approximate label width
+        
+        const iconX = x - totalWidth / 2;
+        textX = iconX + iconSize + iconPadding + (label.length * 4); // Center text in remaining space
+
+        const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        img.setAttribute('x', (iconX).toString());
+        img.setAttribute('y', (y - iconSize / 2).toString());
+        img.setAttribute('width', iconSize.toString());
+        img.setAttribute('height', iconSize.toString());
+        // Use lucide icons via unpkg
+        img.setAttribute('href', `https://unpkg.com/lucide-static/icons/${style.icon}.svg`);
+        svg.appendChild(img);
+      }
+
       // Add text with better centering
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', x.toString());
+      text.setAttribute('x', textX.toString());
       text.setAttribute('y', (y + 4).toString());
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'middle');

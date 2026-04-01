@@ -7,6 +7,7 @@ export interface NodeStyle {
   strokeWidth?: number;
   roughness?: number;
   opacity?: number;
+  icon?: string;
 }
 
 export interface Node {

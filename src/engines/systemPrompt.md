@@ -92,7 +92,7 @@ Guidelines:
   - Nodes: `ID [Label]` (Rectangle), `ID (Label)` (Ellipse), `ID {Label}` (Diamond).
   - Edges: `ID1 -> ID2` or `ID1 -> ID2 : Label`.
   - Styles: Add `{ key: value }` at the end of the line.
-  - Supported Styles: `stroke`, `fill`, `fillStyle` (hachure, solid, zigzag, cross-hatch, dots), `roughness` (0-5), `strokeWidth`, `opacity`.
+  - Supported Styles: `stroke`, `fill`, `fillStyle` (hachure, solid, zigzag, cross-hatch, dots), `roughness` (0-5), `strokeWidth`, `opacity`, `icon` (Lucide icon name).
 - For Mermaid, use v11 syntax and wrap node labels in double quotes.
 - SUPPORTED MERMAID DIAGRAMS: graph, flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, journey, gantt, pie, quadrantChart, xychart-beta, mindmap, timeline, zenuml, sankey-beta, packet-beta, kanban, architecture, gitGraph, requirementDiagram, C4Context.
 - CRITICAL: Mermaid does NOT support 'useCaseDiagram'. Use 'graph TD' or 'flowchart TD' with custom shapes for use cases instead.
