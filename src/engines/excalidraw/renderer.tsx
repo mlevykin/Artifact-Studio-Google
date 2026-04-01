@@ -107,13 +107,30 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
 
       // Edge label
       if (edge.label) {
-        const mid = points[Math.floor(points.length / 2)];
+        const midIdx = Math.floor(points.length / 2);
+        const mid = points[midIdx];
+        
+        // Add a small white background rectangle for the label
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        const labelWidth = edge.label.length * 8 + 10;
+        const labelHeight = 20;
+        bg.setAttribute('x', (mid.x - labelWidth / 2).toString());
+        bg.setAttribute('y', (mid.y - labelHeight / 2 - 5).toString());
+        bg.setAttribute('width', labelWidth.toString());
+        bg.setAttribute('height', labelHeight.toString());
+        bg.setAttribute('fill', 'white');
+        bg.setAttribute('opacity', '0.9');
+        bg.setAttribute('rx', '4');
+        svg.appendChild(bg);
+
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', mid.x.toString());
         text.setAttribute('y', (mid.y - 5).toString());
         text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('font-family', 'Inter, sans-serif');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('font-family', '"Inter", sans-serif');
         text.setAttribute('font-size', '12px');
+        text.setAttribute('font-weight', '500');
         text.setAttribute('fill', '#71717a');
         text.textContent = edge.label;
         svg.appendChild(text);
