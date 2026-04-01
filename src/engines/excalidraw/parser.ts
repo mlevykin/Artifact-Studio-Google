@@ -7,11 +7,14 @@ function parseStyles(styleStr: string): any {
   for (const pair of pairs) {
     const [key, value] = pair.split(':').map(p => p.trim());
     if (key && value) {
+      // Strip quotes from value if present
+      const cleanValue = value.replace(/^["']|["']$/g, '');
+      
       // Convert numeric values
-      if (!isNaN(Number(value))) {
-        styles[key] = Number(value);
+      if (!isNaN(Number(cleanValue))) {
+        styles[key] = Number(cleanValue);
       } else {
-        styles[key] = value;
+        styles[key] = cleanValue;
       }
     }
   }
@@ -25,11 +28,9 @@ export function parseExcalidraw(text: string): Graph {
 
   // Improved regex: 
   // 1. ID
-  // 2. Opening bracket [({
-  // 3. Label (everything until the closing bracket)
-  // 4. Closing bracket ])}
-  // 5. Optional style block { key: value }
-  const nodeDefRegex = /^(\w+)\s*([\[\{\(])(.*?)([\]\}\)])(?:\s*\{(.*)\})?$/;
+  // 2. Label in [], (), or {}
+  // 3. Optional style block { key: value }
+  const nodeDefRegex = /^(\w+)\s*(?:\[(.*?)\]|\((.*?)\)|\{(.*?)\})(?:\s*\{(.*)\})?$/;
   const edgeRegex = /^(\w+)\s*->\s*(\w+)(?:\s*[:]\s*([^{]*))?(?:\s*\{(.*)\})?$/;
 
   for (let line of lines) {
@@ -38,10 +39,11 @@ export function parseExcalidraw(text: string): Graph {
 
     const nodeMatch = line.match(nodeDefRegex);
     if (nodeMatch) {
-      const [, id, open, label, close, styleStr] = nodeMatch;
+      const [, id, rectLabel, ellipseLabel, diamondLabel, styleStr] = nodeMatch;
+      let label = rectLabel || ellipseLabel || diamondLabel || '';
       let type: NodeType = 'rectangle';
-      if (open === '{' && close === '}') type = 'diamond';
-      if (open === '(' && close === ')') type = 'ellipse';
+      if (diamondLabel !== undefined) type = 'diamond';
+      if (ellipseLabel !== undefined) type = 'ellipse';
       
       nodes.set(id, { 
         id, 

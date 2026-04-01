@@ -866,6 +866,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                       styleId={artifact.mermaidStyleId}
                     />
                   )}
+                  {pType === 'excalidraw' && (
+                    <div className="w-[800px] h-[500px] bg-white shadow-lg rounded-xl overflow-hidden">
+                      <ExcalidrawDiagram code={pContent} />
+                    </div>
+                  )}
                   {pType === 'svg' && (
                     <div 
                       className="svg-preview-container bg-white shadow-sm rounded-lg overflow-hidden"
