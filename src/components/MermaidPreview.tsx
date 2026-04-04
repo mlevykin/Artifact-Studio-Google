@@ -28,7 +28,12 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
       mermaid.initialize({
         startOnLoad: false,
         theme: currentStyle.theme as any,
-        themeVariables: currentStyle.themeVariables,
+        themeVariables: {
+          ...currentStyle.themeVariables,
+          fontSize: currentStyle.themeVariables?.fontSize || '14px',
+        },
+        // Some mermaid versions use top-level fontSize
+        fontSize: parseInt(currentStyle.themeVariables?.fontSize || '14px'),
         securityLevel: 'loose',
         fontFamily: currentStyle.themeVariables?.fontFamily || 'Inter, sans-serif',
         flowchart: { useMaxWidth: false },
@@ -55,7 +60,11 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
     } catch (err) {
       console.error('Mermaid initialization error:', err);
       // Fallback to basic initialization
-      mermaid.initialize({ startOnLoad: false });
+      mermaid.initialize({ 
+        startOnLoad: false,
+        theme: 'neutral',
+        themeVariables: { fontSize: '14px' }
+      });
       setIsInitialized(true);
     }
   }, [currentStyle]);
@@ -128,6 +137,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
           // Only update if this is still the most recent render request
           if (currentRenderId === renderCount.current && containerRef.current) {
             // Make SVG responsive: fit container but don't upscale beyond natural size
+            // We keep the original width/height if they are absolute to prevent stretching
             const responsiveSvg = svg
               .replace(/max-width: [^;]+;/, '')
               .replace(/style="[^"]*max-width:[^"]*"/, '')
@@ -173,9 +183,9 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
           className
         )}
         style={{ 
-          width: className?.includes('!w-full') ? 'auto' : (className?.includes('natural-size') ? 'auto' : '800px'), 
-          maxWidth: '100%',
-          minHeight: className?.includes('!min-h-0') ? '0' : '400px' 
+          width: className?.includes('!w-full') ? '100%' : 'auto', 
+          maxWidth: className?.includes('!w-full') ? 'none' : '800px',
+          minHeight: className?.includes('!min-h-0') ? '0' : '100px' 
         }}
       />
     </div>
