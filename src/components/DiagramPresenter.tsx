@@ -54,11 +54,9 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
   }, []);
 
   const handleWheel = useCallback((e: WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      setZoom(prev => Math.min(Math.max(prev + delta, 0.2), 5));
-    }
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom(prev => Math.min(Math.max(prev + delta, 0.2), 5));
   }, []);
 
   useEffect(() => {
