@@ -183,28 +183,10 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
         const startY = y - ((lines.length - 1) * lineHeight) / 2;
         
         lines.forEach((line, i) => {
-          if (line.trim() === '---') {
-            const lineY = startY + (i * lineHeight) - 4;
-            const lineEl = rc.line(textX - width / 2 + 20, lineY, textX + width / 2 - 20, lineY, {
-              stroke: style.stroke || '#3f3f46',
-              strokeWidth: 1,
-              roughness: 0.5
-            });
-            svg.appendChild(lineEl);
-            return;
-          }
-
           const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
           tspan.setAttribute('x', textX.toString());
           tspan.setAttribute('dy', i === 0 ? '0' : lineHeight.toString());
-          
-          // Basic bold support: **text**
-          if (line.startsWith('**') && line.endsWith('**')) {
-            tspan.setAttribute('font-weight', '700');
-            tspan.textContent = line.substring(2, line.length - 2);
-          } else {
-            tspan.textContent = line;
-          }
+          tspan.textContent = line;
           text.appendChild(tspan);
         });
         

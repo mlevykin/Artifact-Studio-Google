@@ -105,11 +105,33 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ '': true });
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [presentingDiagram, setPresentingDiagram] = useState<{
-    type: 'excalidraw';
+    type: 'mermaid' | 'excalidraw';
     content: string;
     title: string;
     markdownText?: string;
   } | null>(null);
+
+  const getMermaidStepCount = (content: string) => {
+    const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('%%'));
+    
+    // Count nodes
+    const nodeDefs = lines.filter(l => 
+      /^[a-zA-Z0-9_-]+(\[|\(|\{|\>|\[\[|\(\(|\(\[|\{\{|\(\{\{)/.test(l.trim()) || 
+      /^[a-zA-Z0-9_-]+\s*$/.test(l.trim())
+    );
+    
+    // Count subgraphs
+    const subgraphs = lines.filter(l => l.trim().toLowerCase().startsWith('subgraph'));
+    
+    // Count sequence diagram messages
+    const messages = lines.filter(l => l.includes('->') || l.includes('-->'));
+    
+    if (content.toLowerCase().includes('sequencediagram')) {
+      return Math.max(messages.length, 1);
+    }
+    
+    return Math.max(nodeDefs.length + subgraphs.length, 1);
+  };
 
   const getExcalidrawStepCount = (content: string) => {
     try {
@@ -180,6 +202,19 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       if (!inline && isMermaid) {
         return (
           <div className="my-6 group relative overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm hover:shadow-md transition-all">
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-2">
+              <button 
+                onClick={() => setPresentingDiagram({
+                  type: 'mermaid',
+                  content,
+                  title: 'Presentation mode'
+                })}
+                className="p-2 bg-white/90 text-zinc-600 rounded-lg backdrop-blur-sm hover:bg-white hover:text-zinc-900 transition-all flex items-center justify-center shadow-md border border-zinc-200"
+                title="Present Mode"
+              >
+                <Maximize2 size={16} />
+              </button>
+            </div>
             <MermaidPreview 
               content={content} 
               className="w-fit max-w-full mx-auto !p-4 !shadow-none !rounded-none !min-h-0"
@@ -894,6 +929,19 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 >
                   {pType === 'mermaid' && (
                     <div className="group relative">
+                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <button 
+                          onClick={() => setPresentingDiagram({
+                            type: 'mermaid',
+                            content: pContent,
+                            title: 'Presentation mode'
+                          })}
+                          className="p-2.5 bg-white text-zinc-600 rounded-xl shadow-lg hover:bg-zinc-50 hover:text-zinc-900 transition-all flex items-center justify-center border border-zinc-200"
+                          title="Present Mode"
+                        >
+                          <Maximize2 size={18} />
+                        </button>
+                      </div>
                       <MermaidPreview 
                         content={pContent} 
                         className="natural-size" 
@@ -902,7 +950,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                     </div>
                   )}
                   {pType === 'excalidraw' && (
-                    <div className="group relative w-full h-full bg-white shadow-lg rounded-xl overflow-hidden">
+                    <div className="group relative w-[800px] h-[500px] bg-white shadow-lg rounded-xl overflow-hidden">
                       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                         <button 
                           onClick={() => setPresentingDiagram({
@@ -962,15 +1010,24 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       <AnimatePresence>
         {presentingDiagram && (
           <DiagramPresenter
-            totalSteps={getExcalidrawStepCount(presentingDiagram.content)}
+            totalSteps={presentingDiagram.type === 'mermaid' ? getMermaidStepCount(presentingDiagram.content) : getExcalidrawStepCount(presentingDiagram.content)}
             title={presentingDiagram.title}
             onExit={() => setPresentingDiagram(null)}
           >
             {(step) => (
-              <ExcalidrawDiagram 
-                code={presentingDiagram.content} 
-                step={step}
-              />
+              presentingDiagram.type === 'mermaid' ? (
+                <MermaidPreview 
+                  content={presentingDiagram.content} 
+                  step={step}
+                  className="!w-full !h-full !p-0 !shadow-none !rounded-none"
+                  styleId={artifact?.mermaidStyleId}
+                />
+              ) : (
+                <ExcalidrawDiagram 
+                  code={presentingDiagram.content} 
+                  step={step}
+                />
+              )
             )}
           </DiagramPresenter>
         )}

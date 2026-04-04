@@ -20,98 +20,7 @@ function wrapText(text: string, maxCharsPerLine: number): string {
   }).join('\n');
 }
 
-function getIntersection(node: any, otherX: number, otherY: number) {
-  const dx = otherX - node.x;
-  const dy = otherY - node.y;
-  const angle = Math.atan2(dy, dx);
-  
-  if (node.type === 'ellipse' || node.type === 'circle') {
-    return {
-      x: node.x + (node.width / 2) * Math.cos(angle),
-      y: node.y + (node.height / 2) * Math.sin(angle)
-    };
-  }
-  
-  // For rectangle, simplified:
-  const absCos = Math.abs(Math.cos(angle));
-  const absSin = Math.abs(Math.sin(angle));
-  
-  let scale;
-  if (node.width * absSin <= node.height * absCos) {
-    scale = (node.width / 2) / absCos;
-  } else {
-    scale = (node.height / 2) / absSin;
-  }
-  
-  return {
-    x: node.x + scale * Math.cos(angle),
-    y: node.y + scale * Math.sin(angle)
-  };
-}
-
 export function layoutGraph(graph: Graph): Graph {
-  // Common node size calculation
-  const nodesWithSizes = graph.nodes.map(node => {
-    let label = node.label;
-    const originalLines = label.split('\n');
-    const longestOriginalLine = Math.max(...originalLines.map(l => l.length));
-    
-    if (longestOriginalLine > 20) {
-      label = wrapText(label, 22);
-    }
-    
-    const lines = label.split('\n');
-    const maxLineLength = Math.max(...lines.map(l => l.length));
-    
-    let width = Math.max(100, maxLineLength * 10 + 40);
-    if (node.style?.icon) {
-      width += 30;
-    }
-    
-    const height = Math.max(60, lines.length * 20 + 30);
-    return { ...node, width, height, label };
-  });
-
-  if (graph.direction === 'CIRCLE') {
-    const radius = Math.max(300, nodesWithSizes.length * 100);
-    const centerX = 0;
-    const centerY = 0;
-    
-    const positionedNodes = nodesWithSizes.map((node, i) => {
-      const angle = (i / nodesWithSizes.length) * 2 * Math.PI - Math.PI / 2;
-      return {
-        ...node,
-        x: centerX + radius * Math.cos(angle),
-        y: centerY + radius * Math.sin(angle)
-      };
-    });
-    
-    const edges = graph.edges.map(edge => {
-      const fromNode = positionedNodes.find(n => n.id === edge.from);
-      const toNode = positionedNodes.find(n => n.id === edge.to);
-      if (fromNode && toNode) {
-        const start = getIntersection(fromNode, toNode.x!, toNode.y!);
-        const end = getIntersection(toNode, fromNode.x!, fromNode.y!);
-        return {
-          ...edge,
-          points: [start, end]
-        };
-      }
-      return edge;
-    });
-
-    const elements = graph.elements.map(el => {
-      if ('from' in el) {
-        return edges.find(e => e.from === el.from && e.to === el.to) || el;
-      } else {
-        return positionedNodes.find(n => n.id === el.id) || el;
-      }
-    });
-
-    return { nodes: positionedNodes, edges, elements, direction: graph.direction };
-  }
-
-  // Hierarchical layout (dagre)
   const g = new dagre.graphlib.Graph();
   g.setGraph({ 
     rankdir: graph.direction || 'TB', 
@@ -122,20 +31,47 @@ export function layoutGraph(graph: Graph): Graph {
   });
   g.setDefaultEdgeLabel(() => ({}));
 
-  for (const node of nodesWithSizes) {
-    g.setNode(node.id, { width: node.width, height: node.height, label: node.label });
+  // Add nodes to dagre
+  for (const node of graph.nodes) {
+    let label = node.label;
+    
+    // If the label is long, wrap it to aim for square-ish shape
+    // Threshold for wrapping: if single line is > 20 chars
+    const originalLines = label.split('\n');
+    const longestOriginalLine = Math.max(...originalLines.map(l => l.length));
+    
+    if (longestOriginalLine > 20) {
+      // Aim for a width of about 20-25 characters
+      label = wrapText(label, 22);
+    }
+    
+    const lines = label.split('\n');
+    const maxLineLength = Math.max(...lines.map(l => l.length));
+    
+    // Aim for more square-like proportions
+    let width = Math.max(100, maxLineLength * 10 + 40);
+    if (node.style?.icon) {
+      width += 30; // Extra space for icon
+    }
+    
+    const height = Math.max(60, lines.length * 20 + 30);
+    g.setNode(node.id, { width, height, label });
   }
 
+  // Add edges to dagre
   for (const edge of graph.edges) {
     g.setEdge(edge.from, edge.to);
   }
 
+  // Compute layout
   dagre.layout(g);
 
-  const nodes = nodesWithSizes.map(node => {
+  // Update graph with positions
+  const nodes = graph.nodes.map(node => {
     const n = g.node(node.id);
     return {
       ...node,
+      label: n.label || node.label,
       x: n.x,
       y: n.y,
       width: n.width,
@@ -151,10 +87,13 @@ export function layoutGraph(graph: Graph): Graph {
     };
   });
 
+  // Reconstruct elements with updated node/edge data
   const elements = graph.elements.map(el => {
     if ('from' in el) {
+      // It's an edge
       return edges.find(e => e.from === el.from && e.to === el.to) || el;
     } else {
+      // It's a node
       return nodes.find(n => n.id === el.id) || el;
     }
   });
