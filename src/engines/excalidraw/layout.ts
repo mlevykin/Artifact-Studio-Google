@@ -20,6 +20,35 @@ function wrapText(text: string, maxCharsPerLine: number): string {
   }).join('\n');
 }
 
+function getIntersection(node: any, otherX: number, otherY: number) {
+  const dx = otherX - node.x;
+  const dy = otherY - node.y;
+  const angle = Math.atan2(dy, dx);
+  
+  if (node.type === 'ellipse' || node.type === 'circle') {
+    return {
+      x: node.x + (node.width / 2) * Math.cos(angle),
+      y: node.y + (node.height / 2) * Math.sin(angle)
+    };
+  }
+  
+  // For rectangle, simplified:
+  const absCos = Math.abs(Math.cos(angle));
+  const absSin = Math.abs(Math.sin(angle));
+  
+  let scale;
+  if (node.width * absSin <= node.height * absCos) {
+    scale = (node.width / 2) / absCos;
+  } else {
+    scale = (node.height / 2) / absSin;
+  }
+  
+  return {
+    x: node.x + scale * Math.cos(angle),
+    y: node.y + scale * Math.sin(angle)
+  };
+}
+
 export function layoutGraph(graph: Graph): Graph {
   // Common node size calculation
   const nodesWithSizes = graph.nodes.map(node => {
@@ -44,7 +73,7 @@ export function layoutGraph(graph: Graph): Graph {
   });
 
   if (graph.direction === 'CIRCLE') {
-    const radius = Math.max(250, nodesWithSizes.length * 80);
+    const radius = Math.max(300, nodesWithSizes.length * 100);
     const centerX = 0;
     const centerY = 0;
     
@@ -61,14 +90,11 @@ export function layoutGraph(graph: Graph): Graph {
       const fromNode = positionedNodes.find(n => n.id === edge.from);
       const toNode = positionedNodes.find(n => n.id === edge.to);
       if (fromNode && toNode) {
-        // For circular layout, we can use a simple straight line or a curve
-        // Let's use points that dagre would expect
+        const start = getIntersection(fromNode, toNode.x!, toNode.y!);
+        const end = getIntersection(toNode, fromNode.x!, fromNode.y!);
         return {
           ...edge,
-          points: [
-            { x: fromNode.x!, y: fromNode.y! },
-            { x: toNode.x!, y: toNode.y! }
-          ]
+          points: [start, end]
         };
       }
       return edge;

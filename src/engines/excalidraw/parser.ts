@@ -58,7 +58,8 @@ export function parseExcalidraw(text: string): Graph {
 
   // 3. Parse Node Definitions
   // Matches: ID [Label] {Style} or ID (Label) ( {Style} )
-  const nodeDefRegex = /(\w+)\s*(?:\[([\s\S]*?)\]|\(([\s\S]*?)\)|\{([\s\S]*?)\})(?:\s*(?:\{([\s\S]*?)\}|\(([\s\S]*?)\)))?/g;
+  // Use ^ and $ with m flag to ensure we don't consume next nodes as styles
+  const nodeDefRegex = /^[ \t]*(\w+)[ \t]*(?:\[([\s\S]*?)\]|\(([\s\S]*?)\)|\{([\s\S]*?)\})(?:[ \t]*(?:\{([\s\S]*?)\}|\(([\s\S]*?)\)))?[ \t]*$/gm;
   let nodeMatch;
   while ((nodeMatch = nodeDefRegex.exec(cleanText)) !== null) {
     const [, id, rectLabel, ellipseLabel, diamondLabel, style1, style2] = nodeMatch;
@@ -80,7 +81,7 @@ export function parseExcalidraw(text: string): Graph {
 
   // 4. Parse Edge Definitions
   // Matches: A -> B -> C : Label { style }
-  const edgeLineRegex = /(\w+)\s*->\s*([\s\S]*?)(?=$|\n\w+\s*(?:\[|\(|\{)|$)/g;
+  const edgeLineRegex = /^[ \t]*(\w+)[ \t]*->[ \t]*([\s\S]*?)$/gm;
   let edgeLineMatch;
   while ((edgeLineMatch = edgeLineRegex.exec(cleanText)) !== null) {
     const [, from, rest] = edgeLineMatch;

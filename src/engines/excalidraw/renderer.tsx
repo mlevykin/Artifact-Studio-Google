@@ -186,7 +186,14 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
           const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
           tspan.setAttribute('x', textX.toString());
           tspan.setAttribute('dy', i === 0 ? '0' : lineHeight.toString());
-          tspan.textContent = line;
+          
+          // Basic bold support: **text**
+          if (line.startsWith('**') && line.endsWith('**')) {
+            tspan.setAttribute('font-weight', '700');
+            tspan.textContent = line.substring(2, line.length - 2);
+          } else {
+            tspan.textContent = line;
+          }
           text.appendChild(tspan);
         });
         
