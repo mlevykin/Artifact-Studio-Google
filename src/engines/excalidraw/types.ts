@@ -38,5 +38,5 @@ export interface Graph {
   nodes: Node[];
   edges: Edge[];
   elements: (Node | Edge)[];
-  direction?: 'TB' | 'LR' | 'BT' | 'RL';
+  direction?: 'TB' | 'LR' | 'BT' | 'RL' | 'CIRCLE';
 }
