@@ -187,6 +187,30 @@ export default function App() {
     }
   };
 
+  const pathExists = useCallback((tree: any, path: string | null): boolean => {
+    if (!path || !tree) return false;
+    const parts = path.split('/').filter(Boolean);
+    let current = tree;
+    
+    for (const part of parts) {
+      if (!current.children) return false;
+      const found = current.children.find((c: any) => c.name === part);
+      if (!found) return false;
+      current = found;
+    }
+    return true;
+  }, []);
+
+  // Check if selected file still exists when workspace tree updates
+  useEffect(() => {
+    if (workspaceTree && currentSession?.selectedFilePath) {
+      if (!pathExists(workspaceTree, currentSession.selectedFilePath)) {
+        console.warn(`Selected file ${currentSession.selectedFilePath} not found in workspace. Clearing selection.`);
+        updateSession({ selectedFilePath: null });
+      }
+    }
+  }, [workspaceTree, currentSession?.selectedFilePath, pathExists, updateSession]);
+
   const handleDisconnectWorkspace = async () => {
     await clearStoredDirectoryHandle();
     setWorkspaceHandle(null);

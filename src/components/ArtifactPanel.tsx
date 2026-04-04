@@ -462,6 +462,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       } catch (err) {
         console.error('Failed to read file from disk:', err);
         setEditContent(`// Error loading file: ${path}\n// It might be a directory or deleted.`);
+        onFileSelect(null);
       }
     } else {
       setEditContent('// No workspace connected to load external files.');
