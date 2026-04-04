@@ -2,12 +2,9 @@ import { Graph, Node, Edge, NodeType, NodeStyle } from './types';
 
 function parseStyles(styleStr: string): any {
   if (!styleStr) return {};
-  // Remove outer braces or parentheses if present
+  // Remove outer braces or parentheses if present, even with spaces
   let cleanStr = styleStr.trim();
-  if (cleanStr.startsWith('(') && cleanStr.endsWith(')')) {
-    cleanStr = cleanStr.substring(1, cleanStr.length - 1).trim();
-  }
-  if (cleanStr.startsWith('{') && cleanStr.endsWith('}')) {
+  while ((cleanStr.startsWith('(') && cleanStr.endsWith(')')) || (cleanStr.startsWith('{') && cleanStr.endsWith('}'))) {
     cleanStr = cleanStr.substring(1, cleanStr.length - 1).trim();
   }
   
@@ -16,13 +13,18 @@ function parseStyles(styleStr: string): any {
   const styles: any = {};
   const pairs = cleanStr.split(',').map(p => p.trim());
   for (const pair of pairs) {
-    const [key, value] = pair.split(':').map(p => p.trim());
+    const colonIndex = pair.indexOf(':');
+    if (colonIndex === -1) continue;
+    
+    const key = pair.substring(0, colonIndex).trim();
+    const value = pair.substring(colonIndex + 1).trim();
+    
     if (key && value) {
       // Strip quotes from value if present
       const cleanValue = value.replace(/^["']|["']$/g, '');
       
       // Convert numeric values
-      if (!isNaN(Number(cleanValue))) {
+      if (!isNaN(Number(cleanValue)) && cleanValue !== '') {
         styles[key] = Number(cleanValue);
       } else {
         styles[key] = cleanValue;
@@ -47,73 +49,70 @@ export function parseExcalidraw(text: string): Graph {
     direction = dirMatch[1].toUpperCase() as any;
   }
 
-  // 3. Split into logical blocks
-  // A block starts at the beginning of a line with a word or a brace
-  const blocks = cleanText.split(/\n(?=\w|\{)/);
+  // 3. Parse Standalone Styles
+  const standaloneStyleRegex = /^\s*\{(.*?)\}\s*$/gm;
+  let styleMatch;
+  while ((styleMatch = standaloneStyleRegex.exec(cleanText)) !== null) {
+    defaultStyle = { ...defaultStyle, ...parseStyles(styleMatch[1]) };
+  }
 
-  for (let block of blocks) {
-    block = block.trim();
-    if (!block) continue;
+  // 4. Parse Nodes and Edges using a more robust approach
+  // We'll process the text by looking for patterns
+  
+  // First, find all node definitions
+  // ID [Label] {Style}
+  const nodeRegex = /(\w+)\s*(?:\[([\s\S]*?)\]|\(([\s\S]*?)\)|\{([\s\S]*?)\})(?:\s*(?:\{([\s\S]*?)\}|\(([\s\S]*?)\)))?/g;
+  let m;
+  while ((m = nodeRegex.exec(cleanText)) !== null) {
+    const [full, id, rectLabel, ellipseLabel, diamondLabel, style1, style2] = m;
+    
+    // Skip if it looks like an edge (contains ->)
+    if (full.includes('->')) continue;
 
-    // Standalone style block
-    if (block.startsWith('{') && block.endsWith('}')) {
-      defaultStyle = { ...defaultStyle, ...parseStyles(block) };
-      continue;
-    }
+    const label = (rectLabel || ellipseLabel || diamondLabel || '').trim();
+    let type: NodeType = 'rectangle';
+    if (diamondLabel !== undefined) type = 'diamond';
+    if (ellipseLabel !== undefined) type = 'ellipse';
+    const styleStr = style1 || style2 || '';
+    
+    nodes.set(id, {
+      id,
+      label: label || id,
+      type,
+      style: { ...defaultStyle, ...parseStyles(styleStr) }
+    });
+  }
 
-    // Edge definition: A -> B
-    if (block.includes('->')) {
-      const edgeMatch = block.match(/^(\w+)\s*->\s*([\s\S]*)$/);
-      if (edgeMatch) {
-        const [, from, rest] = edgeMatch;
-        const parts = rest.split('->').map(p => p.trim());
-        let currentFrom = from;
+  // Then, find all edges
+  const edgeLineRegex = /^(\w+)\s*->\s*([\s\S]*?)$/gm;
+  let edgeLineMatch;
+  while ((edgeLineMatch = edgeLineRegex.exec(cleanText)) !== null) {
+    const [, from, rest] = edgeLineMatch;
+    const parts = rest.split('->').map(p => p.trim());
+    let currentFrom = from;
 
-        for (const part of parts) {
-          // Match "ID : Label { Style }" or "ID ( { Style } )" or just "ID"
-          const partMatch = part.match(/^(\w+)(?:\s*[:]\s*([^{]*))?(?:\s*(?:\{(.*)\}|\((.*)\)))?$/s);
-          if (partMatch) {
-            const [, to, label, style1, style2] = partMatch;
-            const styleStr = style1 || style2 || '';
-            
-            if (!nodes.has(currentFrom)) {
-              nodes.set(currentFrom, { id: currentFrom, label: currentFrom, type: 'rectangle', style: defaultStyle });
-            }
-            if (!nodes.has(to)) {
-              nodes.set(to, { id: to, label: to, type: 'rectangle', style: defaultStyle });
-            }
-            
-            edges.push({ 
-              from: currentFrom, 
-              to, 
-              label: label?.trim(),
-              style: { ...defaultStyle, ...parseStyles(styleStr) }
-            });
-            currentFrom = to;
-          }
+    for (const part of parts) {
+      // Match "ID : Label { Style }" or "ID ( { Style } )" or just "ID"
+      const partMatch = part.match(/^(\w+)(?:\s*[:]\s*([^{]*))?(?:\s*(?:\{(.*)\}|\((.*)\)))?$/s);
+      if (partMatch) {
+        const [, to, label, style1, style2] = partMatch;
+        const styleStr = style1 || style2 || '';
+        
+        if (!nodes.has(currentFrom)) {
+          nodes.set(currentFrom, { id: currentFrom, label: currentFrom, type: 'rectangle', style: defaultStyle });
         }
+        if (!nodes.has(to)) {
+          nodes.set(to, { id: to, label: to, type: 'rectangle', style: defaultStyle });
+        }
+        
+        edges.push({ 
+          from: currentFrom, 
+          to, 
+          label: label?.trim(),
+          style: { ...defaultStyle, ...parseStyles(styleStr) }
+        });
+        currentFrom = to;
       }
-      continue;
-    }
-
-    // Node definition: ID [Label] {Style}
-    // Supports multi-line labels and styles
-    const nodeMatch = block.match(/^(\w+)\s*(?:\[([\s\S]*?)\]|\(([\s\S]*?)\)|\{([\s\S]*?)\})(?:\s*(?:\{([\s\S]*?)\}|\(([\s\S]*?)\)))?$/);
-    if (nodeMatch) {
-      const [, id, rectLabel, ellipseLabel, diamondLabel, style1, style2] = nodeMatch;
-      const label = (rectLabel || ellipseLabel || diamondLabel || '').trim();
-      let type: NodeType = 'rectangle';
-      if (diamondLabel !== undefined) type = 'diamond';
-      if (ellipseLabel !== undefined) type = 'ellipse';
-      
-      const styleStr = style1 || style2 || '';
-      
-      nodes.set(id, { 
-        id, 
-        label: label || id, 
-        type,
-        style: { ...defaultStyle, ...parseStyles(styleStr) }
-      });
     }
   }
 

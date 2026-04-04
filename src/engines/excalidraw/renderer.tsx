@@ -184,7 +184,7 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
         
         lines.forEach((line, i) => {
           if (line.trim() === '---') {
-            const lineY = textY + (i * lineHeight) + (lineHeight / 2);
+            const lineY = startY + (i * lineHeight) - 4;
             const lineEl = rc.line(textX - width / 2 + 20, lineY, textX + width / 2 - 20, lineY, {
               stroke: style.stroke || '#3f3f46',
               strokeWidth: 1,
