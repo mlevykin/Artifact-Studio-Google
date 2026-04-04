@@ -178,14 +178,34 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph })
     // Update viewBox
     if (minX !== Infinity) {
       const padding = 40;
-      setViewBox(`${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`);
+      const width = maxX - minX + padding * 2;
+      const height = maxY - minY + padding * 2;
+      setViewBox(`${minX - padding} ${minY - padding} ${width} ${height}`);
     }
 
   }, [graph]);
 
+  // Calculate natural dimensions from viewBox
+  const [vbX, vbY, vbW, vbH] = viewBox.split(' ').map(Number);
+
   return (
-    <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-white rounded-xl border border-zinc-200 p-4 overflow-hidden">
-      <svg ref={svgRef} viewBox={viewBox} className="w-full h-full max-w-full max-h-full" preserveAspectRatio="xMidYMid meet" />
+    <div className="w-full overflow-visible flex items-center justify-center p-4">
+      <div 
+        className="excalidraw-container shadow-sm rounded-lg flex items-center justify-center bg-white"
+        style={{ 
+          width: vbW ? `${Math.min(vbW, 800)}px` : 'auto',
+          maxWidth: '100%',
+          minHeight: '100px',
+          aspectRatio: vbW && vbH ? `${vbW} / ${vbH}` : 'auto'
+        }}
+      >
+        <svg 
+          ref={svgRef} 
+          viewBox={viewBox} 
+          className="w-full h-full block" 
+          preserveAspectRatio="xMidYMid meet" 
+        />
+      </div>
     </div>
   );
 };

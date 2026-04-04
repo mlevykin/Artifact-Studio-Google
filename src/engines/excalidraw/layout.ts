@@ -7,8 +7,8 @@ export function layoutGraph(graph: Graph): Graph {
     rankdir: graph.direction || 'TB', 
     marginx: 20, 
     marginy: 20,
-    nodesep: 100,
-    ranksep: 120
+    nodesep: 60,
+    ranksep: 80
   });
   g.setDefaultEdgeLabel(() => ({}));
 
