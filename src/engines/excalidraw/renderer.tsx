@@ -25,12 +25,24 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
     // Filter elements based on step if provided
-    const visibleElements = step !== undefined 
-      ? graph.elements.slice(0, step) 
-      : graph.elements;
+    const visibleNodes = step !== undefined ? graph.nodes.slice(0, step) : graph.nodes;
+    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
 
-    // Draw elements in order
-    for (const el of visibleElements) {
+    // Draw elements
+    for (const el of graph.elements) {
+      let isVisible = true;
+      if (step !== undefined) {
+        if ('from' in el) {
+          // Edge: visible if its target node is visible
+          isVisible = visibleNodeIds.has((el as Edge).to);
+        } else {
+          // Node: visible if it's in the current step range
+          isVisible = visibleNodeIds.has((el as Node).id);
+        }
+      }
+      
+      if (!isVisible) continue;
+
       if ('from' in el) {
         // Draw Edge
         const edge = el as Edge;

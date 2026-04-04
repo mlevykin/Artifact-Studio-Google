@@ -112,14 +112,17 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   } | null>(null);
 
   const getMermaidStepCount = (content: string) => {
-    const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('%%') && !/^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|quadrantChart|xychart|mindmap|timeline|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|packetBeta|kanban|architecture|requirementDiagram)/i.test(l.trim()));
-    return lines.length;
+    // Count nodes in Mermaid flowchart/graph
+    // This is still an estimate but we'll try to count node definitions
+    const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('%%'));
+    const nodeDefs = lines.filter(l => /^[a-zA-Z0-9_-]+(\[|\(|\{|\>|\[\[|\(\(|\(\[|\{\{|\(\{\{)/.test(l.trim()) || /^[a-zA-Z0-9_-]+\s*$/.test(l.trim()));
+    return Math.max(nodeDefs.length, 1);
   };
 
   const getExcalidrawStepCount = (content: string) => {
     try {
       const graph = parseExcalidraw(content);
-      return graph.elements.length;
+      return graph.nodes.length;
     } catch (e) {
       return 0;
     }
@@ -190,12 +193,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 onClick={() => setPresentingDiagram({
                   type: 'mermaid',
                   content,
-                  title: 'Mermaid Presentation',
-                  markdownText: 'Presentation Mode'
+                  title: 'Presentation mode',
+                  markdownText: 'Mermaid Diagram'
                 })}
-                className="p-2 bg-zinc-900/80 text-white rounded-lg backdrop-blur-sm hover:bg-zinc-900 transition-all flex items-center gap-2 text-xs font-medium"
+                className="p-2 bg-zinc-900/80 text-white rounded-lg backdrop-blur-sm hover:bg-zinc-900 transition-all flex items-center justify-center shadow-lg"
+                title="Present Mode"
               >
-                <Maximize2 size={14} /> Present
+                <Maximize2 size={16} />
               </button>
             </div>
             <MermaidPreview 
@@ -215,12 +219,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 onClick={() => setPresentingDiagram({
                   type: 'excalidraw',
                   content,
-                  title: 'Excalidraw Presentation',
-                  markdownText: 'Presentation Mode'
+                  title: 'Presentation mode',
+                  markdownText: 'Excalidraw Diagram'
                 })}
-                className="p-2 bg-zinc-900/80 text-white rounded-lg backdrop-blur-sm hover:bg-zinc-900 transition-all flex items-center gap-2 text-xs font-medium"
+                className="p-2 bg-zinc-900/80 text-white rounded-lg backdrop-blur-sm hover:bg-zinc-900 transition-all flex items-center justify-center shadow-lg"
+                title="Present Mode"
               >
-                <Maximize2 size={14} /> Present
+                <Maximize2 size={16} />
               </button>
             </div>
             <ExcalidrawDiagram 
@@ -916,12 +921,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                           onClick={() => setPresentingDiagram({
                             type: 'mermaid',
                             content: pContent,
-                            title: 'Mermaid Presentation',
-                            markdownText: 'Artifact View'
+                            title: 'Presentation mode',
+                            markdownText: 'Artifact'
                           })}
-                          className="p-2.5 bg-zinc-900 text-white rounded-xl shadow-xl hover:bg-zinc-800 transition-all flex items-center gap-2 text-sm font-medium"
+                          className="p-2.5 bg-zinc-900 text-white rounded-xl shadow-xl hover:bg-zinc-800 transition-all flex items-center justify-center"
+                          title="Present Mode"
                         >
-                          <Maximize2 size={16} /> Present Mode
+                          <Maximize2 size={18} />
                         </button>
                       </div>
                       <MermaidPreview 
@@ -938,12 +944,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                           onClick={() => setPresentingDiagram({
                             type: 'excalidraw',
                             content: pContent,
-                            title: 'Excalidraw Presentation',
-                            markdownText: 'Artifact View'
+                            title: 'Presentation mode',
+                            markdownText: 'Artifact'
                           })}
-                          className="p-2.5 bg-zinc-900 text-white rounded-xl shadow-xl hover:bg-zinc-800 transition-all flex items-center gap-2 text-sm font-medium"
+                          className="p-2.5 bg-zinc-900 text-white rounded-xl shadow-xl hover:bg-zinc-800 transition-all flex items-center justify-center"
+                          title="Present Mode"
                         >
-                          <Maximize2 size={16} /> Present Mode
+                          <Maximize2 size={18} />
                         </button>
                       </div>
                       <ExcalidrawDiagram code={pContent} />

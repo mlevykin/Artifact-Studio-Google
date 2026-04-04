@@ -6,7 +6,10 @@ import {
   RotateCcw, 
   Maximize2, 
   Minimize2,
-  Type
+  Type,
+  Plus,
+  Minus,
+  Search
 } from 'lucide-react';
 import { cn } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,7 +31,7 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [showText, setShowText] = useState(true);
-  const [isFullScreen, setIsFullScreen] = useState(true);
+  const [zoom, setZoom] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const nextStep = useCallback(() => {
@@ -43,6 +46,10 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
     setCurrentStep(0);
   }, []);
 
+  const zoomIn = useCallback(() => setZoom(prev => Math.min(prev + 0.2, 3)), []);
+  const zoomOut = useCallback(() => setZoom(prev => Math.max(prev - 0.2, 0.5)), []);
+  const resetZoom = useCallback(() => setZoom(1), []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
@@ -55,12 +62,36 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
         reset();
       } else if (e.key === 't' || e.key === 'T') {
         setShowText(prev => !prev);
+      } else if (e.key === '+' || e.key === '=') {
+        zoomIn();
+      } else if (e.key === '-' || e.key === '_') {
+        zoomOut();
+      } else if (e.key === '0') {
+        resetZoom();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextStep, prevStep, onExit, reset]);
+  }, [nextStep, prevStep, onExit, reset, zoomIn, zoomOut, resetZoom]);
+
+  // Request Fullscreen on mount
+  useEffect(() => {
+    const element = document.documentElement;
+    if (element.requestFullscreen) {
+      element.requestFullscreen().catch(err => {
+        console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    }
+    
+    return () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(err => {
+          console.warn(`Error attempting to exit full-screen mode: ${err.message}`);
+        });
+      }
+    };
+  }, []);
 
   const handleContainerClick = (e: React.MouseEvent) => {
     // Only advance if clicking the background, not buttons
@@ -74,34 +105,58 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-zinc-950 flex flex-col items-center justify-center overflow-hidden select-none"
+      className="fixed inset-0 z-[200] bg-zinc-50 flex flex-col items-center justify-center overflow-hidden select-none"
       onClick={handleContainerClick}
       ref={containerRef}
     >
       {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between bg-gradient-to-b from-black/50 to-transparent z-10">
+      <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between bg-gradient-to-b from-white/80 to-transparent z-10 backdrop-blur-sm">
         <div className="flex flex-col">
-          <h2 className="text-white font-semibold text-lg">{title || 'Diagram Presentation'}</h2>
-          <div className="text-zinc-400 text-sm">
+          <h2 className="text-zinc-900 font-bold text-xl tracking-tight">{title || 'Presentation mode'}</h2>
+          <div className="text-zinc-500 text-sm font-medium">
             Step {currentStep} of {totalSteps}
           </div>
         </div>
         
         <div className="flex items-center gap-3">
+          <div className="flex items-center bg-zinc-200/50 p-1 rounded-xl mr-4">
+            <button 
+              onClick={zoomOut}
+              className="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-white rounded-lg transition-all"
+              title="Zoom Out (-)"
+            >
+              <Minus size={18} />
+            </button>
+            <button 
+              onClick={resetZoom}
+              className="px-3 text-xs font-bold text-zinc-600 hover:text-zinc-900"
+              title="Reset Zoom (0)"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button 
+              onClick={zoomIn}
+              className="p-2 text-zinc-600 hover:text-zinc-900 hover:bg-white rounded-lg transition-all"
+              title="Zoom In (+)"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+
           <button 
             onClick={() => setShowText(!showText)}
             className={cn(
-              "p-2.5 rounded-full transition-all",
-              showText ? "bg-white text-zinc-900" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              "p-2.5 rounded-full transition-all shadow-sm",
+              showText ? "bg-zinc-900 text-white" : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"
             )}
-            title="Toggle Markdown Text (T)"
+            title="Toggle Text (T)"
           >
             <Type size={20} />
           </button>
           <button 
             onClick={onExit}
-            className="p-2.5 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 rounded-full transition-all"
-            title="Exit Presentation (Esc)"
+            className="p-2.5 bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200 rounded-full transition-all shadow-sm"
+            title="Exit (Esc)"
           >
             <X size={20} />
           </button>
@@ -109,75 +164,79 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 w-full flex items-center justify-center p-12 relative">
-        <div className={cn(
-          "flex flex-col items-center justify-center transition-all duration-500 w-full h-full",
-          showText && markdownText ? "lg:flex-row gap-12" : "flex-col"
-        )}>
-          {/* Markdown Text Panel */}
-          <AnimatePresence>
-            {showText && markdownText && (
-              <motion.div 
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                className="max-w-md bg-zinc-900/50 p-8 rounded-2xl border border-zinc-800 backdrop-blur-sm"
-              >
-                <div className="prose prose-invert prose-sm">
-                  {markdownText}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Diagram Area */}
-          <div className="flex-1 flex items-center justify-center max-w-5xl max-h-full bg-white rounded-3xl shadow-2xl overflow-hidden p-8">
+      <div className="flex-1 w-full flex flex-col items-center justify-center p-12 relative">
+        {/* Diagram Area */}
+        <motion.div 
+          className="flex-1 flex items-center justify-center w-full h-full"
+          animate={{ scale: zoom }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        >
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden p-12 border border-zinc-100">
             {children(currentStep)}
           </div>
-        </div>
+        </motion.div>
+
+        {/* Markdown Text Panel (Bottom) */}
+        <AnimatePresence>
+          {showText && markdownText && (
+            <motion.div 
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="absolute bottom-32 left-1/2 -translate-x-1/2 max-w-3xl w-full bg-white/90 p-6 rounded-2xl border border-zinc-200 shadow-xl backdrop-blur-md z-20"
+            >
+              <div className="prose prose-zinc prose-sm max-w-none text-center">
+                <p className="text-zinc-500 font-medium uppercase tracking-widest text-[10px] mb-2">Context</p>
+                <div className="text-zinc-800 text-base leading-relaxed">
+                  {markdownText}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Bottom Controls */}
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md p-3 rounded-2xl border border-zinc-800 shadow-2xl z-10">
+      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-zinc-200 shadow-2xl z-30">
         <button 
           onClick={reset}
-          className="p-3 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all"
+          className="p-3 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-all"
           title="Reset (R)"
         >
           <RotateCcw size={20} />
         </button>
         
-        <div className="h-6 w-[1px] bg-zinc-800 mx-2" />
+        <div className="h-6 w-[1px] bg-zinc-200 mx-2" />
         
         <button 
           onClick={prevStep}
           disabled={currentStep === 0}
-          className="p-3 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-20 rounded-xl transition-all"
-          title="Previous Step (Left Arrow)"
+          className="p-3 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-20 rounded-xl transition-all"
+          title="Previous (Left Arrow)"
         >
           <ChevronLeft size={24} />
         </button>
         
         <div className="flex items-center gap-1.5 px-4 min-w-[100px] justify-center">
-          <span className="text-white font-mono text-lg font-bold">{currentStep}</span>
-          <span className="text-zinc-600 font-mono">/</span>
-          <span className="text-zinc-500 font-mono">{totalSteps}</span>
+          <span className="text-zinc-900 font-mono text-xl font-bold">{currentStep}</span>
+          <span className="text-zinc-300 font-mono">/</span>
+          <span className="text-zinc-500 font-mono font-medium">{totalSteps}</span>
         </div>
 
         <button 
           onClick={nextStep}
           disabled={currentStep === totalSteps}
-          className="p-3 bg-white text-zinc-900 hover:bg-zinc-200 disabled:opacity-20 rounded-xl transition-all shadow-lg"
-          title="Next Step (Right Arrow / Space / Click)"
+          className="p-3 bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-20 rounded-xl transition-all shadow-lg"
+          title="Next (Right Arrow / Space / Click)"
         >
           <ChevronRight size={24} />
         </button>
       </div>
 
       {/* Progress Indicator */}
-      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-zinc-900">
+      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-zinc-200">
         <motion.div 
-          className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+          className="h-full bg-zinc-900 shadow-[0_0_10px_rgba(0,0,0,0.1)]"
           initial={{ width: 0 }}
           animate={{ width: `${(currentStep / totalSteps) * 100}%` }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}

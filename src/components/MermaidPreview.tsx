@@ -180,21 +180,54 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
         const svg = containerRef.current.querySelector('svg');
         if (svg) {
           // Select nodes and edges
-          const elements = Array.from(svg.querySelectorAll('.node, .edgePath, .actor, .messageLine, .messageText, .loop, .note'));
+          const nodes = Array.from(svg.querySelectorAll('.node, .actor'));
+          const edges = Array.from(svg.querySelectorAll('.edgePath, .messageLine, .messageText, .loop, .note'));
           
           if (step !== undefined) {
-            elements.forEach((el, index) => {
+            const visibleNodes = nodes.slice(0, step);
+            const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+            
+            // Hide/show nodes
+            nodes.forEach((node, index) => {
               if (index >= step) {
-                (el as HTMLElement).style.opacity = '0';
-                (el as HTMLElement).style.pointerEvents = 'none';
+                (node as HTMLElement).style.opacity = '0';
+                (node as HTMLElement).style.pointerEvents = 'none';
               } else {
-                (el as HTMLElement).style.opacity = '1';
-                (el as HTMLElement).style.pointerEvents = 'auto';
-                (el as HTMLElement).style.transition = 'opacity 0.3s ease-in-out';
+                (node as HTMLElement).style.opacity = '1';
+                (node as HTMLElement).style.pointerEvents = 'auto';
+                (node as HTMLElement).style.transition = 'opacity 0.3s ease-in-out';
+              }
+            });
+
+            // Hide/show edges
+            edges.forEach((edge) => {
+              const edgeEl = edge as HTMLElement;
+              // Mermaid edges often have classes like L-nodeId
+              // We'll show an edge if it's connected to a visible node
+              const classList = Array.from(edgeEl.classList);
+              const isConnectedToVisibleNode = classList.some(cls => {
+                if (cls.startsWith('L-')) {
+                  const nodeId = cls.substring(2);
+                  return visibleNodeIds.has(nodeId);
+                }
+                return false;
+              });
+
+              // Also check for sequence diagram messages
+              // They are often in order, so we can just show them if they are before the current step?
+              // Or if they are between visible actors.
+              
+              if (isConnectedToVisibleNode || (nodes.length === 0 && edges.indexOf(edge) < step)) {
+                edgeEl.style.opacity = '1';
+                edgeEl.style.pointerEvents = 'auto';
+                edgeEl.style.transition = 'opacity 0.3s ease-in-out';
+              } else {
+                edgeEl.style.opacity = '0';
+                edgeEl.style.pointerEvents = 'none';
               }
             });
           } else {
-            elements.forEach((el) => {
+            [...nodes, ...edges].forEach((el) => {
               (el as HTMLElement).style.opacity = '1';
               (el as HTMLElement).style.pointerEvents = 'auto';
             });
