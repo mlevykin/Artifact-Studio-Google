@@ -87,5 +87,16 @@ export function layoutGraph(graph: Graph): Graph {
     };
   });
 
-  return { nodes, edges };
+  // Reconstruct elements with updated node/edge data
+  const elements = graph.elements.map(el => {
+    if ('from' in el) {
+      // It's an edge
+      return edges.find(e => e.from === el.from && e.to === el.to) || el;
+    } else {
+      // It's a node
+      return nodes.find(n => n.id === el.id) || el;
+    }
+  });
+
+  return { nodes, edges, elements, direction: graph.direction };
 }

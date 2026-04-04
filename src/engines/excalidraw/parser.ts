@@ -25,6 +25,7 @@ export function parseExcalidraw(text: string): Graph {
   const lines = text.split('\n');
   const nodes: Map<string, Node> = new Map();
   const edges: Edge[] = [];
+  const elements: (Node | Edge)[] = [];
   let direction: 'TB' | 'LR' | 'BT' | 'RL' = 'TB';
   let defaultStyle: any = {};
 
@@ -61,12 +62,14 @@ export function parseExcalidraw(text: string): Graph {
       if (diamondLabel !== undefined) type = 'diamond';
       if (ellipseLabel !== undefined) type = 'ellipse';
       
-      nodes.set(id, { 
+      const node: Node = { 
         id, 
         label: label.trim(), 
         type,
         style: { ...defaultStyle, ...parseStyles(styleStr) }
-      });
+      };
+      nodes.set(id, node);
+      elements.push(node);
       continue;
     }
 
@@ -86,26 +89,46 @@ export function parseExcalidraw(text: string): Graph {
           const labelStyleMatch = part.match(/^(\w+)(?:\s*[:]\s*([^{]*))?(?:\s*\{(.*)\})?$/);
           if (labelStyleMatch) {
             const [, to, label, styleStr] = labelStyleMatch;
-            if (!nodes.has(currentFrom)) nodes.set(currentFrom, { id: currentFrom, label: currentFrom, type: 'rectangle', style: defaultStyle });
-            if (!nodes.has(to)) nodes.set(to, { id: to, label: to, type: 'rectangle', style: defaultStyle });
+            if (!nodes.has(currentFrom)) {
+              const n: Node = { id: currentFrom, label: currentFrom, type: 'rectangle', style: defaultStyle };
+              nodes.set(currentFrom, n);
+              elements.push(n);
+            }
+            if (!nodes.has(to)) {
+              const n: Node = { id: to, label: to, type: 'rectangle', style: defaultStyle };
+              nodes.set(to, n);
+              elements.push(n);
+            }
             
-            edges.push({ 
+            const edge: Edge = { 
               from: currentFrom, 
               to, 
               label: label?.trim(),
               style: { ...defaultStyle, ...parseStyles(styleStr) }
-            });
+            };
+            edges.push(edge);
+            elements.push(edge);
           }
         } else {
           const to = part;
-          if (!nodes.has(currentFrom)) nodes.set(currentFrom, { id: currentFrom, label: currentFrom, type: 'rectangle', style: defaultStyle });
-          if (!nodes.has(to)) nodes.set(to, { id: to, label: to, type: 'rectangle', style: defaultStyle });
+          if (!nodes.has(currentFrom)) {
+            const n: Node = { id: currentFrom, label: currentFrom, type: 'rectangle', style: defaultStyle };
+            nodes.set(currentFrom, n);
+            elements.push(n);
+          }
+          if (!nodes.has(to)) {
+            const n: Node = { id: to, label: to, type: 'rectangle', style: defaultStyle };
+            nodes.set(to, n);
+            elements.push(n);
+          }
           
-          edges.push({ 
+          const edge: Edge = { 
             from: currentFrom, 
             to,
             style: defaultStyle
-          });
+          };
+          edges.push(edge);
+          elements.push(edge);
           currentFrom = to;
         }
       }
@@ -115,6 +138,7 @@ export function parseExcalidraw(text: string): Graph {
   return {
     nodes: Array.from(nodes.values()),
     edges,
+    elements,
     direction
   };
 }

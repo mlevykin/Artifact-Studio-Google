@@ -5,16 +5,17 @@ import { ExcalidrawRenderer } from '../engines/excalidraw/renderer';
 
 interface ExcalidrawDiagramProps {
   code: string;
+  step?: number;
 }
 
-export const ExcalidrawDiagram: React.FC<ExcalidrawDiagramProps> = ({ code }) => {
+export const ExcalidrawDiagram: React.FC<ExcalidrawDiagramProps> = ({ code, step }) => {
   const graph = useMemo(() => {
     try {
       const parsed = parseExcalidraw(code);
       return layoutGraph(parsed);
     } catch (error) {
       console.error('Failed to parse or layout Excalidraw diagram:', error);
-      return { nodes: [], edges: [] };
+      return { nodes: [], edges: [], elements: [] };
     }
   }, [code]);
 
@@ -26,5 +27,5 @@ export const ExcalidrawDiagram: React.FC<ExcalidrawDiagramProps> = ({ code }) =>
     );
   }
 
-  return <ExcalidrawRenderer graph={graph} />;
+  return <ExcalidrawRenderer graph={graph} step={step} />;
 };

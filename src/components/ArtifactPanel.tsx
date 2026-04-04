@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { TTSControls } from './TTSControls';
 import { 
   Code, 
@@ -25,6 +26,8 @@ import {
 import { Artifact, ProjectFile, ContextLogEntry, ProjectConfig } from '../types';
 import { ProjectPanel } from './ProjectPanel';
 import { cn } from '../utils';
+import { DiagramPresenter } from './DiagramPresenter';
+import { parseExcalidraw } from '../engines/excalidraw/parser';
 import { MermaidPreview } from './MermaidPreview';
 import { ExcalidrawDiagram } from './ExcalidrawDiagram';
 import { MERMAID_STYLES } from '../constants/mermaidStyles';
@@ -101,6 +104,26 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ '': true });
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [presentingDiagram, setPresentingDiagram] = useState<{
+    type: 'mermaid' | 'excalidraw';
+    content: string;
+    title: string;
+    markdownText?: string;
+  } | null>(null);
+
+  const getMermaidStepCount = (content: string) => {
+    const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('%%') && !/^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|quadrantChart|xychart|mindmap|timeline|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|packetBeta|kanban|architecture|requirementDiagram)/i.test(l.trim()));
+    return lines.length;
+  };
+
+  const getExcalidrawStepCount = (content: string) => {
+    try {
+      const graph = parseExcalidraw(content);
+      return graph.elements.length;
+    } catch (e) {
+      return 0;
+    }
+  };
   const panelRef = useRef<HTMLDivElement>(null);
   const codeAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -157,12 +180,26 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       const match = /language-(\w+)/.exec(className || '');
       const isMermaid = match && match[1] === 'mermaid';
       const isExcalidraw = match && match[1] === 'excalidraw';
+      const content = children ? String(children).replace(/\n$/, '') : '';
       
       if (!inline && isMermaid) {
         return (
-          <div className="my-6 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+          <div className="my-6 group relative overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm hover:shadow-md transition-all">
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-2">
+              <button 
+                onClick={() => setPresentingDiagram({
+                  type: 'mermaid',
+                  content,
+                  title: 'Mermaid Presentation',
+                  markdownText: 'Presentation Mode'
+                })}
+                className="p-2 bg-zinc-900/80 text-white rounded-lg backdrop-blur-sm hover:bg-zinc-900 transition-all flex items-center gap-2 text-xs font-medium"
+              >
+                <Maximize2 size={14} /> Present
+              </button>
+            </div>
             <MermaidPreview 
-              content={children ? String(children).replace(/\n$/, '') : ''} 
+              content={content} 
               className="w-fit max-w-full mx-auto !p-4 !shadow-none !rounded-none !min-h-0"
               styleId={artifact?.mermaidStyleId}
             />
@@ -172,9 +209,22 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
       if (!inline && isExcalidraw) {
         return (
-          <div className="my-6 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+          <div className="my-6 group relative overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm hover:shadow-md transition-all">
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-2">
+              <button 
+                onClick={() => setPresentingDiagram({
+                  type: 'excalidraw',
+                  content,
+                  title: 'Excalidraw Presentation',
+                  markdownText: 'Presentation Mode'
+                })}
+                className="p-2 bg-zinc-900/80 text-white rounded-lg backdrop-blur-sm hover:bg-zinc-900 transition-all flex items-center gap-2 text-xs font-medium"
+              >
+                <Maximize2 size={14} /> Present
+              </button>
+            </div>
             <ExcalidrawDiagram 
-              code={children ? String(children).replace(/\n$/, '') : ''} 
+              code={content} 
             />
           </div>
         );
@@ -860,14 +910,42 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   isStreaming={isStreaming}
                 >
                   {pType === 'mermaid' && (
-                    <MermaidPreview 
-                      content={pContent} 
-                      className="natural-size" 
-                      styleId={artifact.mermaidStyleId}
-                    />
+                    <div className="group relative">
+                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <button 
+                          onClick={() => setPresentingDiagram({
+                            type: 'mermaid',
+                            content: pContent,
+                            title: 'Mermaid Presentation',
+                            markdownText: 'Artifact View'
+                          })}
+                          className="p-2.5 bg-zinc-900 text-white rounded-xl shadow-xl hover:bg-zinc-800 transition-all flex items-center gap-2 text-sm font-medium"
+                        >
+                          <Maximize2 size={16} /> Present Mode
+                        </button>
+                      </div>
+                      <MermaidPreview 
+                        content={pContent} 
+                        className="natural-size" 
+                        styleId={artifact.mermaidStyleId}
+                      />
+                    </div>
                   )}
                   {pType === 'excalidraw' && (
-                    <div className="w-[800px] h-[500px] bg-white shadow-lg rounded-xl overflow-hidden">
+                    <div className="group relative w-[800px] h-[500px] bg-white shadow-lg rounded-xl overflow-hidden">
+                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <button 
+                          onClick={() => setPresentingDiagram({
+                            type: 'excalidraw',
+                            content: pContent,
+                            title: 'Excalidraw Presentation',
+                            markdownText: 'Artifact View'
+                          })}
+                          className="p-2.5 bg-zinc-900 text-white rounded-xl shadow-xl hover:bg-zinc-800 transition-all flex items-center gap-2 text-sm font-medium"
+                        >
+                          <Maximize2 size={16} /> Present Mode
+                        </button>
+                      </div>
                       <ExcalidrawDiagram code={pContent} />
                     </div>
                   )}
@@ -910,6 +988,33 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           )}
         </div>
       </div>
+      
+      <AnimatePresence>
+        {presentingDiagram && (
+          <DiagramPresenter
+            totalSteps={presentingDiagram.type === 'mermaid' ? getMermaidStepCount(presentingDiagram.content) : getExcalidrawStepCount(presentingDiagram.content)}
+            title={presentingDiagram.title}
+            markdownText={presentingDiagram.markdownText}
+            onExit={() => setPresentingDiagram(null)}
+          >
+            {(step) => (
+              presentingDiagram.type === 'mermaid' ? (
+                <MermaidPreview 
+                  content={presentingDiagram.content} 
+                  step={step}
+                  className="!w-full !h-full !p-0 !shadow-none !rounded-none"
+                  styleId={artifact?.mermaidStyleId}
+                />
+              ) : (
+                <ExcalidrawDiagram 
+                  code={presentingDiagram.content} 
+                  step={step}
+                />
+              )
+            )}
+          </DiagramPresenter>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

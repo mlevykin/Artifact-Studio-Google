@@ -7,12 +7,13 @@ interface MermaidPreviewProps {
   content: string;
   styleId?: string;
   className?: string;
+  step?: number;
 }
 
 // Global cache to prevent flickering on remounts/resizes
 const mermaidRenderCache = new Map<string, string>();
 
-export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ content, styleId = 'minimalist', className }) => {
+export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ content, styleId = 'minimalist', className, step }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const renderCount = useRef(0);
   const [isInitialized, setIsInitialized] = React.useState(false);
@@ -106,6 +107,8 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
         // If we already injected from cache in useLayoutEffect, we can skip re-rendering
         // unless it's the very first render of this component instance
         if (mermaidRenderCache.has(cacheKey) && renderCount.current > 1) {
+          // Even if we skip re-render, we might need to apply step visibility
+          applyStepVisibility();
           return;
         }
 
@@ -152,6 +155,8 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
             if (svgElement) {
               svgElement.style.display = 'block';
             }
+            
+            applyStepVisibility();
           }
         } catch (error: any) {
           const isStreamingError = error?.message?.includes('Parse error') || error?.message?.includes('Syntax error');
@@ -170,8 +175,36 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
       }
     };
 
+    function applyStepVisibility() {
+      if (containerRef.current) {
+        const svg = containerRef.current.querySelector('svg');
+        if (svg) {
+          // Select nodes and edges
+          const elements = Array.from(svg.querySelectorAll('.node, .edgePath, .actor, .messageLine, .messageText, .loop, .note'));
+          
+          if (step !== undefined) {
+            elements.forEach((el, index) => {
+              if (index >= step) {
+                (el as HTMLElement).style.opacity = '0';
+                (el as HTMLElement).style.pointerEvents = 'none';
+              } else {
+                (el as HTMLElement).style.opacity = '1';
+                (el as HTMLElement).style.pointerEvents = 'auto';
+                (el as HTMLElement).style.transition = 'opacity 0.3s ease-in-out';
+              }
+            });
+          } else {
+            elements.forEach((el) => {
+              (el as HTMLElement).style.opacity = '1';
+              (el as HTMLElement).style.pointerEvents = 'auto';
+            });
+          }
+        }
+      }
+    }
+
     renderDiagram();
-  }, [content, styleId, isInitialized, isFullWidth]);
+  }, [content, styleId, isInitialized, isFullWidth, step]);
   return (
     <div className={cn("relative w-full overflow-visible flex items-center justify-center p-4", className?.includes('!min-h-0') ? "h-auto" : "h-full")}>
       <style dangerouslySetInnerHTML={{ __html: currentStyle.css || '' }} />
