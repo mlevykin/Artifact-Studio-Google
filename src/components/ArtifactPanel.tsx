@@ -193,10 +193,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 onClick={() => setPresentingDiagram({
                   type: 'mermaid',
                   content,
-                  title: 'Presentation mode',
-                  markdownText: 'Mermaid Diagram'
+                  title: 'Presentation mode'
                 })}
-                className="p-2 bg-zinc-900/80 text-white rounded-lg backdrop-blur-sm hover:bg-zinc-900 transition-all flex items-center justify-center shadow-lg"
+                className="p-2 bg-white/90 text-zinc-600 rounded-lg backdrop-blur-sm hover:bg-white hover:text-zinc-900 transition-all flex items-center justify-center shadow-md border border-zinc-200"
                 title="Present Mode"
               >
                 <Maximize2 size={16} />
@@ -219,10 +218,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                 onClick={() => setPresentingDiagram({
                   type: 'excalidraw',
                   content,
-                  title: 'Presentation mode',
-                  markdownText: 'Excalidraw Diagram'
+                  title: 'Presentation mode'
                 })}
-                className="p-2 bg-zinc-900/80 text-white rounded-lg backdrop-blur-sm hover:bg-zinc-900 transition-all flex items-center justify-center shadow-lg"
+                className="p-2 bg-white/90 text-zinc-600 rounded-lg backdrop-blur-sm hover:bg-white hover:text-zinc-900 transition-all flex items-center justify-center shadow-md border border-zinc-200"
                 title="Present Mode"
               >
                 <Maximize2 size={16} />
@@ -921,10 +919,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                           onClick={() => setPresentingDiagram({
                             type: 'mermaid',
                             content: pContent,
-                            title: 'Presentation mode',
-                            markdownText: 'Artifact'
+                            title: 'Presentation mode'
                           })}
-                          className="p-2.5 bg-zinc-900 text-white rounded-xl shadow-xl hover:bg-zinc-800 transition-all flex items-center justify-center"
+                          className="p-2.5 bg-white text-zinc-600 rounded-xl shadow-lg hover:bg-zinc-50 hover:text-zinc-900 transition-all flex items-center justify-center border border-zinc-200"
                           title="Present Mode"
                         >
                           <Maximize2 size={18} />
@@ -944,10 +941,9 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                           onClick={() => setPresentingDiagram({
                             type: 'excalidraw',
                             content: pContent,
-                            title: 'Presentation mode',
-                            markdownText: 'Artifact'
+                            title: 'Presentation mode'
                           })}
-                          className="p-2.5 bg-zinc-900 text-white rounded-xl shadow-xl hover:bg-zinc-800 transition-all flex items-center justify-center"
+                          className="p-2.5 bg-white text-zinc-600 rounded-xl shadow-lg hover:bg-zinc-50 hover:text-zinc-900 transition-all flex items-center justify-center border border-zinc-200"
                           title="Present Mode"
                         >
                           <Maximize2 size={18} />
@@ -1001,7 +997,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           <DiagramPresenter
             totalSteps={presentingDiagram.type === 'mermaid' ? getMermaidStepCount(presentingDiagram.content) : getExcalidrawStepCount(presentingDiagram.content)}
             title={presentingDiagram.title}
-            markdownText={presentingDiagram.markdownText}
             onExit={() => setPresentingDiagram(null)}
           >
             {(step) => (

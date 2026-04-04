@@ -18,7 +18,6 @@ interface DiagramPresenterProps {
   children: (step: number) => React.ReactNode;
   totalSteps: number;
   title?: string;
-  markdownText?: string;
   onExit: () => void;
 }
 
@@ -26,12 +25,11 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
   children, 
   totalSteps, 
   title, 
-  markdownText,
   onExit 
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [showText, setShowText] = useState(true);
   const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const nextStep = useCallback(() => {
@@ -44,11 +42,36 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
 
   const reset = useCallback(() => {
     setCurrentStep(0);
+    setZoom(1);
+    setPosition({ x: 0, y: 0 });
   }, []);
 
-  const zoomIn = useCallback(() => setZoom(prev => Math.min(prev + 0.2, 3)), []);
-  const zoomOut = useCallback(() => setZoom(prev => Math.max(prev - 0.2, 0.5)), []);
-  const resetZoom = useCallback(() => setZoom(1), []);
+  const zoomIn = useCallback(() => setZoom(prev => Math.min(prev + 0.2, 5)), []);
+  const zoomOut = useCallback(() => setZoom(prev => Math.max(prev - 0.2, 0.2)), []);
+  const resetZoom = useCallback(() => {
+    setZoom(1);
+    setPosition({ x: 0, y: 0 });
+  }, []);
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom(prev => Math.min(Math.max(prev + delta, 0.2), 5));
+    }
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+    }
+    return () => {
+      if (container) {
+        container.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, [handleWheel]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -60,8 +83,6 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
         onExit();
       } else if (e.key === 'r' || e.key === 'R') {
         reset();
-      } else if (e.key === 't' || e.key === 'T') {
-        setShowText(prev => !prev);
       } else if (e.key === '+' || e.key === '=') {
         zoomIn();
       } else if (e.key === '-' || e.key === '_') {
@@ -105,20 +126,20 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-zinc-50 flex flex-col items-center justify-center overflow-hidden select-none"
+      className="fixed inset-0 z-[200] bg-zinc-50 flex flex-col items-center justify-center overflow-hidden select-none cursor-grab active:cursor-grabbing"
       onClick={handleContainerClick}
       ref={containerRef}
     >
       {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between bg-gradient-to-b from-white/80 to-transparent z-10 backdrop-blur-sm">
-        <div className="flex flex-col">
+      <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between bg-gradient-to-b from-white/80 to-transparent z-10 backdrop-blur-sm pointer-events-none">
+        <div className="flex flex-col pointer-events-auto">
           <h2 className="text-zinc-900 font-bold text-xl tracking-tight">{title || 'Presentation mode'}</h2>
           <div className="text-zinc-500 text-sm font-medium">
             Step {currentStep} of {totalSteps}
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pointer-events-auto">
           <div className="flex items-center bg-zinc-200/50 p-1 rounded-xl mr-4">
             <button 
               onClick={zoomOut}
@@ -144,16 +165,6 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
           </div>
 
           <button 
-            onClick={() => setShowText(!showText)}
-            className={cn(
-              "p-2.5 rounded-full transition-all shadow-sm",
-              showText ? "bg-zinc-900 text-white" : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"
-            )}
-            title="Toggle Text (T)"
-          >
-            <Type size={20} />
-          </button>
-          <button 
             onClick={onExit}
             className="p-2.5 bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200 rounded-full transition-all shadow-sm"
             title="Exit (Esc)"
@@ -164,36 +175,25 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 w-full flex flex-col items-center justify-center p-12 relative">
-        {/* Diagram Area */}
+      <div className="flex-1 w-full flex flex-col items-center justify-center relative overflow-hidden">
         <motion.div 
-          className="flex-1 flex items-center justify-center w-full h-full"
+          drag
+          dragMomentum={false}
+          className="flex items-center justify-center cursor-grab active:cursor-grabbing"
+          style={{ x: position.x, y: position.y }}
+          onDragEnd={(_, info) => {
+            setPosition(prev => ({
+              x: prev.x + info.offset.x,
+              y: prev.y + info.offset.y
+            }));
+          }}
           animate={{ scale: zoom }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden p-12 border border-zinc-100">
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden p-12 border border-zinc-100 pointer-events-auto">
             {children(currentStep)}
           </div>
         </motion.div>
-
-        {/* Markdown Text Panel (Bottom) */}
-        <AnimatePresence>
-          {showText && markdownText && (
-            <motion.div 
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
-              className="absolute bottom-32 left-1/2 -translate-x-1/2 max-w-3xl w-full bg-white/90 p-6 rounded-2xl border border-zinc-200 shadow-xl backdrop-blur-md z-20"
-            >
-              <div className="prose prose-zinc prose-sm max-w-none text-center">
-                <p className="text-zinc-500 font-medium uppercase tracking-widest text-[10px] mb-2">Context</p>
-                <div className="text-zinc-800 text-base leading-relaxed">
-                  {markdownText}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Bottom Controls */}
