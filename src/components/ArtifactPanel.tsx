@@ -112,11 +112,25 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   } | null>(null);
 
   const getMermaidStepCount = (content: string) => {
-    // Count nodes in Mermaid flowchart/graph
-    // This is still an estimate but we'll try to count node definitions
     const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('%%'));
-    const nodeDefs = lines.filter(l => /^[a-zA-Z0-9_-]+(\[|\(|\{|\>|\[\[|\(\(|\(\[|\{\{|\(\{\{)/.test(l.trim()) || /^[a-zA-Z0-9_-]+\s*$/.test(l.trim()));
-    return Math.max(nodeDefs.length, 1);
+    
+    // Count nodes
+    const nodeDefs = lines.filter(l => 
+      /^[a-zA-Z0-9_-]+(\[|\(|\{|\>|\[\[|\(\(|\(\[|\{\{|\(\{\{)/.test(l.trim()) || 
+      /^[a-zA-Z0-9_-]+\s*$/.test(l.trim())
+    );
+    
+    // Count subgraphs
+    const subgraphs = lines.filter(l => l.trim().toLowerCase().startsWith('subgraph'));
+    
+    // Count sequence diagram messages
+    const messages = lines.filter(l => l.includes('->') || l.includes('-->'));
+    
+    if (content.toLowerCase().includes('sequencediagram')) {
+      return Math.max(messages.length, 1);
+    }
+    
+    return Math.max(nodeDefs.length + subgraphs.length, 1);
   };
 
   const getExcalidrawStepCount = (content: string) => {

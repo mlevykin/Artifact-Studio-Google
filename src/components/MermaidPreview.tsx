@@ -179,11 +179,21 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
       if (containerRef.current) {
         const svg = containerRef.current.querySelector('svg');
         if (svg) {
-          // Select nodes and edges
-          const nodes = Array.from(svg.querySelectorAll('.node, .actor'));
-          const edges = Array.from(svg.querySelectorAll('.edgePath, .messageLine, .messageText, .loop, .note'));
+          // Select nodes and edges more comprehensively
+          const nodes = Array.from(svg.querySelectorAll('.node, .actor, .cluster, .state, .er.entityBox'));
+          const edges = Array.from(svg.querySelectorAll('.edgePath, .edge-paths, .messageLine, .messageText, .loop, .note, .relation, .transition'));
           
           if (step !== undefined) {
+            // At step 0, hide EVERYTHING
+            if (step === 0) {
+              [...nodes, ...edges].forEach(el => {
+                (el as HTMLElement).style.opacity = '0';
+                (el as HTMLElement).style.pointerEvents = 'none';
+                (el as HTMLElement).style.transition = 'opacity 0.3s ease-in-out';
+              });
+              return;
+            }
+
             const visibleNodes = nodes.slice(0, step);
             const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
             
@@ -192,6 +202,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
               if (index >= step) {
                 (node as HTMLElement).style.opacity = '0';
                 (node as HTMLElement).style.pointerEvents = 'none';
+                (node as HTMLElement).style.transition = 'opacity 0.3s ease-in-out';
               } else {
                 (node as HTMLElement).style.opacity = '1';
                 (node as HTMLElement).style.pointerEvents = 'auto';
@@ -202,8 +213,9 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
             // Hide/show edges
             edges.forEach((edge) => {
               const edgeEl = edge as HTMLElement;
-              // Mermaid edges often have classes like L-nodeId
-              // We'll show an edge if it's connected to a visible node
+              
+              // For sequence diagrams, edges (messages) are usually in order
+              // For flowcharts, we check if the edge is connected to visible nodes
               const classList = Array.from(edgeEl.classList);
               const isConnectedToVisibleNode = classList.some(cls => {
                 if (cls.startsWith('L-')) {
@@ -213,17 +225,17 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
                 return false;
               });
 
-              // Also check for sequence diagram messages
-              // They are often in order, so we can just show them if they are before the current step?
-              // Or if they are between visible actors.
+              // Also check if the edge itself is within the step count if nodes are not the primary unit (e.g. sequence diagrams)
+              const isWithinStep = edges.indexOf(edge) < step;
               
-              if (isConnectedToVisibleNode || (nodes.length === 0 && edges.indexOf(edge) < step)) {
+              if (isConnectedToVisibleNode || (nodes.length === 0 && isWithinStep)) {
                 edgeEl.style.opacity = '1';
                 edgeEl.style.pointerEvents = 'auto';
                 edgeEl.style.transition = 'opacity 0.3s ease-in-out';
               } else {
                 edgeEl.style.opacity = '0';
                 edgeEl.style.pointerEvents = 'none';
+                edgeEl.style.transition = 'opacity 0.3s ease-in-out';
               }
             });
           } else {
