@@ -114,6 +114,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const activeSkills = skills.filter(s => activeSkillIds.includes(s.id));
   const activeMcps = mcpConfigs.filter(m => activeMcpIds.includes(m.id));
+  
+  // Count selected skills and MCPs
+  const selectedSkillsCount = activeSkillIds.length;
+  const selectedMcpCount = activeMcpIds.length;
+  
+  // Count deselected context options
+  const contextOptions = [
+    contextSettings.includeSystemPrompt,
+    contextSettings.includeChatHistory,
+    contextSettings.includeAttachmentsHistory,
+    contextSettings.includeArtifactContext,
+    contextSettings.includeSkills,
+    contextSettings.includeMcp
+  ];
+  const deselectedContextCount = contextOptions.filter(v => !v).length;
   const [showOllamaSettings, setShowOllamaSettings] = useState(false);
   const [showGeminiSettings, setShowGeminiSettings] = useState(false);
   const [showSkills, setShowSkills] = useState(false);
@@ -1054,12 +1069,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   setShowContext(false);
                 }}
                 className={cn(
-                  "p-2 rounded-lg transition-all",
-                  showSkills ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                  "p-2 rounded-lg transition-all relative",
+                  (showSkills || selectedSkillsCount > 0) ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
                 )}
                 title="Select Skills"
               >
                 <Book size={20} />
+                {selectedSkillsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-emerald-600 flex items-center justify-center text-[9px] font-bold border border-emerald-100 shadow-sm">
+                    {selectedSkillsCount}
+                  </span>
+                )}
               </button>
               
               <AnimatePresence>
@@ -1142,12 +1162,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   setShowContext(false);
                 }}
                 className={cn(
-                  "p-2 rounded-lg transition-all",
-                  showMcp ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                  "p-2 rounded-lg transition-all relative",
+                  (showMcp || selectedMcpCount > 0) ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
                 )}
                 title="Select MCP Servers"
               >
                 <Server size={20} />
+                {selectedMcpCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-amber-600 flex items-center justify-center text-[9px] font-bold border border-amber-100 shadow-sm">
+                    {selectedMcpCount}
+                  </span>
+                )}
               </button>
 
               <AnimatePresence>
@@ -1205,12 +1230,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   setShowMultiChapter(false);
                 }}
                 className={cn(
-                  "p-2 rounded-lg transition-all",
-                  showContext ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                  "p-2 rounded-lg transition-all relative",
+                  (showContext || deselectedContextCount > 0) ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
                 )}
                 title="Context Management"
               >
                 <Layers size={20} />
+                {deselectedContextCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-indigo-600 flex items-center justify-center text-[9px] font-bold border border-indigo-100 shadow-sm">
+                    {deselectedContextCount}
+                  </span>
+                )}
               </button>
 
               <AnimatePresence>
@@ -1338,12 +1368,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   setShowMcp(false);
                 }}
                 className={cn(
-                  "p-2 rounded-lg transition-all",
-                  contextSettings.includeMultiChapter ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                  "p-2 rounded-lg transition-all relative",
+                  (showMultiChapter || contextSettings.includeMultiChapter) ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
                 )}
                 title="Multi-Chapter Mode"
               >
                 <Book size={20} />
+                {contextSettings.includeMultiChapter && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-amber-600 flex items-center justify-center text-[9px] font-bold border border-amber-100 shadow-sm">
+                    1
+                  </span>
+                )}
               </button>
 
               <AnimatePresence>
