@@ -765,7 +765,9 @@ export default function App() {
     let initialArtifact = currentSession?.artifacts.find(a => a.id === currentSession.currentArtifactId) || null;
     let isAutoSelect = currentSession?.autoSelectSkills;
     let sessionActiveSkills = currentSession?.activeSkills || [];
+    let sessionInvokedSkillIds = currentSession?.invokedSkillIds || [];
     let sessionActiveMcpIds = currentSession?.activeMcpIds || [];
+    let sessionInvokedMcpIds = currentSession?.invokedMcpIds || [];
     let selectedFilePath = currentSession?.selectedFilePath;
     
     if (!sessionId) {
@@ -775,12 +777,14 @@ export default function App() {
       initialArtifact = null;
       isAutoSelect = false;
       sessionActiveSkills = [];
+      sessionInvokedSkillIds = [];
       sessionActiveMcpIds = [];
+      sessionInvokedMcpIds = [];
       selectedFilePath = null;
     }
 
-    const activeSkills = skills.filter(s => sessionActiveSkills.includes(s.id));
-    const activeMCPs = mcpConfigs.filter(c => c.enabled && sessionActiveMcpIds.includes(c.id));
+    const activeSkills = skills.filter(s => sessionActiveSkills.includes(s.id) || sessionInvokedSkillIds.includes(s.id));
+    const activeMCPs = mcpConfigs.filter(c => c.enabled && (sessionActiveMcpIds.includes(c.id) || sessionInvokedMcpIds.includes(c.id)));
 
     let skillsContext = '';
     let mcpContext = '';
@@ -1156,11 +1160,23 @@ ${activeMCPs.map(c => {
         }
 
         if (needsNextTurn) {
-          // Update active skills in session if any were invoked
-          if (invokedSkills.length > 0) {
-            const newActiveSkills = [...new Set([...sessionActiveSkills, ...invokedSkills.map(s => s.name)])];
-            updateSession({ activeSkills: newActiveSkills }, sessionId);
-            sessionActiveSkills = newActiveSkills;
+          // Update invoked skills/MCPs in session if any were called
+          if (invokedSkills.length > 0 || mcpCalls.length > 0) {
+            const updates: Partial<Session> = {};
+            
+            if (invokedSkills.length > 0) {
+              const newInvokedSkills = [...new Set([...sessionInvokedSkillIds, ...invokedSkills.map(s => s.name)])];
+              updates.invokedSkillIds = newInvokedSkills;
+              sessionInvokedSkillIds = newInvokedSkills;
+            }
+            
+            if (mcpCalls.length > 0) {
+              const newInvokedMcps = [...new Set([...sessionInvokedMcpIds, ...mcpCalls.map(c => c.name)])];
+              updates.invokedMcpIds = newInvokedMcps;
+              sessionInvokedMcpIds = newInvokedMcps;
+            }
+            
+            updateSession(updates, sessionId);
           }
 
           // If ONLY skills were invoked (no MCP calls), we don't need a next turn 
@@ -1199,8 +1215,8 @@ ${activeMCPs.map(c => {
           currentMessages.push(resultsMessage);
 
           // Re-calculate context for the next turn
-          const updatedActiveSkills = skills.filter(s => sessionActiveSkills.includes(s.id));
-          const updatedActiveMCPs = mcpConfigs.filter(c => sessionActiveMcpIds.includes(c.id));
+          const updatedActiveSkills = skills.filter(s => sessionActiveSkills.includes(s.id) || sessionInvokedSkillIds.includes(s.id));
+          const updatedActiveMCPs = mcpConfigs.filter(c => sessionActiveMcpIds.includes(c.id) || sessionInvokedMcpIds.includes(c.id));
           
           const nextSkillsContext = updatedActiveSkills.length > 0 
             ? updatedActiveSkills.map(s => `SKILL: ${s.name}\n${s.content}`).join('\n\n') + `\n${skillReportingInstruction}`

@@ -161,8 +161,10 @@ export interface Session {
   currentArtifactId: string | null;
   lastUpdated: number;
   activeSkills?: string[]; // IDs of enabled skills for this session
+  invokedSkillIds?: string[]; // IDs of skills invoked by the model
   testerSkillIds?: string[]; // IDs of skills acting as testers for this session
   activeMcpIds?: string[]; // IDs of enabled MCPs for this session
+  invokedMcpIds?: string[]; // IDs of MCPs invoked by the model
   autoSelectSkills?: boolean; // Whether AI should auto-select skills/MCPs
   selectedFilePath?: string | null; // Currently selected file in the workspace
   contextLogs?: ContextLogEntry[];

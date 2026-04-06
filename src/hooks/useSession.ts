@@ -23,6 +23,9 @@ export function useSessions() {
       currentArtifactId: null,
       lastUpdated: Date.now(),
       activeSkills: [],
+      invokedSkillIds: [],
+      activeMcpIds: [],
+      invokedMcpIds: [],
       selectedFilePath: null,
       contextLogs: [],
       folderId: folderId || null
