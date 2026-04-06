@@ -950,7 +950,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                     </div>
                   )}
                   {pType === 'excalidraw' && (
-                    <div className="group relative w-[800px] h-[500px] bg-white shadow-lg rounded-xl overflow-hidden">
+                    <div className="group relative w-full max-w-[1000px] min-h-[400px] bg-white shadow-lg rounded-xl overflow-hidden">
                       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                         <button 
                           onClick={() => setPresentingDiagram({
@@ -970,7 +970,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   {pType === 'svg' && (
                     <div 
                       className="svg-preview-container bg-white shadow-sm rounded-lg overflow-hidden"
-                      style={{ width: '800px', height: '500px' }}
+                      style={{ width: '100%', maxWidth: '1000px', minHeight: '400px' }}
                       dangerouslySetInnerHTML={{ __html: pContent }}
                     />
                   )}

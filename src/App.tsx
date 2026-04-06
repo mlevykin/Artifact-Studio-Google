@@ -25,7 +25,7 @@ import {
   truncateAfterToolCall,
   parseMessageSteps
 } from './engines/responseParser';
-import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings, ProjectConfig, Patch, ChatFolder } from './types';
+import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings, ProjectConfig, Patch, ChatFolder, Session } from './types';
 import { generateId } from './utils';
 import { MCPService } from './services/mcpService';
 import { motion, AnimatePresence } from 'motion/react';

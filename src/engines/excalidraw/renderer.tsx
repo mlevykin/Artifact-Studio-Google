@@ -195,9 +195,9 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
       }
     }
 
-    // Update viewBox based on ALL nodes, not just visible ones, 
-    // to keep layout stable during presentation
+    // Update viewBox based on ALL nodes and edges to keep layout stable during presentation
     let fullMinX = Infinity, fullMinY = Infinity, fullMaxX = -Infinity, fullMaxY = -Infinity;
+    
     for (const node of graph.nodes) {
       const { x = 0, y = 0, width = 100, height = 50 } = node;
       fullMinX = Math.min(fullMinX, x - width / 2);
@@ -206,8 +206,19 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
       fullMaxY = Math.max(fullMaxY, y + height / 2);
     }
 
+    for (const edge of graph.edges) {
+      if (edge.points) {
+        for (const p of edge.points) {
+          fullMinX = Math.min(fullMinX, p.x);
+          fullMinY = Math.min(fullMinY, p.y);
+          fullMaxX = Math.max(fullMaxX, p.x);
+          fullMaxY = Math.max(fullMaxY, p.y);
+        }
+      }
+    }
+
     if (fullMinX !== Infinity) {
-      const padding = 40;
+      const padding = 60; // Increased padding for rough edges and labels
       const width = fullMaxX - fullMinX + padding * 2;
       const height = fullMaxY - fullMinY + padding * 2;
       setViewBox(`${fullMinX - padding} ${fullMinY - padding} ${width} ${height}`);
@@ -219,12 +230,13 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
   const [vbX, vbY, vbW, vbH] = viewBox.split(' ').map(Number);
 
   return (
-    <div className="w-full overflow-visible flex items-center justify-center p-4">
+    <div className="w-full h-full overflow-visible flex items-center justify-center p-4">
       <div 
         className="excalidraw-container shadow-sm rounded-lg flex items-center justify-center bg-white"
         style={{ 
-          width: vbW ? `${Math.min(vbW, 800)}px` : 'auto',
+          width: vbW ? `${vbW}px` : 'auto',
           maxWidth: '100%',
+          maxHeight: '100%',
           minHeight: '100px',
           aspectRatio: vbW && vbH ? `${vbW} / ${vbH}` : 'auto'
         }}
