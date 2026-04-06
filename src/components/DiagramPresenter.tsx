@@ -40,6 +40,7 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
   title, 
   onExit 
 }) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -54,6 +55,24 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   const cursorStyle = useMemo(() => {
     if (isPanning) return 'grabbing';
@@ -269,30 +288,14 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
         resetZoom();
       } else if (e.key === 'p' || e.key === 'P') {
         setIsDrawingMode(prev => !prev);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextStep, prevStep, onExit, reset, zoomIn, zoomOut, resetZoom]);
-
-  // Request Fullscreen on mount
-  useEffect(() => {
-    const element = document.documentElement;
-    if (element.requestFullscreen) {
-      element.requestFullscreen().catch(err => {
-        console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
-      });
-    }
-    
-    return () => {
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(err => {
-          console.warn(`Error attempting to exit full-screen mode: ${err.message}`);
-        });
-      }
-    };
-  }, []);
+  }, [nextStep, prevStep, onExit, reset, zoomIn, zoomOut, resetZoom, toggleFullscreen]);
 
   const handleContainerClick = (e: React.MouseEvent) => {
     // Only advance if clicking the background, not buttons
@@ -399,6 +402,14 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
               <Plus size={18} />
             </button>
           </div>
+
+          <button 
+            onClick={toggleFullscreen}
+            className="p-2.5 bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200 rounded-full transition-all shadow-sm"
+            title="Toggle Fullscreen (F)"
+          >
+            {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+          </button>
 
           <button 
             onClick={onExit}
