@@ -120,14 +120,17 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       const scrollX = intendedScroll.current.x;
       const scrollY = intendedScroll.current.y;
       
+      // Calculate where the mouse is relative to the unscaled content
+      // 1. Convert screen mouseX to container-relative mouseX
+      // 2. Adjust for current scroll and current centering offset
+      // 3. Divide by current zoom to get unscaled coordinates
+      
       const currentLeft = (cW - conW * currentZoom) / 2;
-      const nextLeft = (cW - conW * newZoom) / 2;
-
-      // Use the actual offsets including potential negative ones for calculation, 
-      // then the browser scroll will handle the clamping to 0.
       const relX = (scrollX + mouseX - currentLeft) / currentZoom;
       const relY = (scrollY + mouseY - 64) / currentZoom;
 
+      // Now calculate the new scroll position to keep that relX/relY under the mouse
+      const nextLeft = (cW - conW * newZoom) / 2;
       const nextScrollX = relX * newZoom - mouseX + nextLeft;
       const nextScrollY = relY * newZoom - mouseY + 64;
 
