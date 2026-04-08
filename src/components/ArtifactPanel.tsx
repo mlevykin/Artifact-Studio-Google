@@ -135,7 +135,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   const getExcalidrawStepCount = (content: string) => {
     try {
       const graph = parseExcalidraw(content);
-      return graph.nodes.length * 2;
+      return graph.nodes.length;
     } catch (e) {
       return 0;
     }

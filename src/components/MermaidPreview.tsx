@@ -213,22 +213,19 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
             // Hide/show edges
             edges.forEach((edge) => {
               const edgeEl = edge as HTMLElement;
-              
-              // For sequence diagrams, edges (messages) are usually in order
-              // For flowcharts, we check if the edge is connected to visible nodes
               const classList = Array.from(edgeEl.classList);
-              const isConnectedToVisibleNode = classList.some(cls => {
-                if (cls.startsWith('L-')) {
-                  const nodeId = cls.substring(2);
-                  return visibleNodeIds.has(nodeId);
-                }
-                return false;
-              });
+              
+              // Find all nodes this edge is connected to (Mermaid uses L-nodeId classes)
+              const connectedNodeClasses = classList.filter(cls => cls.startsWith('L-'));
+              
+              // An edge is visible if all its connected nodes are visible
+              const allConnectedNodesVisible = connectedNodeClasses.length > 0 && 
+                connectedNodeClasses.every(cls => visibleNodeIds.has(cls.substring(2)));
 
               // Also check if the edge itself is within the step count if nodes are not the primary unit (e.g. sequence diagrams)
               const isWithinStep = edges.indexOf(edge) < step;
               
-              if (isConnectedToVisibleNode || (nodes.length === 0 && isWithinStep)) {
+              if (allConnectedNodesVisible || (nodes.length === 0 && isWithinStep)) {
                 edgeEl.style.opacity = '1';
                 edgeEl.style.pointerEvents = 'auto';
                 edgeEl.style.transition = 'opacity 0.3s ease-in-out';

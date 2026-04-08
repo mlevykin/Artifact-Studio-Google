@@ -25,8 +25,7 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
     // Filter elements based on step if provided
-    const nodeCount = step !== undefined ? Math.ceil(step / 2) : graph.nodes.length;
-    const isEdgeStep = step !== undefined ? step % 2 === 0 : true;
+    const nodeCount = step !== undefined ? step : graph.nodes.length;
     
     const visibleNodes = graph.nodes.slice(0, nodeCount);
     const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
@@ -45,15 +44,9 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
             isVisible = false;
           } else {
             const maxIdx = Math.max(fromIdx, toIdx);
-            // Visible if it connects nodes from previous steps, 
-            // or if it connects to the current node during an edge step
-            if (maxIdx < nodeCount - 1) {
-              isVisible = true;
-            } else if (maxIdx === nodeCount - 1 && isEdgeStep) {
-              isVisible = true;
-            } else {
-              isVisible = false;
-            }
+            // Visible if both nodes it connects are visible
+            // (i.e., the "latest" node in the sequence is visible)
+            isVisible = maxIdx < nodeCount;
           }
         } else {
           // Node: visible if it's in the current step range
