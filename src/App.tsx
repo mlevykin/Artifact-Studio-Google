@@ -198,6 +198,7 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('chatWidth', String(chatWidth));
+    document.documentElement.style.setProperty('--secondary-sidebar-width', `${chatWidth}px`);
   }, [chatWidth]);
 
   const updateWorkspaceTree = async (handle: any) => {
@@ -746,9 +747,8 @@ export default function App() {
     const maxSecondaryWidth = window.innerWidth - activityBarWidth - sidebarWidth - 300; // Keep at least 300px for chat
     
     if (newSecondaryWidth > 300 && newSecondaryWidth < maxSecondaryWidth) {
-      requestAnimationFrame(() => {
-        setChatWidth(newSecondaryWidth);
-      });
+      // Use CSS variable for high-performance resizing without React re-renders
+      document.documentElement.style.setProperty('--secondary-sidebar-width', `${newSecondaryWidth}px`);
     }
   }, [isSidebarOpen]);
 
@@ -756,6 +756,12 @@ export default function App() {
     setIsResizing(false);
     document.body.style.cursor = 'default';
     document.body.style.userSelect = 'auto';
+    
+    // Sync the final width back to React state and localStorage
+    const finalWidth = parseInt(document.documentElement.style.getPropertyValue('--secondary-sidebar-width'), 10);
+    if (!isNaN(finalWidth)) {
+      setChatWidth(finalWidth);
+    }
   }, []);
 
   useEffect(() => {

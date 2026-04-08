@@ -118,10 +118,11 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
         {isSecondarySidebarOpen && (
           <motion.div
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: secondarySidebarWidth, opacity: 1 }}
+            animate={{ width: isResizing ? 'var(--secondary-sidebar-width)' : secondarySidebarWidth, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            transition={isResizing ? { duration: 0 } : { type: 'spring', damping: 25, stiffness: 200 }}
             className="flex-shrink-0 bg-slate-900/30 border-l border-slate-800 flex flex-col overflow-hidden"
+            style={{ width: isResizing ? 'var(--secondary-sidebar-width)' : secondarySidebarWidth } as any}
           >
             <div className="flex-1 overflow-hidden">
               {secondarySidebarContent}

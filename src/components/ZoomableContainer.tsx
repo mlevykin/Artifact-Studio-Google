@@ -22,6 +22,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const [contentHeight, setContentHeight] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [panMode, setPanMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,13 +30,11 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const pendingScroll = useRef<{ x: number, y: number } | null>(null);
   const intendedScroll = useRef({ x: 0, y: 0 });
   const lastZoomTime = useRef(0);
-  const isZooming = useRef(false);
-  const zoomTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const isDocMode = fitMode === 'width';
 
   // Use refs to avoid re-attaching wheel listener too often
-  const stateRef = useRef({ zoom, position, containerWidth, contentWidth });
+  const stateRef = useRef({ zoom, position, containerWidth, containerHeight, contentWidth });
   
   // Update ref immediately when state changes to avoid stale closures in event handlers
   const updateStateRef = useCallback((updates: Partial<typeof stateRef.current>) => {
@@ -71,8 +70,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   }, [isDocMode]);
 
   useEffect(() => {
-    updateStateRef({ zoom, position, containerWidth, contentWidth });
-  }, [zoom, position, containerWidth, contentWidth, updateStateRef]);
+    updateStateRef({ zoom, position, containerWidth, containerHeight, contentWidth });
+  }, [zoom, position, containerWidth, containerHeight, contentWidth, updateStateRef]);
 
   const hasInteractedRef = useRef(false);
   const [hasInteracted, setHasInteractedState] = useState(false);
@@ -109,30 +108,23 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   });
 
   const handleZoom = useCallback((newZoom: number, focalPoint: { x: number, y: number } | null) => {
-    const { zoom: currentZoom, position: currentPos, containerWidth: cW, contentWidth: conW } = stateRef.current;
+    const { zoom: currentZoom, position: currentPos, containerWidth: cW, containerHeight: cH, contentWidth: conW } = stateRef.current;
     if (!containerRef.current) return;
     
-    const rect = containerRef.current.getBoundingClientRect();
-    const mouseX = focalPoint ? focalPoint.x : rect.width / 2;
-    const mouseY = focalPoint ? focalPoint.y : rect.height / 2;
+    const mouseX = focalPoint ? focalPoint.x : cW / 2;
+    const mouseY = focalPoint ? focalPoint.y : cH / 2;
 
     if (isDocMode) {
       const scrollX = intendedScroll.current.x;
       const scrollY = intendedScroll.current.y;
       
-      // Calculate where the mouse is relative to the unscaled content
-      // 1. Convert screen mouseX to container-relative mouseX
-      // 2. Adjust for current scroll and current centering offset
-      // 3. Divide by current zoom to get unscaled coordinates
-      
       const currentLeft = (cW - conW * currentZoom) / 2;
       const relX = (scrollX + mouseX - currentLeft) / currentZoom;
       const relY = (scrollY + mouseY - 64) / currentZoom;
 
-      // Now calculate the new scroll position to keep that relX/relY under the mouse
       const nextLeft = (cW - conW * newZoom) / 2;
-      const nextScrollX = relX * newZoom - mouseX + nextLeft;
-      const nextScrollY = relY * newZoom - mouseY + 64;
+      const nextScrollX = Math.round(relX * newZoom - mouseX + nextLeft);
+      const nextScrollY = Math.round(relY * newZoom - mouseY + 64);
 
       intendedScroll.current = { x: nextScrollX, y: nextScrollY };
       pendingScroll.current = { x: nextScrollX, y: nextScrollY };
@@ -140,8 +132,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       updateStateRef({ zoom: newZoom });
       setZoom(newZoom);
     } else {
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
+      const centerX = cW / 2;
+      const centerY = cH / 2;
 
       const relX = (mouseX - centerX - currentPos.x) / currentZoom;
       const relY = (mouseY - centerY - currentPos.y) / currentZoom;
@@ -155,11 +147,6 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     }
 
     lastZoomTime.current = Date.now();
-    isZooming.current = true;
-    if (zoomTimeout.current) clearTimeout(zoomTimeout.current);
-    zoomTimeout.current = setTimeout(() => {
-      isZooming.current = false;
-    }, 150);
   }, [isDocMode]);
 
   const handleWheel = useCallback((e: WheelEvent) => {
@@ -346,9 +333,10 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
             }
           }
         } else if (entry.target === containerRef.current) {
-          const { width } = entry.contentRect;
-          updateStateRef({ containerWidth: width });
+          const { width, height } = entry.contentRect;
+          updateStateRef({ containerWidth: width, containerHeight: height });
           setContainerWidth(width);
+          setContainerHeight(height);
           // Also trigger fit if container size changes significantly and we haven't interacted
           if (!hasInteractedRef.current || !initialFitDone.current) {
             shouldFit = true;
@@ -395,7 +383,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         style={{ 
           cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto'),
           overflowAnchor: 'none', // Prevent browser from jumping scroll position during layout changes
-          willChange: isZooming.current ? 'transform' : 'auto'
+          willChange: 'transform'
         }}
       >
         <div 
