@@ -21,6 +21,8 @@ interface IDELayoutProps {
   onToggleSecondarySidebar: () => void;
   sidebarWidth?: number;
   secondarySidebarWidth?: number;
+  onSecondarySidebarResizeStart?: (e: React.MouseEvent) => void;
+  isResizing?: boolean;
 }
 
 export const IDELayout: React.FC<IDELayoutProps> = ({
@@ -35,10 +37,15 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
   isSecondarySidebarOpen,
   onToggleSecondarySidebar,
   sidebarWidth = 300,
-  secondarySidebarWidth = 500
+  secondarySidebarWidth = 500,
+  onSecondarySidebarResizeStart,
+  isResizing = false
 }) => {
   return (
-    <div className="flex h-screen w-full bg-zinc-950 text-zinc-300 overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-zinc-950 text-zinc-300 overflow-hidden font-sans relative">
+      {isResizing && (
+        <div className="fixed inset-0 z-[100] cursor-col-resize" />
+      )}
       {/* Activity Bar (Far Left) */}
       <div className="w-12 flex-shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-4 gap-4 z-50">
         {activityBar.map((item) => (
@@ -95,6 +102,14 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
       <div className="flex-1 flex flex-col min-w-0 bg-zinc-950 relative overflow-hidden">
         {mainContent}
       </div>
+
+      {/* Resizer Handle */}
+      {isSecondarySidebarOpen && onSecondarySidebarResizeStart && (
+        <div 
+          onMouseDown={onSecondarySidebarResizeStart}
+          className="w-1 bg-zinc-800 hover:bg-emerald-500/50 cursor-col-resize transition-colors z-50 flex-shrink-0"
+        />
+      )}
 
       {/* Secondary Side Bar (Right) */}
       <AnimatePresence initial={false}>

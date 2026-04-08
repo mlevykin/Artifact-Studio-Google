@@ -184,8 +184,21 @@ export default function App() {
   const [streamingText, setStreamingText] = useState('');
   const [streamingArtifact, setStreamingArtifact] = useState<{ type: string; title: string; content: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [chatWidth, setChatWidth] = useState(500);
+  const [chatWidth, setChatWidth] = useState(() => {
+    const saved = localStorage.getItem('chatWidth');
+    if (saved) return parseInt(saved, 10);
+    // Default to 20% of window width for chat, which means secondary sidebar takes the rest
+    const activityBarWidth = 48;
+    const sidebarWidth = 300;
+    const initialChatWidth = window.innerWidth * 0.2;
+    const initialSecondaryWidth = window.innerWidth - activityBarWidth - sidebarWidth - initialChatWidth;
+    return Math.max(400, initialSecondaryWidth);
+  });
   const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('chatWidth', String(chatWidth));
+  }, [chatWidth]);
 
   const updateWorkspaceTree = async (handle: any) => {
     try {
@@ -727,10 +740,13 @@ export default function App() {
   };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    const sidebarWidth = isSidebarOpen ? 280 : 0;
-    const newWidth = e.clientX - sidebarWidth;
-    if (newWidth > 300 && newWidth < window.innerWidth - 400) {
-      setChatWidth(newWidth);
+    const newSecondaryWidth = window.innerWidth - e.clientX;
+    const activityBarWidth = 48;
+    const sidebarWidth = isSidebarOpen ? 300 : 0;
+    const maxSecondaryWidth = window.innerWidth - activityBarWidth - sidebarWidth - 300; // Keep at least 300px for chat
+    
+    if (newSecondaryWidth > 300 && newSecondaryWidth < maxSecondaryWidth) {
+      setChatWidth(newSecondaryWidth);
     }
   }, [isSidebarOpen]);
 
@@ -1429,6 +1445,9 @@ ${activeMCPs.map(c => {
       onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
       isSecondarySidebarOpen={isSecondarySidebarOpen}
       onToggleSecondarySidebar={() => setIsSecondarySidebarOpen(!isSecondarySidebarOpen)}
+      secondarySidebarWidth={chatWidth}
+      onSecondarySidebarResizeStart={startResizing}
+      isResizing={isResizing}
       sidebarContent={
         <Sidebar 
           sessions={sessions}
