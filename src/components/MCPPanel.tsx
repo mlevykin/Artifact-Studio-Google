@@ -261,7 +261,7 @@ export const MCPPanel: React.FC<MCPPanelProps> = ({
                 <span className="text-[9px] font-mono text-zinc-500 truncate flex-1">{config.url}</span>
                 {config.status === 'connected' ? (
                   <span className="flex items-center gap-1 text-[8px] font-bold text-emerald-500 uppercase tracking-widest">
-                    <ShieldCheck size={10} /> Connected
+                    <ShieldCheck size={10} />
                   </span>
                 ) : config.status === 'error' ? (
                   <span className="flex items-center gap-1 text-[8px] font-bold text-red-500 uppercase tracking-widest">
@@ -269,7 +269,7 @@ export const MCPPanel: React.FC<MCPPanelProps> = ({
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
-                    <ShieldAlert size={10} /> Disconnected
+                    <ShieldAlert size={10} />
                   </span>
                 )}
               </div>

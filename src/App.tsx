@@ -1547,7 +1547,7 @@ ${activeMCPs.map(c => {
                   onClick={handleDisconnectWorkspace}
                   className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold rounded-lg transition-all"
                 >
-                  Disconnect Workspace
+                  Close Workspace
                 </button>
               </div>
             </div>
@@ -1566,7 +1566,7 @@ ${activeMCPs.map(c => {
                 <FolderOpen className="w-8 h-8 text-emerald-500" />
               </div>
               
-              <h2 className="text-2xl font-bold text-white mb-3">Connect Workspace</h2>
+              <h2 className="text-2xl font-bold text-white mb-3">Open Workspace</h2>
               <p className="text-zinc-500 mb-8 text-sm leading-relaxed">
                 To start using Artifact Studio, please select a local folder where all your projects, chats, and settings will be stored.
               </p>

@@ -113,25 +113,6 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Status Bar (Bottom) */}
-      <div className="fixed bottom-0 left-0 right-0 h-6 bg-zinc-900 border-t border-zinc-800 flex items-center px-3 justify-between text-[10px] text-zinc-500 z-[60]">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-            <span className="font-medium text-zinc-400">Connected</span>
-          </div>
-          <div className="h-3 w-[1px] bg-zinc-800" />
-          <div className="flex items-center gap-1">
-            <span className="opacity-70">Workspace:</span>
-            <span className="text-zinc-400">Artifacts Studio</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1">
-            <span className="opacity-70">v1.0.0</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
