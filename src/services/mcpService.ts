@@ -47,6 +47,8 @@ export class MCPService {
         finalUrl = new URL(`${window.location.origin}/proxy/${protocol}/${url.host}${url.pathname}${url.search}`);
       }
       
+      console.log(`Attempting to connect to MCP server: ${finalUrl.toString()}`);
+      
       const transport = new SSEClientTransport(finalUrl, {
         fetch: async (input, init) => {
           const inputUrl = typeof input === 'string' ? input : (input as any).url || input.toString();
@@ -65,6 +67,7 @@ export class MCPService {
             targetUrl = `${window.location.origin}/proxy/${targetProtocol}/${urlObj.host}${urlObj.pathname}${urlObj.search}`;
           }
           
+          console.log(`[MCP Fetch] ${targetUrl}`);
           return fetch(targetUrl, init);
         }
       });
@@ -78,7 +81,14 @@ export class MCPService {
         }
       );
 
-      await client.connect(transport);
+      // Add a timeout to the connection
+      const connectionPromise = client.connect(transport);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Connection timeout (20s). The server might not be responding or proxy is blocked.")), 20000)
+      );
+
+      await Promise.race([connectionPromise, timeoutPromise]);
+      console.log(`Successfully connected to MCP server ${config.name}`);
       
       this.clients.set(config.id, client);
       this.transports.set(config.id, transport);

@@ -19,10 +19,19 @@ async function startServer() {
     
     console.log(`[Proxy] ${req.method} ${target}${req.url}`);
     
+    // For SSE, we need to make sure we don't buffer the response
+    if (req.headers.accept === 'text/event-stream') {
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders?.();
+    }
+
     proxy.web(req, res, {
       target,
       changeOrigin: true,
       secure: false,
+      xfwd: true,
     }, (err) => {
       console.error('Proxy error:', err);
       if (!res.headersSent) {
