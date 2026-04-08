@@ -107,8 +107,10 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
       {isSecondarySidebarOpen && onSecondarySidebarResizeStart && (
         <div 
           onMouseDown={onSecondarySidebarResizeStart}
-          className="w-1 bg-slate-700 hover:bg-sky-500/50 cursor-col-resize transition-colors z-50 flex-shrink-0"
-        />
+          className="w-[1px] bg-slate-800 hover:bg-sky-500/50 cursor-col-resize transition-colors z-50 flex-shrink-0 relative group"
+        >
+          <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
+        </div>
       )}
 
       {/* Secondary Side Bar (Right) */}
