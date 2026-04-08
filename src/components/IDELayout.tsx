@@ -1,0 +1,137 @@
+import React from 'react';
+import { cn } from '../utils';
+import { motion, AnimatePresence } from 'motion/react';
+
+interface ActivityItem {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+}
+
+interface IDELayoutProps {
+  activityBar: ActivityItem[];
+  activeActivity: string;
+  onActivityChange: (id: string) => void;
+  sidebarContent: React.ReactNode;
+  mainContent: React.ReactNode;
+  secondarySidebarContent: React.ReactNode;
+  isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
+  isSecondarySidebarOpen: boolean;
+  onToggleSecondarySidebar: () => void;
+  sidebarWidth?: number;
+  secondarySidebarWidth?: number;
+}
+
+export const IDELayout: React.FC<IDELayoutProps> = ({
+  activityBar,
+  activeActivity,
+  onActivityChange,
+  sidebarContent,
+  mainContent,
+  secondarySidebarContent,
+  isSidebarOpen,
+  onToggleSidebar,
+  isSecondarySidebarOpen,
+  onToggleSecondarySidebar,
+  sidebarWidth = 300,
+  secondarySidebarWidth = 500
+}) => {
+  return (
+    <div className="flex h-screen w-full bg-zinc-950 text-zinc-300 overflow-hidden font-sans">
+      {/* Activity Bar (Far Left) */}
+      <div className="w-12 flex-shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-4 gap-4 z-50">
+        {activityBar.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => {
+              if (activeActivity === item.id && isSidebarOpen) {
+                onToggleSidebar();
+              } else {
+                onActivityChange(item.id);
+                if (!isSidebarOpen) onToggleSidebar();
+              }
+            }}
+            className={cn(
+              "p-2 rounded-lg transition-all relative group",
+              activeActivity === item.id && isSidebarOpen
+                ? "text-white bg-zinc-800 shadow-sm"
+                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+            )}
+            title={item.label}
+          >
+            {item.icon}
+            {activeActivity === item.id && isSidebarOpen && (
+              <motion.div 
+                layoutId="active-indicator"
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-emerald-500 rounded-r-full" 
+              />
+            )}
+            <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
+              {item.label}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Side Bar (Left) */}
+      <AnimatePresence initial={false}>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: sidebarWidth, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="flex-shrink-0 bg-zinc-900/50 border-r border-zinc-800 flex flex-col overflow-hidden"
+          >
+            <div className="flex-1 overflow-hidden">
+              {sidebarContent}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content Area (Center) */}
+      <div className="flex-1 flex flex-col min-w-0 bg-zinc-950 relative overflow-hidden">
+        {mainContent}
+      </div>
+
+      {/* Secondary Side Bar (Right) */}
+      <AnimatePresence initial={false}>
+        {isSecondarySidebarOpen && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: secondarySidebarWidth, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="flex-shrink-0 bg-zinc-900/30 border-l border-zinc-800 flex flex-col overflow-hidden"
+          >
+            <div className="flex-1 overflow-hidden">
+              {secondarySidebarContent}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Status Bar (Bottom) */}
+      <div className="fixed bottom-0 left-0 right-0 h-6 bg-zinc-900 border-t border-zinc-800 flex items-center px-3 justify-between text-[10px] text-zinc-500 z-[60]">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+            <span className="font-medium text-zinc-400">Connected</span>
+          </div>
+          <div className="h-3 w-[1px] bg-zinc-800" />
+          <div className="flex items-center gap-1">
+            <span className="opacity-70">Workspace:</span>
+            <span className="text-zinc-400">Artifacts Studio</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <span className="opacity-70">v1.0.0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -26,10 +26,24 @@ import {
   parseMessageSteps
 } from './engines/responseParser';
 import { Message, Attachment, Artifact, OllamaConfig, Skill, MCPConfig, ContextSettings, ProjectConfig, Patch, ChatFolder, Session } from './types';
-import { generateId } from './utils';
+import { cn, generateId } from './utils';
 import { MCPService } from './services/mcpService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Layers, Diff, FolderOpen, AlertCircle, Loader2 } from 'lucide-react';
+import { IDELayout } from './components/IDELayout';
+import { 
+  MessageSquare, 
+  Files, 
+  Zap, 
+  Network, 
+  Settings,
+  History,
+  Layers,
+  Diff,
+  FolderOpen,
+  AlertCircle,
+  Loader2
+} from 'lucide-react';
+import { FileExplorer } from './components/FileExplorer';
 import { 
   getStoredDirectoryHandle, 
   selectLocalDirectory, 
@@ -40,7 +54,8 @@ import {
   storeDirectoryHandle,
   clearStoredDirectoryHandle,
   saveArtifact,
-  getWorkspaceTree
+  getWorkspaceTree,
+  writeProjectToDirectory
 } from './services/fileSystemService';
 
 export default function App() {
@@ -151,8 +166,9 @@ export default function App() {
     localStorage.setItem('contextSettings', JSON.stringify(contextSettings));
   }, [contextSettings]);
 
-  const [activeTab, setActiveTab] = useState<'chats' | 'skills' | 'mcp'>('chats');
+  const [activeActivity, setActiveActivity] = useState<string>('chats');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSecondarySidebarOpen, setIsSecondarySidebarOpen] = useState(true);
   const [availableModels, setAvailableModels] = useState<string[]>(['llama3']);
 
   const [isStreaming, setIsStreaming] = useState(false);
@@ -1388,78 +1404,175 @@ ${activeMCPs.map(c => {
     timestamp: Date.now()
   } as Artifact : (currentArtifact || (currentSession?.artifacts.length ? currentSession.artifacts[currentSession.artifacts.length - 1] : workspaceArtifact));
 
-  return (
-    <div className="flex h-screen w-full bg-zinc-100 font-sans text-zinc-900 overflow-hidden relative">
-      {isResizing && (
-        <div 
-          className="fixed inset-0 z-[9999] cursor-col-resize"
-          onMouseMove={(e) => handleMouseMove(e.nativeEvent)}
-          onMouseUp={stopResizing}
-        />
-      )}
-      <Sidebar 
-        sessions={sessions}
-        folders={folders}
-        currentSessionId={currentSessionId}
-        onSessionSelect={setCurrentSessionId}
-        onNewSession={createSession}
-        onDeleteSession={handleDeleteSession}
-        onMoveSession={handleMoveSessionToFolder}
-        onCreateFolder={createFolder}
-        onUpdateFolder={handleUpdateFolder}
-        onDeleteFolder={handleDeleteFolder}
-        provider={provider}
-        onProviderChange={setProvider}
-        isOpen={isSidebarOpen}
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      >
-        {activeTab === 'skills' && (
-          <SkillsPanel 
-            skills={skills}
-            onAddSkill={handleAddSkill}
-            onUpdateSkill={handleUpdateSkill}
-            onDeleteSkill={handleDeleteSkill}
-            activeSkillIds={currentSession?.activeSkills || []}
-            onToggleSkill={handleToggleSkill}
-            testerSkillIds={currentSession?.testerSkillIds || []}
-            onToggleTester={handleToggleTester}
-            autoSelectSkills={currentSession?.autoSelectSkills || false}
-          />
-        )}
-        {activeTab === 'mcp' && (
-          <MCPPanel 
-            configs={mcpConfigs}
-            onAddConfig={handleAddMCP}
-            onUpdateConfig={handleUpdateMCP}
-            onDeleteConfig={handleDeleteMCP}
-            activeMcpIds={currentSession?.activeMcpIds || []}
-            onToggleMcp={handleToggleMcp}
-            autoSelectSkills={currentSession?.autoSelectSkills || false}
-          />
-        )}
-      </Sidebar>
+  const activityBar = [
+    { id: 'chats', icon: <MessageSquare size={20} />, label: 'Chats' },
+    { id: 'explorer', icon: <Files size={20} />, label: 'Explorer' },
+    { id: 'skills', icon: <Zap size={20} />, label: 'Skills' },
+    { id: 'mcp', icon: <Network size={20} />, label: 'MCP' },
+    { id: 'settings', icon: <Settings size={20} />, label: 'Settings' },
+  ];
 
-      <main className="flex-1 flex overflow-hidden relative">
-        {!workspaceHandle ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 bg-zinc-50 text-center">
+  if (isInitializing) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-zinc-950">
+        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <IDELayout
+      activityBar={activityBar}
+      activeActivity={activeActivity}
+      onActivityChange={setActiveActivity}
+      isSidebarOpen={isSidebarOpen}
+      onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+      isSecondarySidebarOpen={isSecondarySidebarOpen}
+      onToggleSecondarySidebar={() => setIsSecondarySidebarOpen(!isSecondarySidebarOpen)}
+      sidebarContent={
+        <Sidebar 
+          sessions={sessions}
+          folders={folders}
+          currentSessionId={currentSessionId}
+          onSessionSelect={setCurrentSessionId}
+          onNewSession={createSession}
+          onDeleteSession={handleDeleteSession}
+          onMoveSession={handleMoveSessionToFolder}
+          onCreateFolder={createFolder}
+          onUpdateFolder={handleUpdateFolder}
+          onDeleteFolder={handleDeleteFolder}
+          provider={provider}
+          onProviderChange={setProvider}
+          isOpen={true}
+          onToggle={() => setIsSidebarOpen(false)}
+          activeTab={activeActivity as any}
+          onTabChange={setActiveActivity as any}
+        >
+          {activeActivity === 'skills' && (
+            <SkillsPanel 
+              skills={skills}
+              onAddSkill={handleAddSkill}
+              onUpdateSkill={handleUpdateSkill}
+              onDeleteSkill={handleDeleteSkill}
+              activeSkillIds={currentSession?.activeSkills || []}
+              onToggleSkill={handleToggleSkill}
+              testerSkillIds={currentSession?.testerSkillIds || []}
+              onToggleTester={handleToggleTester}
+              autoSelectSkills={currentSession?.autoSelectSkills || false}
+            />
+          )}
+          {activeActivity === 'mcp' && (
+            <MCPPanel 
+              configs={mcpConfigs}
+              onAddConfig={handleAddMCP}
+              onUpdateConfig={handleUpdateMCP}
+              onDeleteConfig={handleDeleteMCP}
+              activeMcpIds={currentSession?.activeMcpIds || []}
+              onToggleMcp={handleToggleMcp}
+              autoSelectSkills={currentSession?.autoSelectSkills || false}
+            />
+          )}
+          {activeActivity === 'explorer' && (
+            <FileExplorer 
+              tree={workspaceTree}
+              selectedFile={currentSession?.selectedFilePath || null}
+              onFileSelect={(path) => updateSession({ selectedFilePath: path })}
+              onRefresh={() => updateWorkspaceTree(workspaceHandle)}
+              onDisconnect={handleDisconnectWorkspace}
+              onAddFile={async () => {
+                const name = prompt('File name:');
+                if (name && workspaceHandle) {
+                  await writeProjectToDirectory(workspaceHandle, [{ path: name, content: '' }]);
+                  updateWorkspaceTree(workspaceHandle);
+                }
+              }}
+            />
+          )}
+          {activeActivity === 'settings' && (
+            <div className="p-4 space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Model Provider</h3>
+                <div className="flex p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+                  <button 
+                    onClick={() => setProvider('gemini')}
+                    className={cn(
+                      "flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all",
+                      provider === 'gemini' ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-400"
+                    )}
+                  >
+                    GEMINI
+                  </button>
+                  <button 
+                    onClick={() => setProvider('ollama')}
+                    className={cn(
+                      "flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all",
+                      provider === 'ollama' ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-400"
+                    )}
+                  >
+                    OLLAMA
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Gemini Settings</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] text-zinc-400 mb-1 block">API Key</label>
+                    <input 
+                      type="password"
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                      placeholder="Enter API Key..."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-zinc-400 mb-1 block">Model</label>
+                    <select 
+                      value={geminiModel}
+                      onChange={(e) => setGeminiModel(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                    >
+                      <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                      <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                      <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-zinc-800">
+                <button 
+                  onClick={handleDisconnectWorkspace}
+                  className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold rounded-lg transition-all"
+                >
+                  Disconnect Workspace
+                </button>
+              </div>
+            </div>
+          )}
+        </Sidebar>
+      }
+      mainContent={
+        !workspaceHandle ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-12 bg-zinc-950 text-center">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-md w-full bg-white border border-zinc-200 rounded-[32px] p-10 shadow-xl"
+              className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-[32px] p-10 shadow-2xl"
             >
               <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
                 <FolderOpen className="w-8 h-8 text-emerald-500" />
               </div>
               
-              <h2 className="text-2xl font-bold text-zinc-800 mb-3">Connect Workspace</h2>
+              <h2 className="text-2xl font-bold text-white mb-3">Connect Workspace</h2>
               <p className="text-zinc-500 mb-8 text-sm leading-relaxed">
                 To start using Artifact Studio, please select a local folder where all your projects, chats, and settings will be stored.
               </p>
 
               {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-red-600 text-xs text-left">
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-400 text-xs text-left">
                   <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   <div>{error}</div>
                 </div>
@@ -1467,7 +1580,7 @@ ${activeMCPs.map(c => {
 
               <button 
                 onClick={handleSelectWorkspace}
-                className="w-full py-4 bg-zinc-800 hover:bg-zinc-900 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group"
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group"
               >
                 Select Workspace Folder
                 <motion.span
@@ -1480,8 +1593,6 @@ ${activeMCPs.map(c => {
             </motion.div>
           </div>
         ) : (
-          <>
-            <div style={{ width: chatWidth }} className="flex-shrink-0 flex flex-col">
           <ChatPanel 
             messages={currentSession?.messages || []}
             onSendMessage={handleSendMessage}
@@ -1515,91 +1626,83 @@ ${activeMCPs.map(c => {
             onContextSettingsChange={setContextSettings}
             onApplyVerificationFixes={handleApplyVerificationFixes}
           />
-        </div>
-
-        <div 
-          onMouseDown={startResizing}
-          className="w-1.5 h-full bg-zinc-200 hover:bg-zinc-400 cursor-col-resize transition-colors z-30 flex-shrink-0 flex items-center justify-center group"
-        >
-          <div className="w-0.5 h-8 bg-zinc-300 group-hover:bg-zinc-500 rounded-full" />
-        </div>
-
-        <div className="flex-1 flex flex-col min-w-0 relative">
-          <ArtifactPanel 
-            artifact={displayArtifact}
-            history={currentSession?.artifacts || []}
-            onVersionSelect={handleVersionSelect}
-            currentIndex={currentIndex}
-            onSave={handleSaveArtifact}
-            isStreaming={isStreaming}
-            geminiApiKey={geminiApiKey}
-            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            isSidebarOpen={isSidebarOpen}
-            workspaceHandle={workspaceHandle}
-            workspaceTree={workspaceTree}
-            onRefreshTree={() => updateWorkspaceTree(workspaceHandle)}
-            onDisconnectWorkspace={handleDisconnectWorkspace}
-            selectedFilePath={currentSession?.selectedFilePath || null}
-            onFileSelect={(path) => updateSession({ selectedFilePath: path })}
-            sessionId={currentSession?.id}
-            folderName={folders.find(f => f.id === currentSession?.folderId)?.name}
-            streamingText={streamingText}
-            onUpdateArtifact={(updates) => displayArtifact && displayArtifact.id !== 'workspace-explorer' && displayArtifact.id !== 'streaming' && updateArtifact(displayArtifact.id, updates)}
-            contextLogs={currentSession?.contextLogs || []}
-            project={projects.find(p => p.id === currentSession?.activeProjectId)}
-            includeMultiChapter={contextSettings.includeMultiChapter}
-            targetDepth={contextSettings.targetDepth}
-            onAssemble={() => handleAssembleProject(currentSession?.id || undefined)}
-          />
-          
-          <AnimatePresence>
-            {isStreaming && streamingText.includes('<artifact') && !streamingText.includes('</artifact>') && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur shadow-2xl border border-zinc-200 rounded-2xl px-6 py-4 flex items-center gap-4 z-50"
-              >
-                <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-white animate-pulse">
-                  <Layers size={20} />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-zinc-800">Generating Artifact...</div>
-                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Streaming content</div>
-                </div>
-              </motion.div>
-            )}
-
-            {isStreaming && streamingText.includes('<patch') && !streamingText.includes('</patch>') && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur shadow-2xl border border-zinc-200 rounded-2xl px-6 py-4 flex items-center gap-4 z-50"
-              >
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white animate-pulse">
-                  <Diff size={20} />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-zinc-800">Applying Patches...</div>
-                  <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold flex items-center gap-2">
-                    Updating code
-                    {parsePartialPatches(streamingText).length > 0 && (
-                      <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full text-[8px]">
-                        {parsePartialPatches(streamingText).length} detected
-                      </span>
-                    )}
+        )
+      }
+      secondarySidebarContent={
+        workspaceHandle && (
+          <div className="flex-1 flex flex-col min-w-0 relative h-full">
+            <ArtifactPanel 
+              artifact={displayArtifact}
+              history={currentSession?.artifacts || []}
+              onVersionSelect={handleVersionSelect}
+              currentIndex={currentIndex}
+              onSave={handleSaveArtifact}
+              isStreaming={isStreaming}
+              geminiApiKey={geminiApiKey}
+              onToggleSidebar={() => setIsSecondarySidebarOpen(!isSecondarySidebarOpen)}
+              isSidebarOpen={isSecondarySidebarOpen}
+              workspaceHandle={workspaceHandle}
+              workspaceTree={workspaceTree}
+              onRefreshTree={() => updateWorkspaceTree(workspaceHandle)}
+              onDisconnectWorkspace={handleDisconnectWorkspace}
+              selectedFilePath={currentSession?.selectedFilePath || null}
+              onFileSelect={(path) => updateSession({ selectedFilePath: path })}
+              sessionId={currentSession?.id}
+              folderName={folders.find(f => f.id === currentSession?.folderId)?.name}
+              streamingText={streamingText}
+              onUpdateArtifact={(updates) => displayArtifact && displayArtifact.id !== 'workspace-explorer' && displayArtifact.id !== 'streaming' && updateArtifact(displayArtifact.id, updates)}
+              contextLogs={currentSession?.contextLogs || []}
+              project={projects.find(p => p.id === currentSession?.activeProjectId)}
+              includeMultiChapter={contextSettings.includeMultiChapter}
+              targetDepth={contextSettings.targetDepth}
+              onAssemble={() => handleAssembleProject(currentSession?.id || undefined)}
+            />
+            
+            <AnimatePresence>
+              {isStreaming && streamingText.includes('<artifact') && !streamingText.includes('</artifact>') && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900/90 backdrop-blur shadow-2xl border border-zinc-800 rounded-2xl px-6 py-4 flex items-center gap-4 z-50"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white animate-pulse">
+                    <Layers size={20} />
                   </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </>
-    )}
-  </main>
+                  <div>
+                    <div className="text-sm font-semibold text-white">Generating Artifact...</div>
+                    <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Streaming content</div>
+                  </div>
+                </motion.div>
+              )}
 
-  {/* ProjectConfigurator removed */}
-</div>
-);
+              {isStreaming && streamingText.includes('<patch') && !streamingText.includes('</patch>') && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900/90 backdrop-blur shadow-2xl border border-zinc-800 rounded-2xl px-6 py-4 flex items-center gap-4 z-50"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white animate-pulse">
+                    <Diff size={20} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-white">Applying Patches...</div>
+                    <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
+                      Updating code
+                      {parsePartialPatches(streamingText).length > 0 && (
+                        <span className="bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-full text-[8px]">
+                          {parsePartialPatches(streamingText).length} detected
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )
+      }
+    />
+  );
 }

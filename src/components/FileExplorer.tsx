@@ -104,7 +104,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         <div key={currentPath}>
           <button 
             onClick={() => toggleFolder(currentPath)}
-            className="w-full flex items-center gap-1.5 py-1 px-2 hover:bg-zinc-100 rounded text-xs text-zinc-600 transition-colors group"
+            className="w-full flex items-center gap-1.5 py-1 px-2 hover:bg-zinc-800 rounded text-xs text-zinc-400 transition-colors group"
             style={{ paddingLeft: `${depth * 12 + 8}px` }}
           >
             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -134,7 +134,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         onClick={() => onFileSelect(currentPath)}
         className={cn(
           "w-full flex items-center gap-2 py-1 px-2 rounded text-xs transition-colors group",
-          isSelected ? "bg-zinc-200 text-zinc-900 font-medium" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+          isSelected ? "bg-zinc-800 text-white font-medium" : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
         )}
         style={{ paddingLeft: `${depth * 12 + 24}px` }}
       >
@@ -145,9 +145,9 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   };
 
   return (
-    <div className="w-64 h-full border-r border-zinc-200 flex flex-col bg-zinc-50/50">
-      <div className="p-3 border-b border-zinc-200 flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Explorer</span>
+    <div className="flex-1 h-full flex flex-col bg-zinc-900">
+      <div className="p-3 border-b border-zinc-800 flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Explorer</span>
         <div className="flex items-center gap-1">
           {onRefresh && (
             <button onClick={onRefresh} className="p-1 hover:bg-zinc-200 rounded text-zinc-500" title="Refresh">
