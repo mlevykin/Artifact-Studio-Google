@@ -40,14 +40,34 @@ export class MCPService {
       const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
       let finalUrl: URL;
       
+      const protocol = url.protocol.replace(':', '');
       if (isLocal) {
         finalUrl = url;
       } else {
-        const protocol = url.protocol.replace(':', '');
         finalUrl = new URL(`${window.location.origin}/proxy/${protocol}/${url.host}${url.pathname}${url.search}`);
       }
       
-      const transport = new SSEClientTransport(finalUrl);
+      const transport = new SSEClientTransport(finalUrl, {
+        fetch: async (input, init) => {
+          const inputUrl = typeof input === 'string' ? input : (input as any).url || input.toString();
+          const urlObj = new URL(inputUrl, window.location.origin);
+          
+          let targetUrl = inputUrl;
+          
+          // If the URL is on our origin but not under /proxy/, it's a relative path 
+          // resolved by the SDK against our origin. We need to redirect it back to the proxy.
+          if (urlObj.origin === window.location.origin && !urlObj.pathname.startsWith('/proxy/')) {
+            targetUrl = `${window.location.origin}/proxy/${protocol}/${url.host}${urlObj.pathname}${urlObj.search}`;
+          } 
+          // If the URL is absolute and external, it's bypassing our proxy.
+          else if (urlObj.origin !== window.location.origin) {
+            const targetProtocol = urlObj.protocol.replace(':', '');
+            targetUrl = `${window.location.origin}/proxy/${targetProtocol}/${urlObj.host}${urlObj.pathname}${urlObj.search}`;
+          }
+          
+          return fetch(targetUrl, init);
+        }
+      });
       const client = new Client(
         {
           name: "Artifact Studio Client",

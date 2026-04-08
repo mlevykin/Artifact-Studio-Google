@@ -17,8 +17,7 @@ async function startServer() {
     const { protocol, host } = req.params;
     const target = `${protocol}://${host}`;
     
-    // The remaining path is in req.url (relative to the mount point /proxy/:protocol/:host)
-    // We need to preserve it.
+    console.log(`[Proxy] ${req.method} ${target}${req.url}`);
     
     proxy.web(req, res, {
       target,
