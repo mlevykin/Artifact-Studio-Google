@@ -746,9 +746,7 @@ export default function App() {
     const maxSecondaryWidth = window.innerWidth - activityBarWidth - sidebarWidth - 300; // Keep at least 300px for chat
     
     if (newSecondaryWidth > 300 && newSecondaryWidth < maxSecondaryWidth) {
-      requestAnimationFrame(() => {
-        setChatWidth(newSecondaryWidth);
-      });
+      setChatWidth(newSecondaryWidth);
     }
   }, [isSidebarOpen]);
 

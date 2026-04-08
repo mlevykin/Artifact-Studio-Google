@@ -33,6 +33,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const zoomTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const isDocMode = fitMode === 'width';
+  const H_OFFSET = isDocMode ? 5000 : 0;
+  const V_OFFSET = isDocMode ? 5000 : 0;
 
   // Use refs to avoid re-attaching wheel listener too often
   const stateRef = useRef({ zoom, position, containerWidth, contentWidth });
@@ -60,8 +62,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       // Only update intendedScroll from native scroll if we're not in the middle of a zoom-induced scroll
       if (!pendingScroll.current) {
         intendedScroll.current = {
-          x: container.scrollLeft,
-          y: container.scrollTop
+          x: container.scrollLeft - H_OFFSET,
+          y: container.scrollTop - V_OFFSET
         };
       }
     };
@@ -102,8 +104,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
 
   useLayoutEffect(() => {
     if (pendingScroll.current && containerRef.current) {
-      containerRef.current.scrollLeft = pendingScroll.current.x;
-      containerRef.current.scrollTop = pendingScroll.current.y;
+      containerRef.current.scrollLeft = pendingScroll.current.x + H_OFFSET;
+      containerRef.current.scrollTop = pendingScroll.current.y + V_OFFSET;
       pendingScroll.current = null;
     }
   });
@@ -120,19 +122,16 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       const scrollX = intendedScroll.current.x;
       const scrollY = intendedScroll.current.y;
       
-      // Calculate where the mouse is relative to the unscaled content
-      // 1. Convert screen mouseX to container-relative mouseX
-      // 2. Adjust for current scroll and current centering offset
-      // 3. Divide by current zoom to get unscaled coordinates
+      // LINEAR ZOOM FORMULA:
+      // The point under the mouse (mouseX) in container coordinates corresponds to 
+      // some point in the "virtual world" coordinates.
+      // worldX = scrollX + mouseX
+      // When we zoom, we want the same world coordinate to stay under the same mouseX.
+      // (worldX - center_offset) / zoom = constant
+      // nextScrollX = (scrollX + mouseX - cW/2) * (newZoom / currentZoom) - (mouseX - cW/2)
       
-      const currentLeft = (cW - conW * currentZoom) / 2;
-      const relX = (scrollX + mouseX - currentLeft) / currentZoom;
-      const relY = (scrollY + mouseY - 64) / currentZoom;
-
-      // Now calculate the new scroll position to keep that relX/relY under the mouse
-      const nextLeft = (cW - conW * newZoom) / 2;
-      const nextScrollX = relX * newZoom - mouseX + nextLeft;
-      const nextScrollY = relY * newZoom - mouseY + 64;
+      const nextScrollX = (scrollX + mouseX - cW/2) * (newZoom / currentZoom) - (mouseX - cW/2);
+      const nextScrollY = (scrollY + mouseY - 64) * (newZoom / currentZoom) - (mouseY - 64);
 
       intendedScroll.current = { x: nextScrollX, y: nextScrollY };
       pendingScroll.current = { x: nextScrollX, y: nextScrollY };
@@ -233,8 +232,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           containerRef.current.scrollTop -= e.movementY;
           containerRef.current.scrollLeft -= e.movementX;
           intendedScroll.current = {
-            x: containerRef.current.scrollLeft,
-            y: containerRef.current.scrollTop
+            x: containerRef.current.scrollLeft - H_OFFSET,
+            y: containerRef.current.scrollTop - V_OFFSET
           };
         } else {
           // Diagram mode: pan by translating
@@ -302,8 +301,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     if (isDocMode) {
       // Reset scroll for documents only if requested
       if (resetScroll && containerRef.current) {
-        containerRef.current.scrollTop = 0;
-        containerRef.current.scrollLeft = 0;
+        containerRef.current.scrollTop = V_OFFSET;
+        containerRef.current.scrollLeft = H_OFFSET;
         intendedScroll.current = { x: 0, y: 0 };
       }
       setPosition({ x: 0, y: 0 });
@@ -404,8 +403,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
             !isDocMode ? "w-full h-full flex items-center justify-center pointer-events-none" : "flex justify-center"
           )}
           style={{ 
-            height: isDocMode ? (contentHeight * zoom + 128) : '100%',
-            width: isDocMode ? Math.max(containerWidth, contentWidth * zoom + 128) : '100%',
+            height: isDocMode ? (contentHeight * zoom + 128 + V_OFFSET * 2) : '100%',
+            width: isDocMode ? (contentWidth * zoom + 128 + H_OFFSET * 2) : '100%',
             minWidth: isDocMode ? '100%' : 'auto'
           }}
         >
@@ -418,8 +417,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
               transformOrigin: isDocMode ? 'top left' : 'center',
               width: isDocMode ? contentWidth : 'auto',
               position: isDocMode ? 'absolute' : 'relative',
-              top: isDocMode ? 64 : 0,
-              left: isDocMode ? Math.max(0, (containerWidth - contentWidth * zoom) / 2) : 0
+              top: isDocMode ? (64 + V_OFFSET) : 0,
+              left: isDocMode ? ((containerWidth - contentWidth * zoom) / 2 + H_OFFSET) : 0
             }}
           >
             <div ref={contentRef} className={cn(isDocMode ? "w-fit" : "w-full flex justify-center")}>
