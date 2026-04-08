@@ -44,6 +44,8 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const isZooming = useRef(false);
+  const zoomTimeout = useRef<NodeJS.Timeout | null>(null);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [penColor, setPenColor] = useState('#ef4444');
   const [isDrawing, setIsDrawing] = useState(false);
@@ -258,18 +260,28 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newZoom = Math.min(Math.max(zoom * delta, 0.2), 5);
+    // Smooth zoom factor based on deltaY
+    const delta = Math.max(Math.min(-e.deltaY, 1000), -1000);
+    const factor = Math.pow(1.1, delta / 100);
+    const newZoom = Math.min(Math.max(zoom * factor, 0.2), 10);
 
     if (newZoom !== zoom) {
+      isZooming.current = true;
+      if (zoomTimeout.current) clearTimeout(zoomTimeout.current);
+      zoomTimeout.current = setTimeout(() => {
+        isZooming.current = false;
+      }, 150);
+
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
 
+      // Calculate relative position within unscaled content
       const relX = (mouseX - centerX - position.x) / zoom;
       const relY = (mouseY - centerY - position.y) / zoom;
 
+      // Calculate new position to keep the point under the mouse
       const newX = mouseX - centerX - relX * newZoom;
       const newY = mouseY - centerY - relY * newZoom;
 
@@ -450,7 +462,11 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
             "flex items-center justify-center",
             !isDrawingMode && "cursor-grab active:cursor-grabbing"
           )}
-          style={{ x: position.x, y: position.y }}
+          animate={{ 
+            scale: zoom,
+            x: position.x,
+            y: position.y
+          }}
           onDragEnd={(_, info) => {
             if (isDrawingMode) return;
             setPosition(prev => ({
@@ -458,8 +474,7 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
               y: prev.y + info.offset.y
             }));
           }}
-          animate={{ scale: zoom }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          transition={isZooming.current ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 30 }}
         >
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden p-12 border border-zinc-100 pointer-events-auto">
             {children(currentStep)}

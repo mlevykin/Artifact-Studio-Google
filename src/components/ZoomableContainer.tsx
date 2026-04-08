@@ -137,21 +137,15 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           const scrollX = intendedScroll.current.x;
           const scrollY = intendedScroll.current.y;
           
-          const { containerWidth: cW, contentWidth: conW } = stateRef.current;
+          const { containerWidth: cW } = stateRef.current;
           
-          // Current left offset logic
-          const getLeft = (z: number, cw: number, conw: number) => Math.max(64, (cw - conw * z) / 2);
-          const currentLeft = getLeft(currentZoom, cW, conW);
-          const nextLeft = getLeft(newZoom, cW, conW);
+          // In doc mode, content is centered horizontally (translateX(-50%), left: 50%)
+          // and has a top offset of 64px.
+          const centerX = cW / 2;
+          const relX = (scrollX + mouseX - centerX) / currentZoom;
+          const relY = (scrollY + mouseY - 64) / currentZoom;
 
-          // Calculate relative position within unscaled content
-          const focalX = (scrollX + mouseX - currentLeft);
-          const focalY = (scrollY + mouseY - 64);
-          
-          const relX = focalX / currentZoom;
-          const relY = focalY / currentZoom;
-          
-          const nextScrollX = Math.round(relX * newZoom - mouseX + nextLeft);
+          const nextScrollX = Math.round(relX * newZoom - mouseX + centerX);
           const nextScrollY = Math.round(relY * newZoom - mouseY + 64);
 
           intendedScroll.current = { x: nextScrollX, y: nextScrollY };
