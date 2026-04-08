@@ -254,9 +254,29 @@ export const DiagramPresenter: React.FC<DiagramPresenterProps> = ({
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom(prev => Math.min(Math.max(prev + delta, 0.2), 5));
-  }, []);
+    
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.min(Math.max(zoom * delta, 0.2), 5);
+
+    if (newZoom !== zoom) {
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      const relX = (mouseX - centerX - position.x) / zoom;
+      const relY = (mouseY - centerY - position.y) / zoom;
+
+      const newX = mouseX - centerX - relX * newZoom;
+      const newY = mouseY - centerY - relY * newZoom;
+
+      setZoom(newZoom);
+      setPosition({ x: newX, y: newY });
+    }
+  }, [zoom, position]);
 
   useEffect(() => {
     const container = containerRef.current;
