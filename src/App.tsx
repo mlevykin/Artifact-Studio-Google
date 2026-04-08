@@ -1430,8 +1430,8 @@ ${activeMCPs.map(c => {
 
   if (isInitializing) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-zinc-950">
-        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+      <div className="h-screen w-full flex items-center justify-center bg-slate-950">
+        <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
       </div>
     );
   }
@@ -1510,13 +1510,13 @@ ${activeMCPs.map(c => {
           {activeActivity === 'settings' && (
             <div className="p-4 space-y-6">
               <div className="space-y-2">
-                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Model Provider</h3>
-                <div className="flex p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Model Provider</h3>
+                <div className="flex p-1 bg-slate-950 rounded-xl border border-slate-800">
                   <button 
                     onClick={() => setProvider('gemini')}
                     className={cn(
                       "flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all",
-                      provider === 'gemini' ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-400"
+                      provider === 'gemini' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-400"
                     )}
                   >
                     GEMINI
@@ -1525,7 +1525,7 @@ ${activeMCPs.map(c => {
                     onClick={() => setProvider('ollama')}
                     className={cn(
                       "flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all",
-                      provider === 'ollama' ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-400"
+                      provider === 'ollama' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-400"
                     )}
                   >
                     OLLAMA
@@ -1534,24 +1534,24 @@ ${activeMCPs.map(c => {
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Gemini Settings</h3>
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gemini Settings</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[10px] text-zinc-400 mb-1 block">API Key</label>
+                    <label className="text-[10px] text-slate-400 mb-1 block">API Key</label>
                     <input 
                       type="password"
                       value={geminiApiKey}
                       onChange={(e) => setGeminiApiKey(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-sky-500 outline-none"
                       placeholder="Enter API Key..."
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-zinc-400 mb-1 block">Model</label>
+                    <label className="text-[10px] text-slate-400 mb-1 block">Model</label>
                     <select 
                       value={geminiModel}
                       onChange={(e) => setGeminiModel(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-sky-500 outline-none"
                     >
                       <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
                       <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
@@ -1561,7 +1561,7 @@ ${activeMCPs.map(c => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-zinc-800">
+              <div className="pt-4 border-t border-slate-800">
                 <button 
                   onClick={handleDisconnectWorkspace}
                   className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold rounded-lg transition-all"
@@ -1575,18 +1575,18 @@ ${activeMCPs.map(c => {
       }
       mainContent={
         !workspaceHandle ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 bg-zinc-950 text-center">
+          <div className="flex-1 flex flex-col items-center justify-center p-12 bg-slate-950 text-center">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-[32px] p-10 shadow-2xl"
+              className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-[32px] p-10 shadow-2xl"
             >
-              <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
-                <FolderOpen className="w-8 h-8 text-emerald-500" />
+              <div className="w-16 h-16 bg-sky-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                <FolderOpen className="w-8 h-8 text-sky-500" />
               </div>
               
               <h2 className="text-2xl font-bold text-white mb-3">Open Workspace</h2>
-              <p className="text-zinc-500 mb-8 text-sm leading-relaxed">
+              <p className="text-slate-500 mb-8 text-sm leading-relaxed">
                 To start using Artifact Studio, please select a local folder where all your projects, chats, and settings will be stored.
               </p>
 
@@ -1599,7 +1599,7 @@ ${activeMCPs.map(c => {
 
               <button 
                 onClick={handleSelectWorkspace}
-                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group"
+                className="w-full py-4 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group"
               >
                 Select Workspace Folder
                 <motion.span
@@ -1683,14 +1683,14 @@ ${activeMCPs.map(c => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
-                  className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900/90 backdrop-blur shadow-2xl border border-zinc-800 rounded-2xl px-6 py-4 flex items-center gap-4 z-50"
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur shadow-2xl border border-slate-800 rounded-2xl px-6 py-4 flex items-center gap-4 z-50"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white animate-pulse">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white animate-pulse">
                     <Layers size={20} />
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-white">Generating Artifact...</div>
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Streaming content</div>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Streaming content</div>
                   </div>
                 </motion.div>
               )}
@@ -1700,14 +1700,14 @@ ${activeMCPs.map(c => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
-                  className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900/90 backdrop-blur shadow-2xl border border-zinc-800 rounded-2xl px-6 py-4 flex items-center gap-4 z-50"
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur shadow-2xl border border-slate-800 rounded-2xl px-6 py-4 flex items-center gap-4 z-50"
                 >
                   <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white animate-pulse">
                     <Diff size={20} />
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-white">Applying Patches...</div>
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
+                    <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold flex items-center gap-2">
                       Updating code
                       {parsePartialPatches(streamingText).length > 0 && (
                         <span className="bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-full text-[8px]">

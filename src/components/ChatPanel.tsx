@@ -256,32 +256,32 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-zinc-50 border-r border-zinc-200 w-full flex-shrink-0">
-      <div className="p-4 border-b border-zinc-200 bg-white flex flex-col gap-2">
+    <div className="flex flex-col h-full bg-slate-50 border-r border-slate-200 w-full flex-shrink-0">
+      <div className="p-4 border-b border-slate-200 bg-white flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {!isSidebarOpen && (
               <button 
                 onClick={onToggleSidebar}
-                className="p-1.5 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-800 transition-colors"
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors"
                 title="Expand Sidebar"
               >
                 <Menu size={18} />
               </button>
             )}
-            <h2 className="font-semibold text-zinc-800">Chat</h2>
+            <h2 className="font-semibold text-slate-800">Chat</h2>
           </div>
           <div className="flex items-center gap-2">
             <span className={cn(
               "text-[10px] font-bold px-2 py-0.5 rounded-full border",
-              provider === 'gemini' ? "bg-indigo-50 text-indigo-600 border-indigo-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"
+              provider === 'gemini' ? "bg-indigo-50 text-indigo-600 border-indigo-100" : "bg-sky-50 text-sky-600 border-sky-100"
             )}>
               {provider.toUpperCase()}
             </span>
             {provider === 'ollama' && (
               <button 
                 onClick={() => setShowOllamaSettings(!showOllamaSettings)}
-                className="p-1 hover:bg-zinc-100 rounded text-zinc-400 hover:text-zinc-600 transition-colors"
+                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <Loader2 size={14} className={cn(showOllamaSettings && "rotate-45")} />
               </button>
@@ -289,7 +289,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             {provider === 'gemini' && (
               <button 
                 onClick={() => setShowGeminiSettings(!showGeminiSettings)}
-                className="p-1 hover:bg-zinc-100 rounded text-zinc-400 hover:text-zinc-600 transition-colors"
+                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <Loader2 size={14} className={cn(showGeminiSettings && "rotate-45")} />
               </button>
@@ -383,8 +383,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-zinc-400 text-center p-8">
-            <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-4">
+          <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center p-8">
+            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
               <Send size={20} />
             </div>
             <p className="text-sm">Start a conversation to generate artifacts.</p>
@@ -404,16 +404,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 "p-4 rounded-2xl text-sm shadow-sm relative",
                 m.role === 'user' 
                   ? (m.content.startsWith('MCP CALL RESULT') 
-                      ? "bg-zinc-100 border border-zinc-200 text-zinc-600 rounded-tr-none font-mono text-[10px]" 
-                      : "bg-zinc-800 text-white rounded-tr-none shadow-md")
-                  : "bg-white border border-zinc-100 text-zinc-800 rounded-tl-none pl-6"
+                      ? "bg-slate-100 border border-slate-200 text-slate-600 rounded-tr-none font-mono text-[10px]" 
+                      : "bg-slate-800 text-white rounded-tr-none shadow-md")
+                  : "bg-white border border-slate-100 text-slate-800 rounded-tl-none pl-6"
               )}
             >
               {m.role === 'assistant' && (
-                <div className="absolute left-2 top-4 bottom-4 w-0.5 bg-zinc-100 rounded-full" />
+                <div className="absolute left-2 top-4 bottom-4 w-0.5 bg-slate-100 rounded-full" />
               )}
               {m.role === 'assistant' && m.id === messages[messages.length - 1].id && (
-                <div className="absolute -left-1.5 top-4 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-sm" />
+                <div className="absolute -left-1.5 top-4 w-3 h-3 rounded-full bg-sky-500 border-2 border-white shadow-sm" />
               )}
               {m.role === 'assistant' && m.steps ? (
                 <div className="flex flex-col gap-3">
@@ -1517,7 +1517,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <div className="flex items-end gap-2">
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors flex-shrink-0"
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0"
             >
               <Paperclip size={20} />
             </button>
@@ -1542,15 +1542,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     {attachments.map((a) => (
                       <div key={a.id} className="relative group">
                         {a.type === 'image' ? (
-                          <img src={`data:${a.mimeType};base64,${a.data}`} alt={a.name} className="w-12 h-12 rounded-lg object-cover border border-zinc-200" />
+                          <img src={`data:${a.mimeType};base64,${a.data}`} alt={a.name} className="w-12 h-12 rounded-lg object-cover border border-slate-200" />
                         ) : (
-                          <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500">
+                          <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500">
                             <FileText size={20} />
                           </div>
                         )}
                         <button 
                           onClick={() => setAttachments(attachments.filter(att => att.id !== a.id))}
-                          className="absolute -top-1 -right-1 bg-zinc-800 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute -top-1 -right-1 bg-slate-800 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X size={10} />
                         </button>
@@ -1576,7 +1576,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   }
                 }}
                 placeholder="Type a message..."
-                className="w-full bg-zinc-100 border-none rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-zinc-200 resize-none max-h-64 min-h-[40px] overflow-y-auto"
+                className="w-full bg-slate-100 border-none rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-200 resize-none max-h-64 min-h-[40px] overflow-y-auto"
                 rows={1}
               />
             </div>
@@ -1587,8 +1587,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               className={cn(
                 "p-2.5 rounded-xl transition-all flex-shrink-0",
                 !isStreaming && !input.trim() && attachments.length === 0
-                  ? "bg-zinc-100 text-zinc-300"
-                  : "bg-zinc-800 text-white hover:bg-zinc-900 shadow-md active:scale-95"
+                  ? "bg-slate-100 text-slate-300"
+                  : "bg-slate-800 text-white hover:bg-slate-900 shadow-md active:scale-95"
               )}
             >
               {isStreaming ? (

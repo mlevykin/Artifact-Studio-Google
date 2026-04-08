@@ -96,7 +96,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 }) => {
   const [isStyleExpanded, setIsStyleExpanded] = useState(false);
   const [view, setView] = useState<'preview' | 'code' | 'log'>('preview');
-  const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [copied, setCopied] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -424,7 +423,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       const latestPatch = patches[patches.length - 1];
       if (latestPatch.old && (textareaRef.current || codeAreaRef.current)) {
         const container = textareaRef.current || codeAreaRef.current;
-        const content = isEditing ? editContent : pContent;
+        const content = view === 'code' ? editContent : pContent;
         const index = content.indexOf(latestPatch.old);
         
         if (index !== -1) {
@@ -443,7 +442,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     if (!isStreaming) {
       lastPatchCountRef.current = 0;
     }
-  }, [isStreaming, streamingText, isEditing, editContent, pContent]);
+  }, [isStreaming, streamingText, view, editContent, pContent]);
 
   const handleFileSelect = async (path: string) => {
     onFileSelect(path);
@@ -497,7 +496,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       }
       
       prevArtifactIdRef.current = artifact.id;
-      setIsEditing(false);
     }
   }, [artifact]);
 
@@ -517,11 +515,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
   if (!artifact || (artifact.id === 'workspace-explorer' && !workspaceHandle)) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-zinc-100 text-zinc-400 p-12 text-center">
+      <div className="flex-1 flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-12 text-center">
         <div className="w-16 h-16 rounded-3xl bg-white shadow-sm flex items-center justify-center mb-6">
           <Code size={32} />
         </div>
-        <h3 className="text-lg font-medium text-zinc-600 mb-2">No Artifact Selected</h3>
+        <h3 className="text-lg font-medium text-slate-600 mb-2">No Artifact Selected</h3>
         <p className="max-w-md text-sm">
           Generate an artifact in the chat to see it here. Artifacts support diagrams, HTML, Markdown, and SVG.
         </p>
@@ -536,7 +534,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         await writeProjectToDirectory(workspaceHandle, [{ path: selectedFilePath, content: editContent }]);
         if (onRefreshTree) onRefreshTree();
         setIsSyncing(false);
-        setIsEditing(false);
       } catch (error) {
         console.error('Failed to save workspace file:', error);
         alert('Failed to save file to disk.');
@@ -544,13 +541,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       }
     } else {
       onSave(editContent, selectedFileId || undefined);
-      setIsEditing(false);
     }
-  };
-
-  const handleCancel = () => {
-    setEditContent(artifact.content);
-    setIsEditing(false);
   };
 
   const handleCopy = () => {
@@ -657,30 +648,30 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   return (
     <div ref={panelRef} className={cn("flex-1 flex flex-col h-full bg-white overflow-hidden", isFullScreen && "fixed inset-0 z-[100]")}>
       {/* Header */}
-      <div className="p-4 border-b border-zinc-200 flex items-center justify-between bg-white z-10">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white z-10">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-zinc-100 rounded-lg">
-            <Code size={18} className="text-zinc-600" />
+          <div className="p-2 bg-slate-100 rounded-lg">
+            <Code size={18} className="text-slate-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-zinc-800 leading-tight">
+            <h2 className="font-semibold text-slate-800 leading-tight">
               {artifact.title}
-              {currentFile && <span className="text-zinc-400 font-normal ml-2">/ {currentFile.name}</span>}
-              {!currentFile && isWorkspaceMode && selectedFilePath && <span className="text-zinc-400 font-normal ml-2">/ {selectedFilePath.split('/').pop()}</span>}
+              {currentFile && <span className="text-slate-400 font-normal ml-2">/ {currentFile.name}</span>}
+              {!currentFile && isWorkspaceMode && selectedFilePath && <span className="text-slate-400 font-normal ml-2">/ {selectedFilePath.split('/').pop()}</span>}
             </h2>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 bg-zinc-50 px-1.5 py-0.5 rounded border border-zinc-100">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
                 {pType}
               </span>
               {artifact.id !== 'workspace-explorer' && (
-                <span className="text-[10px] text-zinc-400">
+                <span className="text-[10px] text-slate-400">
                   v{artifact.version} • {new Date(artifact.timestamp).toLocaleTimeString()}
                 </span>
               )}
               {artifact.id === 'workspace-explorer' && workspaceHandle && (
                 <button 
                   onClick={() => onDisconnectWorkspace?.()}
-                  className="text-[10px] text-zinc-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                  className="text-[10px] text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"
                 >
                   <X size={10} /> Disconnect
                 </button>
@@ -689,12 +680,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
           <button 
             onClick={() => setView('preview')}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-              view === 'preview' ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+              view === 'preview' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
           >
             <Eye size={14} /> Preview
@@ -703,7 +694,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             onClick={() => setView('code')}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-              view === 'code' ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+              view === 'code' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
           >
             <Code size={14} /> Code
@@ -712,7 +703,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             onClick={() => setView('log')}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-              view === 'log' ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+              view === 'log' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
           >
             <Terminal size={14} /> Context Log
@@ -731,20 +722,20 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             !isStyleExpanded ? (
               <button 
                 onClick={() => setIsStyleExpanded(true)}
-                className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-xl text-zinc-600 transition-all mr-2"
+                className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-all mr-2"
                 title="Show Style Selection"
               >
                 <Palette size={18} />
               </button>
             ) : (
-              <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
-                <div className="flex items-center gap-1 px-2 text-zinc-500">
+              <div className="flex items-center bg-slate-100 rounded-xl p-1 mr-2">
+                <div className="flex items-center gap-1 px-2 text-slate-500">
                   <Palette size={14} />
                 </div>
                 <select 
                   value={artifact.mermaidStyleId || 'minimalist'}
                   onChange={(e) => onUpdateArtifact({ mermaidStyleId: e.target.value })}
-                  className="bg-transparent text-xs font-medium text-zinc-700 outline-none pr-2 py-1 cursor-pointer"
+                  className="bg-transparent text-xs font-medium text-slate-700 outline-none pr-2 py-1 cursor-pointer"
                 >
                   {MERMAID_STYLES.map(style => (
                     <option key={style.id} value={style.id}>
@@ -752,10 +743,10 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                     </option>
                   ))}
                 </select>
-                <div className="h-4 w-[1px] bg-zinc-300 mx-0.5" />
+                <div className="h-4 w-[1px] bg-slate-300 mx-0.5" />
                 <button 
                   onClick={() => setIsStyleExpanded(false)}
-                  className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-white rounded-lg transition-all"
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-all"
                   title="Collapse"
                 >
                   <X size={14} />
@@ -766,49 +757,34 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
           {view === 'code' && (
             <>
-              {isEditing ? (
-                <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl mr-2">
-                  <button 
-                    onClick={handleSave}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500 text-white shadow-sm hover:bg-emerald-600 transition-all"
-                  >
-                    <Save size={14} /> Save
-                  </button>
-                  <button 
-                    onClick={handleCancel}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-50 hover:bg-zinc-200 hover:text-zinc-800 transition-all"
-                  >
-                    <X size={14} /> Cancel
-                  </button>
-                </div>
-              ) : (
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl mr-2">
                 <button 
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-white shadow-sm hover:bg-zinc-900 transition-all mr-2"
+                  onClick={handleSave}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-sky-500 text-white shadow-sm hover:bg-sky-600 transition-all"
                 >
-                  <Edit size={14} /> Edit
+                  <Save size={14} /> Save
                 </button>
-              )}
+              </div>
             </>
           )}
 
-        <div className="flex items-center bg-zinc-100 rounded-xl p-1 mr-2">
+        <div className="flex items-center bg-slate-100 rounded-xl p-1 mr-2">
           {artifact.id !== 'workspace-explorer' && (
             <>
               <button 
                 disabled={currentIndex <= 0}
                 onClick={() => onVersionSelect(currentIndex - 1)}
-                className="p-1.5 text-zinc-500 hover:text-zinc-800 disabled:opacity-30"
+                className="p-1.5 text-slate-500 hover:text-slate-800 disabled:opacity-30"
               >
                 <ChevronLeft size={16} />
               </button>
-              <span className="text-[10px] font-mono px-2 text-zinc-500">
+              <span className="text-[10px] font-mono px-2 text-slate-500">
                 {currentIndex + 1} / {history.length}
               </span>
               <button 
                 disabled={currentIndex >= history.length - 1}
                 onClick={() => onVersionSelect(currentIndex + 1)}
-                className="p-1.5 text-zinc-500 hover:text-zinc-800 disabled:opacity-30"
+                className="p-1.5 text-slate-500 hover:text-slate-800 disabled:opacity-30"
               >
                 <ChevronRight size={16} />
               </button>
@@ -820,7 +796,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             onClick={toggleFullScreen}
             className={cn(
               "p-2 rounded-lg transition-colors mr-1",
-              isFullScreen ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
+              isFullScreen ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
             )}
             title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
           >
@@ -832,7 +808,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
             disabled={isSyncing}
             className={cn(
               "p-2 rounded-lg transition-colors mr-1",
-              workspaceHandle ? "text-emerald-500 bg-emerald-50" : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
+              workspaceHandle ? "text-sky-500 bg-sky-50" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
             )}
             title={workspaceHandle ? `Workspace: ${workspaceHandle.name}` : "Select Workspace"}
           >
@@ -841,29 +817,29 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
 
           <button 
             onClick={handleCopy}
-            className="p-2 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors relative"
+            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors relative"
             title="Copy Code"
           >
-            {copied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+            {copied ? <Check size={18} className="text-sky-500" /> : <Copy size={18} />}
           </button>
           
           <div className="relative group">
-            <button className="p-2 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors">
+            <button className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
               <Download size={18} />
             </button>
             {/* Added a transparent bridge to prevent menu from disappearing */}
             <div className="absolute right-0 top-full pt-2 hidden group-hover:block z-50">
-              <div className="bg-white border border-zinc-200 rounded-xl shadow-xl p-2 min-w-[140px]">
-                <button onClick={() => handleExport('png')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg flex items-center gap-2">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-2 min-w-[140px]">
+                <button onClick={() => handleExport('png')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 rounded-lg flex items-center gap-2">
                   <Download size={12} /> Export PNG
                 </button>
-                <button onClick={() => handleExport('svg')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg flex items-center gap-2">
+                <button onClick={() => handleExport('svg')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 rounded-lg flex items-center gap-2">
                   <Download size={12} /> Export SVG
                 </button>
-                <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg flex items-center gap-2">
+                <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 rounded-lg flex items-center gap-2">
                   <Download size={12} /> Export HTML
                 </button>
-                <button onClick={() => handleExport('md')} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 rounded-lg flex items-center gap-2">
+                <button onClick={() => handleExport('md')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 rounded-lg flex items-center gap-2">
                   <Download size={12} /> Export Markdown
                 </button>
               </div>
@@ -873,27 +849,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       </div>
 
         <div className="flex-1 overflow-hidden relative bg-zinc-50 flex">
-          {view === 'code' && (
-            <FileExplorer 
-              tree={workspaceTree || {
-                name: workspaceHandle?.name || 'Workspace',
-                kind: 'directory',
-                path: '',
-                children: [{ 
-                      name: `${artifact.title}.${(artifact.type.toLowerCase() === 'markdown' || artifact.type.toLowerCase() === 'text/markdown' || artifact.type.toLowerCase() === 'md') ? 'md' : artifact.type.toLowerCase() === 'mermaid' ? 'mmd' : artifact.type.toLowerCase()}`, 
-                      kind: 'file',
-                      path: `artifacts/${artifact.title}.${(artifact.type.toLowerCase() === 'markdown' || artifact.type.toLowerCase() === 'text/markdown' || artifact.type.toLowerCase() === 'md') ? 'md' : artifact.type.toLowerCase() === 'mermaid' ? 'mmd' : artifact.type.toLowerCase()}`
-                    }]
-              }}
-              selectedFile={selectedFilePath}
-              onFileSelect={handleFileSelect}
-              expandedFolders={expandedFolders}
-              onToggleFolder={(path) => setExpandedFolders(prev => ({ ...prev, [path]: !prev[path] }))}
-              onRefresh={onRefreshTree}
-              onDisconnect={onDisconnectWorkspace}
-            />
-          )}
-
         <div className="flex-1 overflow-hidden relative">
           {view === 'log' ? (
             <ContextLog logs={contextLogs} />
@@ -958,7 +913,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                             content: pContent,
                             title: 'Presentation mode'
                           })}
-                          className="p-2.5 bg-white text-zinc-600 rounded-xl shadow-lg hover:bg-zinc-50 hover:text-zinc-900 transition-all flex items-center justify-center border border-zinc-200"
+                          className="p-2.5 bg-white text-slate-600 rounded-xl shadow-lg hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center border border-slate-200"
                           title="Present Mode"
                         >
                           <Maximize2 size={18} />
@@ -985,22 +940,18 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
           ) : (
             <div ref={codeAreaRef} className="w-full h-full bg-white overflow-auto">
               {isWorkspaceMode && !selectedFilePath ? (
-                <div className="flex flex-col items-center justify-center h-full text-zinc-400 p-8 text-center">
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
                   <FolderSync size={48} className="mb-4 opacity-20" />
                   <p className="text-sm">Select a file from the explorer to start working with it.</p>
                 </div>
-              ) : isEditing ? (
+              ) : (
                 <textarea
                   ref={textareaRef}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full h-full p-6 font-mono text-sm text-zinc-800 leading-relaxed resize-none outline-none bg-zinc-50/50"
+                  className="w-full h-full p-6 font-mono text-sm text-slate-800 leading-relaxed resize-none outline-none bg-slate-50/50"
                   spellCheck={false}
                 />
-              ) : (
-                <pre className="p-6 font-mono text-sm text-zinc-800 leading-relaxed whitespace-pre-wrap break-words">
-                  <code>{editContent}</code>
-                </pre>
               )}
             </div>
           )}

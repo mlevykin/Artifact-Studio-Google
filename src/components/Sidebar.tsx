@@ -81,11 +81,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       className={cn(
         "group flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition-all relative",
         currentSessionId === s.id 
-          ? "bg-zinc-800 text-white shadow-md" 
-          : "hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-200"
+          ? "bg-slate-800 text-white shadow-md" 
+          : "hover:bg-slate-800/50 text-slate-400 hover:text-slate-200"
       )}
     >
-      <MessageSquare size={14} className={cn(currentSessionId === s.id ? "text-zinc-200" : "text-zinc-600")} />
+      <MessageSquare size={14} className={cn(currentSessionId === s.id ? "text-slate-200" : "text-slate-600")} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{s.title}</div>
         <div className="text-[9px] opacity-50 flex items-center gap-1">
@@ -117,8 +117,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {movingSessionId === s.id && (
-        <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
-          <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-500 uppercase border-b border-zinc-700 mb-1">
+        <div className="absolute right-0 top-full mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-700 mb-1">
             Move to...
           </div>
           <button 
@@ -127,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onMoveSession(s.id, null);
               setMovingSessionId(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-700 transition-colors flex items-center gap-2"
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-700 transition-colors flex items-center gap-2"
           >
             <MessageSquare size={12} />
             Root
@@ -140,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onMoveSession(s.id, f.id);
                 setMovingSessionId(null);
               }}
-              className="w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-700 transition-colors flex items-center gap-2"
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-700 transition-colors flex items-center gap-2"
             >
               <Folder size={12} />
               {f.name}
@@ -154,21 +154,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const uncategorizedSessions = sessions.filter(s => !s.folderId);
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-zinc-900">
+    <div className="flex-1 overflow-hidden flex flex-col bg-slate-900">
       {activeTab === 'chats' && (
         <>
           <div className="p-4 space-y-3">
             <div className="flex gap-2">
               <button 
                 onClick={() => onNewSession()}
-                className="flex-1 flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl py-2.5 transition-all active:scale-95 shadow-lg border border-zinc-700"
+                className="flex-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-2.5 transition-all active:scale-95 shadow-lg border border-slate-700"
               >
                 <Plus size={18} />
                 <span className="text-sm font-medium">New Chat</span>
               </button>
               <button 
                 onClick={() => setIsCreatingFolder(true)}
-                className="p-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-xl transition-all border border-zinc-700"
+                className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all border border-slate-700"
                 title="New Folder"
               >
                 <FolderPlus size={18} />
@@ -176,7 +176,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {isCreatingFolder && (
-              <div className="flex items-center gap-2 p-2 bg-zinc-950 rounded-xl border border-zinc-800 animate-in fade-in slide-in-from-top-1">
+              <div className="flex items-center gap-2 p-2 bg-slate-950 rounded-xl border border-slate-800 animate-in fade-in slide-in-from-top-1">
                 <input 
                   autoFocus
                   type="text"
@@ -189,10 +189,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   placeholder="Folder name..."
                   className="flex-1 bg-transparent border-none text-xs focus:ring-0 p-0 text-white"
                 />
-                <button onClick={handleCreateFolder} className="text-emerald-500 hover:text-emerald-400">
+                <button onClick={handleCreateFolder} className="text-sky-500 hover:text-sky-400">
                   <Plus size={14} />
                 </button>
-                <button onClick={() => setIsCreatingFolder(false)} className="text-zinc-500 hover:text-zinc-400">
+                <button onClick={() => setIsCreatingFolder(false)} className="text-slate-500 hover:text-slate-400">
                   <X size={14} />
                 </button>
               </div>
@@ -206,11 +206,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <div key={folder.id} className="space-y-1">
                   <div 
-                    className="group flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zinc-800/30 cursor-pointer transition-all"
+                    className="group flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/30 cursor-pointer transition-all"
                     onClick={() => onUpdateFolder(folder.id, { isExpanded: !folder.isExpanded })}
                   >
-                    {folder.isExpanded ? <ChevronDown size={14} className="text-zinc-600" /> : <ChevronRight size={14} className="text-zinc-600" />}
-                    <Folder size={14} className="text-zinc-500" />
+                    {folder.isExpanded ? <ChevronDown size={14} className="text-slate-600" /> : <ChevronRight size={14} className="text-slate-600" />}
+                    <Folder size={14} className="text-slate-500" />
                     
                     {editingFolderId === folder.id ? (
                       <input 
@@ -223,11 +223,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           if (e.key === 'Enter') handleSaveEditFolder();
                           if (e.key === 'Escape') setEditingFolderId(null);
                         }}
-                        className="flex-1 bg-zinc-950 border border-zinc-700 text-xs rounded px-1 py-0.5 text-white"
+                        className="flex-1 bg-slate-950 border border-slate-700 text-xs rounded px-1 py-0.5 text-white"
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
-                      <div className="flex-1 text-xs font-bold text-zinc-400 truncate uppercase tracking-wider">
+                      <div className="flex-1 text-xs font-bold text-slate-400 truncate uppercase tracking-wider">
                         {folder.name}
                         <span className="ml-2 text-[10px] opacity-40 font-normal">({folderSessions.length})</span>
                       </div>
@@ -239,7 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           e.stopPropagation();
                           handleStartEditFolder(folder);
                         }}
-                        className="p-1 hover:text-zinc-200"
+                        className="p-1 hover:text-slate-200"
                       >
                         <Edit2 size={12} />
                       </button>
@@ -256,9 +256,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
 
                   {folder.isExpanded && (
-                    <div className="ml-4 pl-2 border-l border-zinc-800 space-y-1">
+                    <div className="ml-4 pl-2 border-l border-slate-800 space-y-1">
                       {folderSessions.length === 0 ? (
-                        <div className="px-3 py-2 text-[10px] text-zinc-600 italic">Empty folder</div>
+                        <div className="px-3 py-2 text-[10px] text-slate-600 italic">Empty folder</div>
                       ) : (
                         folderSessions.map(renderSession)
                       )}
@@ -269,12 +269,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             })}
 
             {/* Uncategorized */}
-            <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-4">
+            <div className="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-4">
               Recent Chats
             </div>
             
             {sessions.length === 0 && (
-              <div className="px-3 py-8 text-center text-zinc-600">
+              <div className="px-3 py-8 text-center text-slate-600">
                 <MessageSquare size={24} className="mx-auto mb-2 opacity-20" />
                 <p className="text-xs">No history yet</p>
               </div>

@@ -42,12 +42,12 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
   isResizing = false
 }) => {
   return (
-    <div className="flex h-screen w-full bg-zinc-950 text-zinc-300 overflow-hidden font-sans relative">
+    <div className="flex h-screen w-full bg-slate-950 text-slate-300 overflow-hidden font-sans relative">
       {isResizing && (
         <div className="fixed inset-0 z-[100] cursor-col-resize" />
       )}
       {/* Activity Bar (Far Left) */}
-      <div className="w-12 flex-shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-4 gap-4 z-50">
+      <div className="w-12 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-4 gap-4 z-50">
         {activityBar.map((item) => (
           <button
             key={item.id}
@@ -62,8 +62,8 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
             className={cn(
               "p-2 rounded-lg transition-all relative group",
               activeActivity === item.id && isSidebarOpen
-                ? "text-white bg-zinc-800 shadow-sm"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                ? "text-white bg-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
             )}
             title={item.label}
           >
@@ -71,10 +71,10 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
             {activeActivity === item.id && isSidebarOpen && (
               <motion.div 
                 layoutId="active-indicator"
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-emerald-500 rounded-r-full" 
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-sky-500 rounded-r-full" 
               />
             )}
-            <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
               {item.label}
             </div>
           </button>
@@ -89,7 +89,7 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
             animate={{ width: sidebarWidth, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="flex-shrink-0 bg-zinc-900/50 border-r border-zinc-800 flex flex-col overflow-hidden"
+            className="flex-shrink-0 bg-slate-900/50 border-r border-slate-800 flex flex-col overflow-hidden"
           >
             <div className="flex-1 overflow-hidden">
               {sidebarContent}
@@ -99,7 +99,7 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
       </AnimatePresence>
 
       {/* Main Content Area (Center) */}
-      <div className="flex-1 flex flex-col min-w-0 bg-zinc-950 relative overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative overflow-hidden">
         {mainContent}
       </div>
 
@@ -107,7 +107,7 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
       {isSecondarySidebarOpen && onSecondarySidebarResizeStart && (
         <div 
           onMouseDown={onSecondarySidebarResizeStart}
-          className="w-1 bg-zinc-800 hover:bg-emerald-500/50 cursor-col-resize transition-colors z-50 flex-shrink-0"
+          className="w-1 bg-slate-700 hover:bg-sky-500/50 cursor-col-resize transition-colors z-50 flex-shrink-0"
         />
       )}
 
@@ -119,7 +119,7 @@ export const IDELayout: React.FC<IDELayoutProps> = ({
             animate={{ width: secondarySidebarWidth, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="flex-shrink-0 bg-zinc-900/30 border-l border-zinc-800 flex flex-col overflow-hidden"
+            className="flex-shrink-0 bg-slate-900/30 border-l border-slate-800 flex flex-col overflow-hidden"
           >
             <div className="flex-1 overflow-hidden">
               {secondarySidebarContent}
