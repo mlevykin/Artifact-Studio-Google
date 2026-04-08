@@ -1576,7 +1576,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   }
                 }}
                 placeholder="Type a message..."
-                className="w-full bg-slate-100 border-none rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-200 resize-none max-h-64 min-h-[40px] overflow-y-auto"
+                className="w-full bg-slate-100 border-none rounded-2xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-slate-200 resize-none max-h-64 min-h-[40px] overflow-y-auto placeholder:text-slate-400"
                 rows={1}
               />
             </div>

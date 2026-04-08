@@ -120,14 +120,16 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       const scrollX = intendedScroll.current.x;
       const scrollY = intendedScroll.current.y;
       
-      const currentLeft = Math.max(0, (cW - conW * currentZoom) / 2);
-      const nextLeft = Math.max(0, (cW - conW * newZoom) / 2);
+      const currentLeft = (cW - conW * currentZoom) / 2;
+      const nextLeft = (cW - conW * newZoom) / 2;
 
+      // Use the actual offsets including potential negative ones for calculation, 
+      // then the browser scroll will handle the clamping to 0.
       const relX = (scrollX + mouseX - currentLeft) / currentZoom;
       const relY = (scrollY + mouseY - 64) / currentZoom;
 
-      const nextScrollX = Math.round(relX * newZoom - mouseX + nextLeft);
-      const nextScrollY = Math.round(relY * newZoom - mouseY + 64);
+      const nextScrollX = relX * newZoom - mouseX + nextLeft;
+      const nextScrollY = relY * newZoom - mouseY + 64;
 
       intendedScroll.current = { x: nextScrollX, y: nextScrollY };
       pendingScroll.current = { x: nextScrollX, y: nextScrollY };
@@ -390,7 +392,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         style={{ 
           cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto'),
           overflowAnchor: 'none', // Prevent browser from jumping scroll position during layout changes
-          willChange: isZooming.current ? 'transform, scroll-position' : 'auto'
+          willChange: isZooming.current ? 'transform' : 'auto'
         }}
       >
         <div 
