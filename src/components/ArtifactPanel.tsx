@@ -355,9 +355,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
       if (panelRef.current?.requestFullscreen) {
         panelRef.current.requestFullscreen();
       }
-      if (isSidebarOpen && onToggleSidebar) {
-        onToggleSidebar();
-      }
     } else {
       if (document.fullscreenElement) {
         document.exitFullscreen();
