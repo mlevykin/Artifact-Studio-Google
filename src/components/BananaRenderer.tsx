@@ -147,10 +147,9 @@ export const BananaRenderer: React.FC<BananaRendererProps> = ({ content }) => {
             return (
               <motion.g
                 key={node.id}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+                initial={{ scale: 0.8, opacity: 0, x: node.x - node.width / 2, y: node.y - node.height / 2 }}
+                animate={{ scale: 1, opacity: 1, x: node.x - node.width / 2, y: node.y - node.height / 2 }}
                 transition={{ type: 'spring', damping: 15, stiffness: 100, delay: i * 0.05 }}
-                transform={`translate(${node.x - node.width / 2}, ${node.y - node.height / 2})`}
               >
                 {isDecision ? (
                   <polygon
