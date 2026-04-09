@@ -115,18 +115,34 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     const mouseY = focalPoint ? focalPoint.y : cH / 2;
 
     if (isDocMode) {
-      const scrollX = intendedScroll.current.x;
-      const scrollY = intendedScroll.current.y;
+      const scrollX = containerRef.current.scrollLeft;
+      const scrollY = containerRef.current.scrollTop;
       
-      const currentLeft = (cW - conW * currentZoom) / 2;
-      const relX = (scrollX + mouseX - currentLeft) / currentZoom;
-      const relY = (scrollY + mouseY - 64) / currentZoom;
+      // Calculate where the mouse is relative to the content's top-left corner
+      // We use the actual DOM position of the content to be 100% accurate
+      const contentRect = contentRef.current?.getBoundingClientRect();
+      const containerRect = containerRef.current.getBoundingClientRect();
+      
+      if (!contentRect) return;
 
-      const nextLeft = (cW - conW * newZoom) / 2;
+      // Mouse position relative to the content (scaled)
+      const mouseRelToContentX = mouseX + containerRect.left - contentRect.left;
+      const mouseRelToContentY = mouseY + containerRect.top - contentRect.top;
+
+      // Mouse position relative to the content (unscaled)
+      const relX = mouseRelToContentX / currentZoom;
+      const relY = mouseRelToContentY / currentZoom;
+
+      // Calculate new centering offset
+      const nextLeft = Math.max(0, (cW - conW * newZoom) / 2);
+      const nextTop = 64; // Our fixed top offset
+
+      // The new scroll position should place the same relX/relY under the mouse
+      // Formula: scroll = (rel * newZoom) - mousePos + offset
       const nextScrollX = Math.round(relX * newZoom - mouseX + nextLeft);
-      const nextScrollY = Math.round(relY * newZoom - mouseY + 64);
+      const nextScrollY = Math.round(relY * newZoom - mouseY + nextTop);
 
-      console.log(`ZOOM_LOG_DOC | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Container: [${cW}x${cH}] | ContentW: ${conW} | Scroll: [${scrollX}, ${scrollY}] -> [${nextScrollX}, ${nextScrollY}] | Left: ${currentLeft.toFixed(1)} -> ${nextLeft.toFixed(1)} | Rel: [${relX.toFixed(1)}, ${relY.toFixed(1)}]`);
+      console.log(`ZOOM_LOG_DOC | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Scroll: [${scrollX}, ${scrollY}] -> [${nextScrollX}, ${nextScrollY}] | Rel: [${relX.toFixed(1)}, ${relY.toFixed(1)}] | nextLeft: ${nextLeft.toFixed(1)}`);
 
       intendedScroll.current = { x: nextScrollX, y: nextScrollY };
       pendingScroll.current = { x: nextScrollX, y: nextScrollY };
@@ -408,7 +424,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
               transform: isDocMode 
                 ? `scale(${zoom})` 
                 : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-              transformOrigin: isDocMode ? 'top left' : 'center',
+              transformOrigin: 'top left',
               width: isDocMode ? contentWidth : 'auto',
               position: isDocMode ? 'absolute' : 'relative',
               top: isDocMode ? 64 : 0,
