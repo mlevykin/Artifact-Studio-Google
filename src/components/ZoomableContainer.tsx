@@ -115,32 +115,31 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     const mouseY = focalPoint ? focalPoint.y : cH / 2;
 
     if (isDocMode) {
+      if (!containerRef.current || !contentRef.current) return;
+
       const scrollX = containerRef.current.scrollLeft;
       const scrollY = containerRef.current.scrollTop;
       
-      // Calculate where the mouse is relative to the content's top-left corner
-      // We use the actual DOM position of the content to be 100% accurate
-      const contentRect = contentRef.current?.getBoundingClientRect();
       const containerRect = containerRef.current.getBoundingClientRect();
+      const contentRect = contentRef.current.getBoundingClientRect();
       
-      if (!contentRect) return;
+      // 1. Find where the mouse is relative to the ACTUAL top-left of the content in the DOM
+      // This is the most stable way to get the "anchor" point on the paper
+      const mouseRelToContentX = (mouseX + containerRect.left) - contentRect.left;
+      const mouseRelToContentY = (mouseY + containerRect.top) - contentRect.top;
 
-      // Mouse position relative to the content (scaled)
-      const mouseRelToContentX = mouseX + containerRect.left - contentRect.left;
-      const mouseRelToContentY = mouseY + containerRect.top - contentRect.top;
-
-      // Mouse position relative to the content (unscaled)
+      // 2. Convert to unscaled coordinates
       const relX = mouseRelToContentX / currentZoom;
       const relY = mouseRelToContentY / currentZoom;
 
-      // Calculate new centering offset
+      // 3. Calculate the new centering offset for the NEXT zoom level
       const nextLeft = Math.max(0, (cW - conW * newZoom) / 2);
-      const nextTop = 64; // Our fixed top offset
+      const nextTop = 64; // Matches the 'top: 64' in our style
 
-      // The new scroll position should place the same relX/relY under the mouse
-      // Formula: scroll = (rel * newZoom) - mousePos + offset
-      const nextScrollX = Math.round(relX * newZoom - mouseX + nextLeft);
-      const nextScrollY = Math.round(relY * newZoom - mouseY + nextTop);
+      // 4. Calculate the new scroll position
+      // Formula: We want (relX * newZoom + nextLeft) - nextScrollX = mouseX
+      const nextScrollX = Math.max(0, Math.round(relX * newZoom + nextLeft - mouseX));
+      const nextScrollY = Math.max(0, Math.round(relY * newZoom + nextTop - mouseY));
 
       console.log(`ZOOM_LOG_DOC | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Scroll: [${scrollX}, ${scrollY}] -> [${nextScrollX}, ${nextScrollY}] | Rel: [${relX.toFixed(1)}, ${relY.toFixed(1)}] | nextLeft: ${nextLeft.toFixed(1)}`);
 
