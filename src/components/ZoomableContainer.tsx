@@ -115,33 +115,35 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     const mouseY = focalPoint ? focalPoint.y : cH / 2;
 
     if (isDocMode) {
-      if (!containerRef.current || !contentRef.current) return;
+      if (!containerRef.current) return;
 
       const scrollX = containerRef.current.scrollLeft;
       const scrollY = containerRef.current.scrollTop;
       
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const contentRect = contentRef.current.getBoundingClientRect();
-      
-      // 1. Find where the mouse is relative to the ACTUAL top-left of the content in the DOM
-      // This is the most stable way to get the "anchor" point on the paper
-      const mouseRelToContentX = (mouseX + containerRect.left) - contentRect.left;
-      const mouseRelToContentY = (mouseY + containerRect.top) - contentRect.top;
+      // Use the state variables which should be the unscaled dimensions
+      // Fallback to reasonable defaults if not yet measured
+      const conW = contentWidth || 940;
+      const conH = contentHeight || 1000;
 
-      // 2. Convert to unscaled coordinates
-      const relX = mouseRelToContentX / currentZoom;
-      const relY = mouseRelToContentY / currentZoom;
+      // Current offsets (top is fixed at 64, left is dynamic centering)
+      const currentLeftOffset = Math.max(0, (cW - conW * currentZoom) / 2);
+      const currentTopOffset = 64;
 
-      // 3. Calculate the new centering offset for the NEXT zoom level
-      const nextLeft = Math.max(0, (cW - conW * newZoom) / 2);
-      const nextTop = 64; // Matches the 'top: 64' in our style
+      // 1. Calculate the point under the mouse in UNSCALED coordinates
+      // Formula: (mouseX + scrollX - offset) / zoom
+      const px = (mouseX + scrollX - currentLeftOffset) / currentZoom;
+      const py = (mouseY + scrollY - currentTopOffset) / currentZoom;
 
-      // 4. Calculate the new scroll position
-      // Formula: We want (relX * newZoom + nextLeft) - nextScrollX = mouseX
-      const nextScrollX = Math.max(0, Math.round(relX * newZoom + nextLeft - mouseX));
-      const nextScrollY = Math.max(0, Math.round(relY * newZoom + nextTop - mouseY));
+      // 2. Calculate the new offsets for the next zoom level
+      const nextLeftOffset = Math.max(0, (cW - conW * newZoom) / 2);
+      const nextTopOffset = 64;
 
-      console.log(`ZOOM_LOG_DOC | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Scroll: [${scrollX}, ${scrollY}] -> [${nextScrollX}, ${nextScrollY}] | Rel: [${relX.toFixed(1)}, ${relY.toFixed(1)}] | nextLeft: ${nextLeft.toFixed(1)}`);
+      // 3. Calculate the new scroll position to keep (px, py) under the mouse
+      // Formula: scroll = px * newZoom + nextOffset - mouseX
+      const nextScrollX = Math.max(0, Math.round(px * newZoom + nextLeftOffset - mouseX));
+      const nextScrollY = Math.max(0, Math.round(py * newZoom + nextTopOffset - mouseY));
+
+      console.log(`ZOOM_LOG_DOC | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Scroll: [${scrollX}, ${scrollY}] -> [${nextScrollX}, ${nextScrollY}] | Rel: [${px.toFixed(1)}, ${py.toFixed(1)}] | Content: [${conW}x${conH}] | Left: ${currentLeftOffset.toFixed(1)}->${nextLeftOffset.toFixed(1)}`);
 
       intendedScroll.current = { x: nextScrollX, y: nextScrollY };
       pendingScroll.current = { x: nextScrollX, y: nextScrollY };
@@ -340,9 +342,12 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       for (const entry of entries) {
         if (entry.target === contentRef.current) {
           const { width, height } = entry.contentRect;
-          updateStateRef({ contentWidth: width });
-          setContentHeight(height);
-          setContentWidth(width);
+          if (width > 0 && height > 0) {
+            console.log(`RESIZE_LOG_CONTENT | Content: [${width.toFixed(1)}x${height.toFixed(1)}]`);
+            updateStateRef({ contentWidth: width });
+            setContentHeight(height);
+            setContentWidth(width);
+          }
 
           if (!hasInteractedRef.current || !initialFitDone.current) {
             if (Math.abs(width - lastFitSize.current.width) > 2 || 
@@ -424,7 +429,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
                 ? `scale(${zoom})` 
                 : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
               transformOrigin: 'top left',
-              width: isDocMode ? contentWidth : 'auto',
+              width: isDocMode ? (contentWidth || 'auto') : 'auto',
+              minWidth: isDocMode ? 940 : 'auto', // Prevent collapse to 0
               position: isDocMode ? 'absolute' : 'relative',
               top: isDocMode ? 64 : 0,
               left: isDocMode ? Math.max(0, (containerWidth - contentWidth * zoom) / 2) : 0
