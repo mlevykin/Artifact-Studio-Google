@@ -27,8 +27,6 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const [panMode, setPanMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const pendingScroll = useRef<{ x: number, y: number } | null>(null);
-  const intendedScroll = useRef({ x: 0, y: 0 });
   const lastZoomTime = useRef(0);
 
   const isDocMode = fitMode === 'width';
@@ -40,34 +38,6 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const updateStateRef = useCallback((updates: Partial<typeof stateRef.current>) => {
     stateRef.current = { ...stateRef.current, ...updates };
   }, []);
-
-  // Sync intendedScroll with native scroll
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !isDocMode) return;
-
-    // Initial sync
-    intendedScroll.current = {
-      x: container.scrollLeft,
-      y: container.scrollTop
-    };
-
-    const handleScroll = () => {
-      // Ignore scroll events for a short period after a zoom action to avoid stale events
-      if (Date.now() - lastZoomTime.current < 100) return;
-      
-      // Only update intendedScroll from native scroll if we're not in the middle of a zoom-induced scroll
-      if (!pendingScroll.current) {
-        intendedScroll.current = {
-          x: container.scrollLeft,
-          y: container.scrollTop
-        };
-      }
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [isDocMode]);
 
   useEffect(() => {
     updateStateRef({ zoom, position, containerWidth, containerHeight, contentWidth });
@@ -100,72 +70,30 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   }, [contentId]);
 
   useLayoutEffect(() => {
-    if (pendingScroll.current && containerRef.current) {
-      containerRef.current.scrollLeft = pendingScroll.current.x;
-      containerRef.current.scrollTop = pendingScroll.current.y;
-      pendingScroll.current = null;
-    }
+    // No longer needed with unified position-based zoom
   });
 
   const handleZoom = useCallback((newZoom: number, focalPoint: { x: number, y: number } | null) => {
-    const { zoom: currentZoom, position: currentPos, containerWidth: cW, containerHeight: cH, contentWidth: conW } = stateRef.current;
+    const { zoom: currentZoom, position: currentPos, containerWidth: cW, containerHeight: cH } = stateRef.current;
     if (!containerRef.current) return;
     
     const mouseX = focalPoint ? focalPoint.x : cW / 2;
     const mouseY = focalPoint ? focalPoint.y : cH / 2;
 
-    if (isDocMode) {
-      if (!containerRef.current) return;
+    const centerX = cW / 2;
+    const centerY = isDocMode ? 64 : cH / 2;
 
-      const scrollX = containerRef.current.scrollLeft;
-      const scrollY = containerRef.current.scrollTop;
-      
-      // Use the state variables which should be the unscaled dimensions
-      // Fallback to reasonable defaults if not yet measured
-      const conW = contentWidth || 940;
-      const conH = contentHeight || 1000;
+    const relX = (mouseX - centerX - currentPos.x) / currentZoom;
+    const relY = (mouseY - centerY - currentPos.y) / currentZoom;
 
-      // Current offsets (top is fixed at 64, left is dynamic centering)
-      const currentLeftOffset = Math.max(0, (cW - conW * currentZoom) / 2);
-      const currentTopOffset = 64;
+    const newX = mouseX - centerX - relX * newZoom;
+    const newY = mouseY - centerY - relY * newZoom;
 
-      // 1. Calculate the point under the mouse in UNSCALED coordinates
-      // Formula: (mouseX + scrollX - offset) / zoom
-      const px = (mouseX + scrollX - currentLeftOffset) / currentZoom;
-      const py = (mouseY + scrollY - currentTopOffset) / currentZoom;
+    console.log(`ZOOM_LOG | Mode: ${isDocMode ? 'DOC' : 'DIAG'} | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Pos: [${currentPos.x.toFixed(1)}, ${currentPos.y.toFixed(1)}] -> [${newX.toFixed(1)}, ${newY.toFixed(1)}] | Rel: [${relX.toFixed(1)}, ${relY.toFixed(1)}]`);
 
-      // 2. Calculate the new offsets for the next zoom level
-      const nextLeftOffset = Math.max(0, (cW - conW * newZoom) / 2);
-      const nextTopOffset = 64;
-
-      // 3. Calculate the new scroll position to keep (px, py) under the mouse
-      // Formula: scroll = px * newZoom + nextOffset - mouseX
-      const nextScrollX = Math.max(0, Math.round(px * newZoom + nextLeftOffset - mouseX));
-      const nextScrollY = Math.max(0, Math.round(py * newZoom + nextTopOffset - mouseY));
-
-      console.log(`ZOOM_LOG_DOC | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Scroll: [${scrollX}, ${scrollY}] -> [${nextScrollX}, ${nextScrollY}] | Rel: [${px.toFixed(1)}, ${py.toFixed(1)}] | Content: [${conW}x${conH}] | Left: ${currentLeftOffset.toFixed(1)}->${nextLeftOffset.toFixed(1)}`);
-
-      intendedScroll.current = { x: nextScrollX, y: nextScrollY };
-      pendingScroll.current = { x: nextScrollX, y: nextScrollY };
-      
-      updateStateRef({ zoom: newZoom });
-      setZoom(newZoom);
-    } else {
-      const centerX = cW / 2;
-      const centerY = cH / 2;
-
-      const relX = (mouseX - centerX - currentPos.x) / currentZoom;
-      const relY = (mouseY - centerY - currentPos.y) / currentZoom;
-
-      const newX = mouseX - centerX - relX * newZoom;
-      const newY = mouseY - centerY - relY * newZoom;
-
-      console.log(`ZOOM_LOG_DIAG | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Container: [${cW}x${cH}] | Pos: [${currentPos.x.toFixed(1)}, ${currentPos.y.toFixed(1)}] -> [${newX.toFixed(1)}, ${newY.toFixed(1)}] | Rel: [${relX.toFixed(1)}, ${relY.toFixed(1)}]`);
-
-      setZoom(newZoom);
-      setPosition({ x: newX, y: newY });
-      updateStateRef({ zoom: newZoom, position: { x: newX, y: newY } });
-    }
+    setZoom(newZoom);
+    setPosition({ x: newX, y: newY });
+    updateStateRef({ zoom: newZoom, position: { x: newX, y: newY } });
 
     lastZoomTime.current = Date.now();
   }, [isDocMode]);
@@ -191,9 +119,14 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         handleZoom(newZoom, { x: e.clientX - rect.left, y: e.clientY - rect.top });
       }
     } else {
-      // Normal scrolling: browser handles it in DocMode via overflow-y: auto
-      // For diagrams, we still simulate it if fitMode is width (though usually it's both)
-      if (!isDocMode && fitMode === 'width') {
+      // Normal scrolling
+      if (isDocMode) {
+        // Simulate scrolling by moving the position
+        setPosition(prev => ({
+          ...prev,
+          y: prev.y - e.deltaY
+        }));
+      } else if (fitMode === 'width') {
         setPosition(prev => ({
           ...prev,
           y: prev.y - e.deltaY
@@ -236,21 +169,10 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
-        if (isDocMode && containerRef.current) {
-          // Document mode: pan by scrolling
-          containerRef.current.scrollTop -= e.movementY;
-          containerRef.current.scrollLeft -= e.movementX;
-          intendedScroll.current = {
-            x: containerRef.current.scrollLeft,
-            y: containerRef.current.scrollTop
-          };
-        } else {
-          // Diagram mode: pan by translating
-          setPosition(prev => ({
-            x: prev.x + e.movementX,
-            y: prev.y + e.movementY
-          }));
-        }
+        setPosition(prev => ({
+          x: prev.x + e.movementX,
+          y: prev.y + e.movementY
+        }));
       }
     };
 
@@ -308,12 +230,6 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     setZoom(newZoom);
     
     if (isDocMode) {
-      // Reset scroll for documents only if requested
-      if (resetScroll && containerRef.current) {
-        containerRef.current.scrollTop = 0;
-        containerRef.current.scrollLeft = 0;
-        intendedScroll.current = { x: 0, y: 0 };
-      }
       setPosition({ x: 0, y: 0 });
     } else {
       // For diagrams, since we use flex centering, position {0,0} is the center
@@ -401,42 +317,32 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
         ref={containerRef}
         className={cn(
           "w-full h-full",
-          isDocMode ? "overflow-auto" : "overflow-hidden bg-zinc-50",
+          "overflow-hidden bg-zinc-50",
           isDragging && "select-none"
         )}
         onMouseDown={handleMouseDown}
         style={{ 
           cursor: isDragging ? 'grabbing' : (panMode ? 'grab' : 'auto'),
-          overflowAnchor: 'none', // Prevent browser from jumping scroll position during layout changes
           willChange: 'transform'
         }}
       >
         <div 
           className={cn(
-            "relative",
-            !isDocMode ? "w-full h-full flex items-center justify-center pointer-events-none" : "flex justify-center"
+            "relative w-full h-full flex items-center justify-center pointer-events-none"
           )}
-          style={{ 
-            height: isDocMode ? (contentHeight * zoom + 128) : '100%',
-            width: isDocMode ? Math.max(containerWidth, contentWidth * zoom + 128) : '100%',
-            minWidth: isDocMode ? '100%' : 'auto'
-          }}
         >
           <div 
             className="pointer-events-auto"
             style={{ 
-              transform: isDocMode 
-                ? `scale(${zoom})` 
-                : `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-              transformOrigin: 'top left',
+              transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+              transformOrigin: isDocMode ? 'top center' : 'center',
               width: isDocMode ? (contentWidth || 'auto') : 'auto',
-              minWidth: isDocMode ? 940 : 'auto', // Prevent collapse to 0
-              position: isDocMode ? 'absolute' : 'relative',
+              minWidth: isDocMode ? 940 : 'auto', 
+              position: 'relative',
               top: isDocMode ? 64 : 0,
-              left: isDocMode ? Math.max(0, (containerWidth - contentWidth * zoom) / 2) : 0
             }}
           >
-            <div ref={contentRef} className={cn(isDocMode ? "w-fit" : "w-full flex justify-center")}>
+            <div ref={contentRef} className={cn(isDocMode ? "w-fit bg-white shadow-2xl rounded-sm" : "w-full flex justify-center")}>
               {children}
             </div>
           </div>
