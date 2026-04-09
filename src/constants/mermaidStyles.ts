@@ -202,5 +202,45 @@ export const MERMAID_STYLES: MermaidStyle[] = [
         stroke: rgba(245, 158, 11, 0.6) !important;
       }
     `
+  },
+  {
+    id: 'banana',
+    name: 'Paper Banana',
+    description: 'Академический стиль: мягкие цвета, идеальные скругления и четкая иерархия.',
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#f0f4ff',
+      primaryTextColor: '#1a1a2e',
+      primaryBorderColor: '#4a6fa5',
+      lineColor: '#555555',
+      secondaryColor: '#fff8e1',
+      tertiaryColor: '#f0fdf4',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '13px',
+      mainBkg: '#ffffff',
+      nodeBorder: '#4a6fa5',
+      clusterBkg: '#f8fafc',
+      clusterBorder: '#e2e8f0',
+      defaultLinkColor: '#555555',
+      titleColor: '#1a1a2e',
+      edgeLabelBackground: '#ffffff',
+    },
+    css: `
+      .mermaid-container { 
+        background: #ffffff;
+        padding: 20px;
+      }
+      .node rect, .node polygon, .node circle, .node ellipse, .node path {
+        stroke-width: 1.5px !important;
+      }
+      .node rect { rx: 8; ry: 8; fill: #f0f4ff !important; stroke: #4a6fa5 !important; }
+      .node .label { color: #1a1a2e !important; }
+      .node polygon { fill: #fff8e1 !important; stroke: #c9a227 !important; }
+      .node circle, .node ellipse { fill: #f0fdf4 !important; stroke: #166534 !important; }
+      .edgePath path { stroke: #555555 !important; stroke-width: 1.5px !important; }
+      .marker { fill: #555555 !important; stroke: #555555 !important; }
+      .label foreignObject { overflow: visible; }
+      .edgeLabel { background-color: rgba(255, 255, 255, 0.8) !important; padding: 2px; border-radius: 4px; }
+    `
   }
 ];

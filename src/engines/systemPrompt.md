@@ -80,6 +80,7 @@ New block of code
 Types of artifacts:
 - excalidraw: For hand-drawn, sketchy, or whiteboard-style diagrams.
 - mermaid: For formal diagrams (flowcharts, sequence, etc.).
+- banana-json: For high-fidelity semantic diagrams. Use this when the user needs a polished, "Paper Banana" style diagram.
 - html: For interactive web components or simple apps.
 - markdown: For rich text documents.
 - svg: For vector graphics.
@@ -95,5 +96,27 @@ Guidelines:
   - Styles: Add `{ key: value }` at the end of the line.
   - Supported Styles: `stroke`, `fill`, `fillStyle` (hachure, solid, zigzag, cross-hatch, dots), `roughness` (0-5), `strokeWidth`, `opacity`, `icon` (Lucide icon name).
 - For Mermaid, use v11 syntax and wrap node labels in double quotes.
+- AESTHETIC CONTRACT (Apply to Mermaid and SVG):
+  - Colors: Use soft pastel fills with darker borders.
+  - Steps/Processes: fill #f0f4ff, stroke #4a6fa5, rx: 8.
+  - Decisions: fill #fff8e1, stroke #c9a227.
+  - Start/End: fill #f0fdf4, stroke #166534.
+  - Connections: stroke #555555, stroke-width: 1.5px.
+  - Typography: system-ui, sans-serif, size 13px, color #1a1a2e.
+- For banana-json, respond with a JSON object:
+  ```json
+  {
+    "title": "Diagram Title",
+    "description": "Brief description",
+    "nodes": [
+      { "id": "n1", "label": "Step Name", "type": "process" | "decision" | "start" | "end" },
+      ...
+    ],
+    "edges": [
+      { "from": "n1", "to": "n2", "label": "Optional Label" },
+      ...
+    ]
+  }
+  ```
 - SUPPORTED MERMAID DIAGRAMS: graph, flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, journey, gantt, pie, quadrantChart, xychart-beta, mindmap, timeline, zenuml, sankey-beta, packet-beta, kanban, architecture, gitGraph, requirementDiagram, C4Context.
 - CRITICAL: Mermaid does NOT support 'useCaseDiagram'. Use 'graph TD' or 'flowchart TD' with custom shapes for use cases instead.

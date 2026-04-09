@@ -32,6 +32,7 @@ import { MermaidPreview } from './MermaidPreview';
 import { ExcalidrawDiagram } from './ExcalidrawDiagram';
 import { MERMAID_STYLES } from '../constants/mermaidStyles';
 import { HtmlPreview } from './HtmlPreview';
+import { BananaRenderer } from './BananaRenderer';
 import { ZoomableContainer } from './ZoomableContainer';
 import { FileExplorer } from './FileExplorer';
 import { ContextLog } from './ContextLog';
@@ -177,6 +178,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     if (!artifact) return 'text';
     const type = artifact.type.toLowerCase();
     if (type === 'markdown' || type === 'text/markdown') return 'markdown';
+    if (type === 'banana-json') return 'banana-json';
     return type || 'text';
   };
   const pType = getPreviewType();
@@ -899,6 +901,11 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                         className="natural-size" 
                         styleId={artifact.mermaidStyleId}
                       />
+                    </div>
+                  )}
+                  {pType === 'banana-json' && (
+                    <div className="w-full max-w-[1000px] min-h-[400px] bg-white shadow-lg rounded-xl overflow-hidden">
+                      <BananaRenderer content={pContent} />
                     </div>
                   )}
                   {pType === 'excalidraw' && (
