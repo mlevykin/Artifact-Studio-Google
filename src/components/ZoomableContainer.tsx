@@ -80,14 +80,14 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     const mouseX = focalPoint ? focalPoint.x : cW / 2;
     const mouseY = focalPoint ? focalPoint.y : cH / 2;
 
-    const centerX = cW / 2;
-    const centerY = isDocMode ? 64 : cH / 2;
+    // 1. Determine where on the document the mouse is (unscaled coordinates)
+    // Since transform-origin is 0,0, this is very simple:
+    const relX = (mouseX - currentPos.x) / currentZoom;
+    const relY = (mouseY - currentPos.y) / currentZoom;
 
-    const relX = (mouseX - centerX - currentPos.x) / currentZoom;
-    const relY = (mouseY - centerY - currentPos.y) / currentZoom;
-
-    const newX = mouseX - centerX - relX * newZoom;
-    const newY = mouseY - centerY - relY * newZoom;
+    // 2. Calculate new position to keep that point under the mouse
+    const newX = mouseX - relX * newZoom;
+    const newY = mouseY - relY * newZoom;
 
     console.log(`ZOOM_LOG | Mode: ${isDocMode ? 'DOC' : 'DIAG'} | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Pos: [${currentPos.x.toFixed(1)}, ${currentPos.y.toFixed(1)}] -> [${newX.toFixed(1)}, ${newY.toFixed(1)}] | Rel: [${relX.toFixed(1)}, ${relY.toFixed(1)}]`);
 
@@ -229,12 +229,12 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
 
     setZoom(newZoom);
     
-    if (isDocMode) {
-      setPosition({ x: 0, y: 0 });
-    } else {
-      // For diagrams, since we use flex centering, position {0,0} is the center
-      setPosition({ x: 0, y: 0 });
-    }
+    // Calculate centered position
+    const newX = (container.width - unscaledWidth * newZoom) / 2;
+    const newY = isDocMode ? 64 : (container.height - unscaledHeight * newZoom) / 2;
+    
+    setPosition({ x: newX, y: newY });
+    updateStateRef({ zoom: newZoom, position: { x: newX, y: newY } });
   }, [fitMode, isDocMode]);
 
   // Automatically fit to screen when content size changes
@@ -326,20 +326,17 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           willChange: 'transform'
         }}
       >
-        <div 
-          className={cn(
-            "relative w-full h-full flex items-center justify-center pointer-events-none"
-          )}
-        >
+        <div className="relative w-full h-full pointer-events-none">
           <div 
-            className="pointer-events-auto"
+            className="pointer-events-auto absolute"
             style={{ 
               transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-              transformOrigin: isDocMode ? 'top center' : 'center',
-              width: isDocMode ? (contentWidth || 'auto') : 'auto',
+              transformOrigin: '0 0',
+              width: isDocMode ? (contentWidth || 940) : (contentWidth || 'auto'),
               minWidth: isDocMode ? 940 : 'auto', 
-              position: 'relative',
-              top: isDocMode ? 64 : 0,
+              position: 'absolute',
+              top: 0,
+              left: 0
             }}
           >
             <div ref={contentRef} className={cn(isDocMode ? "w-fit bg-white shadow-2xl rounded-sm" : "w-full flex justify-center")}>
