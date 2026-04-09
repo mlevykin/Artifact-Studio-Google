@@ -126,6 +126,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
       const nextScrollX = Math.round(relX * newZoom - mouseX + nextLeft);
       const nextScrollY = Math.round(relY * newZoom - mouseY + 64);
 
+      console.log(`ZOOM_LOG_DOC | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Container: [${cW}x${cH}] | ContentW: ${conW} | Scroll: [${scrollX}, ${scrollY}] -> [${nextScrollX}, ${nextScrollY}] | Left: ${currentLeft.toFixed(1)} -> ${nextLeft.toFixed(1)} | Rel: [${relX.toFixed(1)}, ${relY.toFixed(1)}]`);
+
       intendedScroll.current = { x: nextScrollX, y: nextScrollY };
       pendingScroll.current = { x: nextScrollX, y: nextScrollY };
       
@@ -140,6 +142,8 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
 
       const newX = mouseX - centerX - relX * newZoom;
       const newY = mouseY - centerY - relY * newZoom;
+
+      console.log(`ZOOM_LOG_DIAG | Zoom: ${currentZoom.toFixed(3)}->${newZoom.toFixed(3)} | Mouse: [${mouseX}, ${mouseY}] | Container: [${cW}x${cH}] | Pos: [${currentPos.x.toFixed(1)}, ${currentPos.y.toFixed(1)}] -> [${newX.toFixed(1)}, ${newY.toFixed(1)}] | Rel: [${relX.toFixed(1)}, ${relY.toFixed(1)}]`);
 
       setZoom(newZoom);
       setPosition({ x: newX, y: newY });
@@ -334,6 +338,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           }
         } else if (entry.target === containerRef.current) {
           const { width, height } = entry.contentRect;
+          console.log(`RESIZE_LOG | Container: [${width.toFixed(1)}x${height.toFixed(1)}] | Content: [${contentWidth.toFixed(1)}x${contentHeight.toFixed(1)}]`);
           updateStateRef({ containerWidth: width, containerHeight: height });
           setContainerWidth(width);
           setContainerHeight(height);
