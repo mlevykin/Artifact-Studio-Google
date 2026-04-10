@@ -12,4 +12,4 @@
     `newY = mouseY - relY * newZoom`
 
 ## Навигация
-- **Upstream**: [[ZoomableContainer-Component|Компонент: ZoomableContainer]]
+- **Upstream**: [[3-Components/Frontend/ZoomableContainer/ZoomableContainer-Component|Компонент: ZoomableContainer]]

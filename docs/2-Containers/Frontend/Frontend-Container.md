@@ -10,24 +10,25 @@
 - Lucide React (иконки)
 
 ## Зависимости
-- **Upstream**: [[System-Context|Системный контекст]]
-- **Related**: [[Backend-Container|Контейнер: Backend]] (API запросы)
-- **Downstream (Компоненты)**
+- **Upstream**: [[1-Context/System-Context|Системный контекст]]
+- **Related**: [[2-Containers/Backend/Backend-Container|Контейнер: Backend]] (API запросы)
+
+## Downstream (Компоненты)
 - **UI Core**:
-    - [[IDELayout-Component|Компонент: IDELayout]]
-    - [[Sidebar-Component|Компонент: Sidebar]]
-    - [[ArtifactPanel-Component|Компонент: ArtifactPanel]]
-    - [[ChatPanel-Component|Компонент: ChatPanel]]
+    - [[3-Components/Frontend/IDELayout/IDELayout-Component|Компонент: IDELayout]]
+    - [[3-Components/Frontend/Sidebar/Sidebar-Component|Компонент: Sidebar]]
+    - [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|Компонент: ArtifactPanel]]
+    - [[3-Components/Frontend/ChatPanel/ChatPanel-Component|Компонент: ChatPanel]]
 - **Navigation & Files**:
-    - [[FileExplorer-Component|Компонент: FileExplorer]]
-    - [[ProjectPanel-Component|Компонент: ProjectPanel]]
+    - [[3-Components/Frontend/FileExplorer/FileExplorer-Component|Компонент: FileExplorer]]
+    - [[3-Components/Frontend/ProjectPanel/ProjectPanel-Component|Компонент: ProjectPanel]]
 - **Renderers & Previews**:
-    - [[MermaidPreview-Component|Компонент: MermaidPreview]]
-    - [[BananaRenderer-Component|Компонент: BananaRenderer]]
-    - [[ExcalidrawDiagram-Component|Компонент: ExcalidrawDiagram]]
-    - [[HtmlPreview-Component|Компонент: HtmlPreview]]
+    - [[3-Components/Frontend/MermaidPreview/MermaidPreview-Component|Компонент: MermaidPreview]]
+    - [[3-Components/Frontend/BananaRenderer/BananaRenderer-Component|Компонент: BananaRenderer]]
+    - [[3-Components/Frontend/ExcalidrawDiagram/ExcalidrawDiagram-Component|Компонент: ExcalidrawDiagram]]
+    - [[3-Components/Frontend/HtmlPreview/HtmlPreview-Component|Компонент: HtmlPreview]]
 - **Utilities**:
-    - [[ZoomableContainer-Component|Компонент: ZoomableContainer]]
-    - [[ContextLog-Component|Компонент: ContextLog]]
-    - [[SkillsPanel-Component|Компонент: SkillsPanel]]
-    - [[TTSControls-Component|Компонент: TTSControls]]
+    - [[3-Components/Frontend/ZoomableContainer/ZoomableContainer-Component|Компонент: ZoomableContainer]]
+    - [[3-Components/Frontend/ContextLog/ContextLog-Component|Компонент: ContextLog]]
+    - [[3-Components/Frontend/SkillsPanel/SkillsPanel-Component|Компонент: SkillsPanel]]
+    - [[3-Components/Frontend/TTSControls/TTSControls-Component|Компонент: TTSControls]]

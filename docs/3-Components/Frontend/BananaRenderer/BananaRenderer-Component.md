@@ -9,6 +9,6 @@
 - Строгое соблюдение цветовой палитры и геометрии.
 
 ## Зависимости
-- **Upstream**: [[ArtifactPanel-Component|Компонент: ArtifactPanel]]
-- **Downstream (Логика)**: [[Banana-Renderer-Logic|Код: Логика рендеринга]]
-- **Related**: [[ZoomableContainer-Component|Компонент: ZoomableContainer]]
+- **Upstream**: [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|Компонент: ArtifactPanel]]
+- **Downstream (Логика)**: [[4-Code/Frontend/BananaRenderer/Banana-Renderer-Logic|Код: Логика рендеринга]]
+- **Related**: [[3-Components/Frontend/ZoomableContainer/ZoomableContainer-Component|Компонент: ZoomableContainer]]

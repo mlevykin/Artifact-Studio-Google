@@ -10,6 +10,6 @@
 - Интеграция с `ArtifactPanel` для автоматического открытия сгенерированных артефактов.
 
 ## Зависимости
-- **Upstream**: [[Frontend-Container|Контейнер: Frontend]]
-- **Related**: [[ArtifactPanel-Component|Компонент: ArtifactPanel]]
-- **Downstream**: [[Chat-Logic|Код: Логика чата]]
+- **Upstream**: [[2-Containers/Frontend/Frontend-Container|Контейнер: Frontend]]
+- **Related**: [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|Компонент: ArtifactPanel]]
+- **Downstream**: [[4-Code/Frontend/ChatPanel/Chat-Logic|Код: Логика чата]]

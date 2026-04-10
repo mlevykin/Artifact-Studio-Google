@@ -2,41 +2,39 @@
 
 ## 🏗️ Архитектурные уровни
 
-1.  **[[System-Context|Уровень 1: Системный контекст]]** — Описание всего приложения.
+1.  **[[1-Context/System-Context|Уровень 1: Системный контекст]]** — Полное описание приложения.
 2.  **Уровень 2: Контейнеры**
-    - [[Frontend-Container|Контейнер: Frontend]]
-    - [[Backend-Container|Контейнер: Backend]]
+    - [[2-Containers/Frontend/Frontend-Container|Контейнер: Frontend]]
+    - [[2-Containers/Backend/Backend-Container|Контейнер: Backend]]
 3.  **Уровень 3: Компоненты (Frontend)**
     - **UI Core**:
-        - [[IDELayout-Component|IDELayout]]
-        - [[Sidebar-Component|Sidebar]]
-        - [[ArtifactPanel-Component|ArtifactPanel]]
-        - [[ChatPanel-Component|ChatPanel]]
+        - [[3-Components/Frontend/IDELayout/IDELayout-Component|IDELayout]]
+        - [[3-Components/Frontend/Sidebar/Sidebar-Component|Sidebar]]
+        - [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|ArtifactPanel]]
+        - [[3-Components/Frontend/ChatPanel/ChatPanel-Component|ChatPanel]]
     - **Navigation**:
-        - [[FileExplorer-Component|FileExplorer]]
-        - [[ProjectPanel-Component|ProjectPanel]]
+        - [[3-Components/Frontend/FileExplorer/FileExplorer-Component|FileExplorer]]
+        - [[3-Components/Frontend/ProjectPanel/ProjectPanel-Component|ProjectPanel]]
     - **Renderers**:
-        - [[MermaidPreview-Component|MermaidPreview (Renderer)]]
-        - [[BananaRenderer-Component|BananaRenderer]]
-        - [[ExcalidrawDiagram-Component|ExcalidrawDiagram]]
-        - [[HtmlPreview-Component|HtmlPreview]]
+        - [[3-Components/Frontend/MermaidPreview/MermaidPreview-Component|MermaidPreview (Renderer)]]
+        - [[3-Components/Frontend/BananaRenderer/BananaRenderer-Component|BananaRenderer]]
+        - [[3-Components/Frontend/ExcalidrawDiagram/ExcalidrawDiagram-Component|ExcalidrawDiagram]]
+        - [[3-Components/Frontend/HtmlPreview/HtmlPreview-Component|HtmlPreview]]
     - **Utilities**:
-        - [[ZoomableContainer-Component|ZoomableContainer]]
-        - [[ContextLog-Component|ContextLog]]
-        - [[SkillsPanel-Component|SkillsPanel]]
-        - [[TTSControls-Component|TTSControls]]
-        - [[DiagramPresenter-Component|DiagramPresenter]]
+        - [[3-Components/Frontend/ZoomableContainer/ZoomableContainer-Component|ZoomableContainer]]
+        - [[3-Components/Frontend/ContextLog/ContextLog-Component|ContextLog]]
+        - [[3-Components/Frontend/SkillsPanel/SkillsPanel-Component|SkillsPanel]]
+        - [[3-Components/Frontend/TTSControls/TTSControls-Component|TTSControls]]
 4.  **Уровень 4: Код**
-    - [[Zoom-Math|Математика зума]]
-    - [[Banana-Renderer-Logic|Логика рендеринга Banana]]
-    - [[Chat-Logic|Логика чата]]
-    - [[Mermaid-Config|Конфигурация Mermaid]]
+    - [[4-Code/Frontend/ZoomableContainer/Zoom-Math|Математика зума]]
+    - [[4-Code/Frontend/BananaRenderer/Banana-Renderer-Logic|Логика рендеринга Banana]]
+    - [[4-Code/Frontend/ChatPanel/Chat-Logic|Логика чата]]
+    - [[4-Code/Frontend/MermaidPreview/Mermaid-Config|Конфигурация Mermaid]]
 
 ---
 ## 📂 Структура проекта (Зеркало)
 - `src/`
-    - `components/` — [[UI-Components-Map|Все компоненты]]
-    - `engines/` — [[Engines-Spec|Движки генерации]]
-    - `services/` — [[Services-Spec|Сервисы API]]
-    - `constants/` — [[Constants-Spec|Константы и стили]]
-    - `utils/` — [[Utils-Spec|Утилиты]]
+    - `components/` — [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|Все компоненты UI]]
+    - `engines/` — [[3-Components/Frontend/BananaRenderer/BananaRenderer-Component|Движки визуализации]]
+    - `services/` — [[2-Containers/Backend/Backend-Container|Сервисы API]]
+    - `docs/` — [[Index|База знаний (Obsidian Wiki)]]

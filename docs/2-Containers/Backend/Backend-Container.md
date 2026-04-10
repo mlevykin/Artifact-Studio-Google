@@ -9,5 +9,5 @@
 - Раздача файлов из директории `dist/`.
 
 ## Зависимости
-- **Upstream**: [[System-Context|Системный контекст]]
-- **Related**: [[Frontend-Container|Контейнер: Frontend]]
+- **Upstream**: [[1-Context/System-Context|Системный контекст]]
+- **Related**: [[2-Containers/Frontend/Frontend-Container|Контейнер: Frontend]]

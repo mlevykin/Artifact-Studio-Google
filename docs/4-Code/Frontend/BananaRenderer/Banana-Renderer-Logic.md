@@ -7,4 +7,4 @@
 4.  **Анимация**: Использование `motion.g` и `motion.path` для плавного появления графа.
 
 ## Навигация
-- **Upstream**: [[BananaRenderer-Component|Компонент: BananaRenderer]]
+- **Upstream**: [[3-Components/Frontend/BananaRenderer/BananaRenderer-Component|Компонент: BananaRenderer]]
