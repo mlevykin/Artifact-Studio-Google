@@ -8,3 +8,4 @@
 
 ## Навигация
 - **Upstream**: [[3-Components/Frontend/BananaRenderer/BananaRenderer-Component|Компонент: BananaRenderer]]
+- **Index**: [[Index|Вернуться к оглавлению]]

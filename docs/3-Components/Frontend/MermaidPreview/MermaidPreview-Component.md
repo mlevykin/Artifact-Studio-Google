@@ -12,3 +12,4 @@
 - **Upstream**: [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|Компонент: ArtifactPanel]]
 - **Related**: [[3-Components/Frontend/BananaRenderer/BananaRenderer-Component|Компонент: BananaRenderer]]
 - **Downstream**: [[4-Code/Frontend/MermaidPreview/Mermaid-Config|Код: Конфигурация Mermaid]]
+- **Index**: [[Index|Вернуться к оглавлению]]

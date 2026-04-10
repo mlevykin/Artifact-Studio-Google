@@ -11,4 +11,5 @@
 ## Зависимости
 - **Upstream**: [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|Компонент: ArtifactPanel]]
 - **Downstream (Логика)**: [[4-Code/Frontend/BananaRenderer/Banana-Renderer-Logic|Код: Логика рендеринга]]
-- **Related**: [[3-Components/Frontend/ZoomableContainer/ZoomableContainer-Component|Компонент: ZoomableContainer]]
+- **Related**: [[3-Components/Frontend/ZoomableContainer/ZoomableContainer-Component|Компонент: ZoomableContainer]], [[3-Components/Frontend/MermaidPreview/MermaidPreview-Component|MermaidPreview]]
+- **Index**: [[Index|Вернуться к оглавлению]]

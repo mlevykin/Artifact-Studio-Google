@@ -6,3 +6,4 @@
 ## Навигация
 - **Upstream**: [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|ArtifactPanel]]
 - **Related**: [[3-Components/Frontend/ZoomableContainer/ZoomableContainer-Component|ZoomableContainer]]
+- **Index**: [[Index|Вернуться к оглавлению]]

@@ -9,8 +9,13 @@
 - Экспорт в различные форматы.
 
 ## Зависимости
-- **Upstream**: [[2-Containers/Frontend/Frontend-Container|Контейнер: Frontend]]
+- **Upstream**: [[3-Components/Frontend/IDELayout/IDELayout-Component|IDELayout]]
 - **Downstream (Подкомпоненты)**:
     - [[3-Components/Frontend/ZoomableContainer/ZoomableContainer-Component|Компонент: ZoomableContainer]]
     - [[3-Components/Frontend/BananaRenderer/BananaRenderer-Component|Компонент: BananaRenderer]]
+    - [[3-Components/Frontend/MermaidPreview/MermaidPreview-Component|Компонент: MermaidPreview]]
+    - [[3-Components/Frontend/ExcalidrawDiagram/ExcalidrawDiagram-Component|Компонент: ExcalidrawDiagram]]
+    - [[3-Components/Frontend/HtmlPreview/HtmlPreview-Component|Компонент: HtmlPreview]]
+    - [[3-Components/Frontend/ContextLog/ContextLog-Component|Компонент: ContextLog]]
 - **Related**: [[3-Components/Frontend/ChatPanel/ChatPanel-Component|Компонент: ChatPanel]] (получение данных)
+- **Index**: [[Index|Вернуться к оглавлению]]

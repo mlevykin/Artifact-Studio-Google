@@ -8,6 +8,7 @@
 - Обработка CORS и заголовков безопасности.
 - Раздача файлов из директории `dist/`.
 
-## Зависимости
+## Навигация
 - **Upstream**: [[1-Context/System-Context|Системный контекст]]
 - **Related**: [[2-Containers/Frontend/Frontend-Container|Контейнер: Frontend]]
+- **Index**: [[Index|Вернуться к оглавлению]]

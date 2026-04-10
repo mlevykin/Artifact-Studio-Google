@@ -10,3 +10,4 @@
 
 ## Навигация
 - **Upstream**: [[3-Components/Frontend/ChatPanel/ChatPanel-Component|Компонент: ChatPanel]]
+- **Index**: [[Index|Вернуться к оглавлению]]

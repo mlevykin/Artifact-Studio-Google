@@ -9,4 +9,5 @@
 ## Зависимости
 - **Upstream**: [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|Компонент: ArtifactPanel]]
 - **Downstream (Логика)**: [[4-Code/Frontend/ZoomableContainer/Zoom-Math|Код: Математика зума]]
-- **Related**: [[3-Components/Frontend/BananaRenderer/BananaRenderer-Component|Компонент: BananaRenderer]] (используется внутри контейнера)
+- **Related**: [[3-Components/Frontend/BananaRenderer/BananaRenderer-Component|Компонент: BananaRenderer]], [[3-Components/Frontend/MermaidPreview/MermaidPreview-Component|MermaidPreview]], [[3-Components/Frontend/ExcalidrawDiagram/ExcalidrawDiagram-Component|ExcalidrawDiagram]]
+- **Index**: [[Index|Вернуться к оглавлению]]

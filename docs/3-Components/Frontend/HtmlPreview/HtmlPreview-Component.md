@@ -5,3 +5,4 @@
 
 ## Навигация
 - **Upstream**: [[3-Components/Frontend/ArtifactPanel/ArtifactPanel-Component|ArtifactPanel]]
+- **Index**: [[Index|Вернуться к оглавлению]]

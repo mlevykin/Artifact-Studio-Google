@@ -9,9 +9,10 @@
 - Framer Motion (для анимаций)
 - Lucide React (иконки)
 
-## Зависимости
+## Навигация
 - **Upstream**: [[1-Context/System-Context|Системный контекст]]
 - **Related**: [[2-Containers/Backend/Backend-Container|Контейнер: Backend]] (API запросы)
+- **Index**: [[Index|Вернуться к оглавлению]]
 
 ## Downstream (Компоненты)
 - **UI Core**:
