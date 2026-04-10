@@ -1,8 +1,14 @@
-# Zoom and Pan Specification (4C Model)
+# 🧩 ZoomableContainer (Component Spec)
 
-This document describes the implementation of the linear "Zoom to Point" and "Pan" logic used in the `ZoomableContainer` component.
+## Описание
+Компонент обеспечивает вьюпорт для взаимодействия с большими документами или диаграммами.
 
-## 1. Context (C1)
+## Навигация
+- **Upstream**: [[UI-Components-Map|Уровень 3: Компоненты]]
+- **Downstream**: [[Zoom-Math|Уровень 4: Математика зума]]
+- **Related**: [[ArtifactPanel]], [[BananaRenderer]]
+
+## 4C Specification
 The `ZoomableContainer` provides a viewport for interacting with large documents (Markdown) or diagrams. It allows users to inspect details via zooming and navigate through content via panning, ensuring that the point of interest (under the mouse cursor) remains stable during scaling.
 
 ## 2. Containers (C2)

@@ -1,6 +1,12 @@
-# Banana JSON Specification (Semantic Diagram Contract)
+# 🧩 Banana JSON (Component Spec)
 
-This document defines the `banana-json` artifact type, designed for high-fidelity, aesthetic diagrams that follow the "Paper Banana" design language.
+## Описание
+Спецификация семантических диаграмм для стиля "Paper Banana".
+
+## Навигация
+- **Upstream**: [[UI-Components-Map|Уровень 3: Компоненты]]
+- **Downstream**: [[Banana-Renderer-Logic|Уровень 4: Логика рендеринга]]
+- **Related**: [[Mermaid-Engine]], [[ArtifactPanel]]
 
 ## 1. Purpose
 Unlike Mermaid or Excalidraw, `banana-json` separates data from presentation. The LLM provides the semantic structure (nodes and edges), and the application's `BananaRenderer` handles the visual styling, ensuring consistency, high-quality typography, and smooth animations.
