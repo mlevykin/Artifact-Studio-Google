@@ -1,16 +1,15 @@
 # 🗺️ Карта знаний проекта (C4 Model)
 
-Добро пожаловать в базу знаний нашего приложения, построенную по методологии C4.
+## 🏗️ Архитектурные уровни
 
-## 🏗️ Уровни архитектуры
-
-1.  **[[System-Context|Уровень 1: Контекст]]** — Общее видение системы и её окружения.
-2.  **[[App-Containers|Уровень 2: Контейнеры]]** — Основные технические блоки приложения.
-3.  **[[UI-Components-Map|Уровень 3: Компоненты]]** — Детализация внутренних модулей и UI.
-4.  **[[Implementation-Details|Уровень 4: Код]]** — Низкоуровневые алгоритмы и спецификации.
-
----
-## 🛠️ Быстрый доступ
-- [[ZoomableContainer|Спецификация Zoom & Pan]]
-- [[Banana-JSON-Contract|Контракт Banana JSON]]
-- [[Project-Structure|Зеркало структуры проекта]]
+1.  **[[System-Context|Уровень 1: Системный контекст]]** — Описание всего приложения.
+2.  **Уровень 2: Контейнеры**
+    - [[Frontend-Container|Контейнер: Frontend]]
+    - [[Backend-Container|Контейнер: Backend]]
+3.  **Уровень 3: Компоненты**
+    - [[ArtifactPanel-Component|Компонент: ArtifactPanel]]
+    - [[ZoomableContainer-Component|Компонент: ZoomableContainer]]
+    - [[BananaRenderer-Component|Компонент: BananaRenderer]]
+4.  **Уровень 4: Код**
+    - [[Zoom-Math|Математика зума]]
+    - [[Banana-Renderer-Logic|Логика рендеринга]]
