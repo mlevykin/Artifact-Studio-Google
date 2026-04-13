@@ -16,7 +16,8 @@ import {
   X,
   FolderSync,
   RefreshCw,
-  Palette
+  Palette,
+  Target
 } from 'lucide-react';
 import { 
   parseArtifacts, 
@@ -67,6 +68,8 @@ interface ArtifactPanelProps {
   targetDepth?: number;
   onAssemble?: () => void;
   geminiApiKey?: string;
+  selection?: any | null;
+  onSelectionChange?: (selection: any | null) => void;
 }
 
 export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ 
@@ -93,9 +96,12 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
   includeMultiChapter = false,
   targetDepth = 3,
   onAssemble,
-  geminiApiKey
+  geminiApiKey,
+  selection,
+  onSelectionChange
 }) => {
   const [isStyleExpanded, setIsStyleExpanded] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [view, setView] = useState<'preview' | 'code' | 'log'>('preview');
   const [editContent, setEditContent] = useState('');
   const [copied, setCopied] = useState(false);
@@ -352,6 +358,51 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     }
   };
 
+  // Handle selection in preview mode
+  useEffect(() => {
+    if (!isSelectionMode || view !== 'preview') return;
+
+    const handleMouseUp = () => {
+      const sel = window.getSelection();
+      if (sel && sel.toString().trim().length > 0 && artifact) {
+        onSelectionChange?.({
+          artifactId: artifact.id,
+          fragment: sel.toString().trim(),
+          mode: 'preview'
+        });
+      }
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, [isSelectionMode, view, artifact, onSelectionChange]);
+
+  // Handle selection in code mode
+  const handleCodeSelection = () => {
+    if (!isSelectionMode || view !== 'code' || !textareaRef.current || !artifact) return;
+    
+    const start = textareaRef.current.selectionStart;
+    const end = textareaRef.current.selectionEnd;
+    
+    if (start !== end) {
+      const fragment = editContent.substring(start, end);
+      if (fragment.trim().length > 0) {
+        onSelectionChange?.({
+          artifactId: artifact.id,
+          fragment: fragment.trim(),
+          mode: 'code'
+        });
+      }
+    }
+  };
+
+  const toggleSelectionMode = () => {
+    const newMode = !isSelectionMode;
+    setIsSelectionMode(newMode);
+    if (!newMode) {
+      onSelectionChange?.(null);
+    }
+  };
   const toggleFullScreen = () => {
     if (!isFullScreen) {
       if (panelRef.current?.requestFullscreen) {
@@ -710,6 +761,18 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          <button 
+            onClick={toggleSelectionMode}
+            className={cn(
+              "p-2 rounded-xl transition-all mr-1 flex items-center gap-2",
+              isSelectionMode ? "bg-amber-100 text-amber-600 border border-amber-200" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+            )}
+            title="Selection Mode (Edit fragment)"
+          >
+            <Target size={18} />
+            {isSelectionMode && <span className="text-[10px] font-bold uppercase">Selection Mode</span>}
+          </button>
+
           {!isStreaming && artifact && artifact.type === 'markdown' && (
             <TTSControls 
               text={pContent} 
@@ -953,7 +1016,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   ref={textareaRef}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full h-full p-6 font-mono text-sm text-slate-800 leading-relaxed resize-none outline-none bg-slate-50/50"
+                  onSelect={handleCodeSelection}
+                  className="w-full h-full p-6 font-mono text-sm text-slate-800 leading-relaxed resize-none outline-none bg-slate-50/50 selection:bg-amber-200 selection:text-amber-900"
                   spellCheck={false}
                 />
               )}

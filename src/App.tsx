@@ -907,7 +907,12 @@ ${activeMCPs.map(c => {
       }
     }
 
-    const fullPrompt = `${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}${multiChapterInstruction}`;
+    let selectionInstruction = '';
+    if (currentSession?.selection) {
+      selectionInstruction = `\n\n[CRITICAL: The user has selected a specific fragment of the artifact (ID: ${currentSession.selection.artifactId}). Your task is to modify ONLY this fragment or use it as the primary context for your changes. When providing a <patch>, ensure it targets the correct lines within the full artifact, but focus your logic on the selected fragment: "${currentSession.selection.fragment}"]`;
+    }
+
+    const fullPrompt = `${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}${multiChapterInstruction}${selectionInstruction}`;
 
     const userMessage: Message = {
       id: generateId(),
@@ -1652,6 +1657,8 @@ ${activeMCPs.map(c => {
             contextSettings={contextSettings}
             onContextSettingsChange={setContextSettings}
             onApplyVerificationFixes={handleApplyVerificationFixes}
+            selection={currentSession?.selection || null}
+            onClearSelection={() => updateSession({ selection: null })}
           />
         )
       }
@@ -1683,6 +1690,8 @@ ${activeMCPs.map(c => {
               includeMultiChapter={contextSettings.includeMultiChapter}
               targetDepth={contextSettings.targetDepth}
               onAssemble={() => handleAssembleProject(currentSession?.id || undefined)}
+              selection={currentSession?.selection || null}
+              onSelectionChange={(selection) => updateSession({ selection })}
             />
             
             <AnimatePresence>

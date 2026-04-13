@@ -75,6 +75,8 @@ interface ChatPanelProps {
   onApplyVerificationFixes: (messageId: string) => void;
   testerSkillIds: string[];
   onToggleTester: (id: string) => void;
+  selection?: any | null;
+  onClearSelection?: () => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -108,7 +110,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onContextSettingsChange,
   onApplyVerificationFixes,
   testerSkillIds,
-  onToggleTester
+  onToggleTester,
+  selection,
+  onClearSelection
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -181,9 +185,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const handleSend = () => {
     if ((!input.trim() && attachments.length === 0) || isStreaming) return;
-    onSendMessage(input, attachments);
+    
+    let finalInput = input;
+    if (selection && selection.fragment) {
+      finalInput = `I have selected the following fragment from the artifact (ID: ${selection.artifactId}):\n\n\`\`\`\n${selection.fragment}\n\`\`\`\n\n${input}`;
+    }
+    
+    onSendMessage(finalInput, attachments);
     setInput('');
     setAttachments([]);
+    if (selection) {
+      onClearSelection?.();
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1512,6 +1525,34 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               )}
             </div>
           </div>
+
+          {/* Selection Preview */}
+          <AnimatePresence>
+            {selection && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-2 overflow-hidden"
+              >
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 relative group">
+                  <div className="flex items-center gap-2 mb-1 text-[10px] font-bold text-amber-600 uppercase tracking-wider">
+                    <Target size={12} />
+                    Selected Fragment ({selection.mode})
+                  </div>
+                  <div className="text-xs text-amber-800 line-clamp-3 font-mono bg-white/50 p-2 rounded-lg border border-amber-100 italic">
+                    {selection.fragment}
+                  </div>
+                  <button 
+                    onClick={onClearSelection}
+                    className="absolute top-2 right-2 p-1 hover:bg-amber-100 rounded-lg text-amber-400 hover:text-amber-600 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Input Row */}
           <div className="flex items-end gap-2">

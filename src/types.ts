@@ -152,6 +152,12 @@ export interface ChatFolder {
   lastUpdated: number;
 }
 
+export interface ArtifactSelection {
+  artifactId: string;
+  fragment: string;
+  mode: 'preview' | 'code';
+}
+
 export interface Session {
   id: string;
   name?: string; // Optional name for the session
@@ -170,6 +176,7 @@ export interface Session {
   contextLogs?: ContextLogEntry[];
   activeProjectId?: string | null; // Currently active project for multi-chapter generation
   folderId?: string | null; // ID of the folder this session belongs to
+  selection?: ArtifactSelection | null; // Currently selected fragment for focused editing
 }
 
 export interface Patch {
