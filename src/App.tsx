@@ -919,7 +919,8 @@ ${activeMCPs.map(c => {
       role: 'user',
       content: content,
       attachments,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      selection: currentSession?.selection || null
     };
 
     addMessage(userMessage, sessionId);
@@ -975,8 +976,8 @@ ${activeMCPs.map(c => {
             const turnContextSettings = {
               ...contextSettings,
               includeChatHistory: contextSettings.includeMultiChapter && turnCount > 0 ? false : contextSettings.includeChatHistory,
-              // Also exclude artifact context if we are in multi-chapter mode to avoid sending the TOC/previous artifacts repeatedly
-              includeArtifactContext: contextSettings.includeMultiChapter && turnCount > 0 ? false : contextSettings.includeArtifactContext
+              // Also exclude artifact context if we are in multi-chapter mode or if a selection is active
+              includeArtifactContext: (currentSession?.selection) ? false : (contextSettings.includeMultiChapter && turnCount > 0 ? false : contextSettings.includeArtifactContext)
             };
 
             const stream = streamResponse(

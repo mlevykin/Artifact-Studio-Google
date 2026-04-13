@@ -101,6 +101,7 @@ export interface Message {
   }[];
   steps?: MessageStep[]; // For ordered rendering of thoughts, skills, and text
   verificationReport?: VerificationReport;
+  selection?: ArtifactSelection | null;
 }
 
 export interface ContextLogEntry {

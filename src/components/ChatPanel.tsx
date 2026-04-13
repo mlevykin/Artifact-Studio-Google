@@ -143,6 +143,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
   const [expandedSkills, setExpandedSkills] = useState<Record<string, boolean>>({});
   const [expandedMcpCalls, setExpandedMcpCalls] = useState<Record<string, boolean>>({});
+  const [expandedSelections, setExpandedSelections] = useState<Record<string, boolean>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -170,6 +171,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     setExpandedMcpCalls(prev => ({ ...prev, [messageId]: !prev[messageId] }));
   };
 
+  const toggleSelection = (messageId: string) => {
+    setExpandedSelections(prev => ({ ...prev, [messageId]: !prev[messageId] }));
+  };
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -186,12 +191,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const handleSend = () => {
     if ((!input.trim() && attachments.length === 0) || isStreaming) return;
     
-    let finalInput = input;
-    if (selection && selection.fragment) {
-      finalInput = `I have selected the following fragment from the artifact (ID: ${selection.artifactId}):\n\n\`\`\`\n${selection.fragment}\n\`\`\`\n\n${input}`;
-    }
-    
-    onSendMessage(finalInput, attachments);
+    onSendMessage(input, attachments);
     setInput('');
     setAttachments([]);
     if (selection) {
@@ -428,6 +428,35 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               {m.role === 'assistant' && m.id === messages[messages.length - 1].id && (
                 <div className="absolute -left-1.5 top-4 w-3 h-3 rounded-full bg-sky-500 border-2 border-white shadow-sm" />
               )}
+
+              {m.role === 'user' && m.selection && (
+                <div className="mb-3 pb-3 border-b border-white/10">
+                  <button 
+                    onClick={() => toggleSelection(m.id)}
+                    className="flex items-center gap-2 text-[10px] font-bold text-amber-400 hover:text-amber-300 transition-colors uppercase tracking-wider"
+                  >
+                    <div className="w-5 h-5 rounded-lg bg-amber-400/20 flex items-center justify-center">
+                      <Target size={12} className="text-amber-400" />
+                    </div>
+                    SELECTED FRAGMENT ({m.selection.mode})
+                    {expandedSelections[m.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
+                  
+                  <AnimatePresence>
+                    {expandedSelections[m.id] && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="mt-2 text-[11px] text-amber-100 bg-white/5 p-3 rounded-xl border border-white/10 overflow-hidden whitespace-pre-wrap leading-relaxed font-mono"
+                      >
+                        {m.selection.fragment}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               {m.role === 'assistant' && m.steps ? (
                 <div className="flex flex-col gap-3">
                   {m.steps.map((step, stepIdx) => {
