@@ -141,19 +141,21 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
         };
 
         let shape;
-        if (type === 'diamond') {
-          shape = rc.polygon([
-            [x, top],
-            [left + width, y],
-            [x, top + height],
-            [left, y]
-          ], options);
-        } else if (type === 'ellipse') {
-          shape = rc.ellipse(x, y, width, height, options);
-        } else {
-          shape = rc.rectangle(left, top, width, height, options);
+        if (style.stroke !== 'transparent') {
+          if (type === 'diamond') {
+            shape = rc.polygon([
+              [x, top],
+              [left + width, y],
+              [x, top + height],
+              [left, y]
+            ], options);
+          } else if (type === 'ellipse') {
+            shape = rc.ellipse(x, y, width, height, options);
+          } else {
+            shape = rc.rectangle(left, top, width, height, options);
+          }
+          svg.appendChild(shape);
         }
-        svg.appendChild(shape);
 
         // Add icon and text
         const iconSize = 18;
@@ -185,15 +187,15 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', textX.toString());
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('text-anchor', style.textAlign === 'left' ? 'start' : style.textAlign === 'right' ? 'end' : 'middle');
+        text.setAttribute('dominant-baseline', style.verticalAlign === 'top' ? 'hanging' : style.verticalAlign === 'bottom' ? 'baseline' : 'middle');
         text.setAttribute('font-family', '"Inter", sans-serif');
-        text.setAttribute('font-size', '14px');
+        text.setAttribute('font-size', `${style.fontSize || 14}px`);
         text.setAttribute('font-weight', '500');
-        text.setAttribute('fill', style.stroke ?? '#18181b');
+        text.setAttribute('fill', style.stroke === 'transparent' ? '#18181b' : (style.stroke ?? '#18181b'));
         
-        const lineHeight = 18;
-        const startY = y - ((lines.length - 1) * lineHeight) / 2;
+        const lineHeight = (style.fontSize || 14) * 1.2;
+        const startY = style.verticalAlign === 'top' ? top + 10 : (y - ((lines.length - 1) * lineHeight) / 2);
         
         lines.forEach((line, i) => {
           const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
@@ -203,7 +205,7 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
           text.appendChild(tspan);
         });
         
-        text.setAttribute('y', (startY + 4).toString());
+        text.setAttribute('y', (startY + (style.verticalAlign === 'top' ? 0 : 4)).toString());
         svg.appendChild(text);
       }
     }

@@ -8,6 +8,10 @@ export interface NodeStyle {
   roughness?: number;
   opacity?: number;
   icon?: string;
+  fontSize?: number;
+  fontFamily?: number;
+  textAlign?: string;
+  verticalAlign?: string;
 }
 
 export interface Node {

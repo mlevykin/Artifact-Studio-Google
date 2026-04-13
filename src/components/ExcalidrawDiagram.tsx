@@ -12,6 +12,11 @@ export const ExcalidrawDiagram: React.FC<ExcalidrawDiagramProps> = ({ code, step
   const graph = useMemo(() => {
     try {
       const parsed = parseExcalidraw(code);
+      // If nodes already have positions (native JSON), skip layout
+      const hasPositions = parsed.nodes.length > 0 && parsed.nodes.every(n => n.x !== undefined && n.y !== undefined);
+      if (hasPositions) {
+        return parsed;
+      }
       return layoutGraph(parsed);
     } catch (error) {
       console.error('Failed to parse or layout Excalidraw diagram:', error);
