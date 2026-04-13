@@ -395,10 +395,10 @@ export function parseMessageSteps(text: string, mcpCalls?: any[]): MessageStep[]
 export function stripArtifactsAndPatches(text: string): string {
   let cleaned = text;
   
-  // Strip artifacts (including partial)
+  // Strip artifacts (including partial and those with attributes)
   cleaned = cleaned.replace(/<artifact[\s\S]*?(?:<\/artifact>|$)/g, '');
   
-  // Strip patches (including partial)
+  // Strip patches (including partial and those with attributes)
   cleaned = cleaned.replace(/<patch[\s\S]*?(?:<\/patch>|$)/g, '');
 
   // Strip thoughts (including partial)
@@ -407,16 +407,16 @@ export function stripArtifactsAndPatches(text: string): string {
   // Strip fallback thoughts (lines starting with thought: or thought )
   cleaned = cleaned.split('\n')
     .filter(line => {
-      const lower = line.toLowerCase();
+      const lower = line.toLowerCase().trim();
       return !lower.startsWith('thought ') && !lower.startsWith('thought:') && !lower.startsWith('thought process');
     })
     .join('\n');
 
   // Strip skill calls (handle both self-closing and paired tags, and unclosed ones)
-  cleaned = cleaned.replace(/<skill_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?\s*(?:\/>|><\/skill_call>|>)/g, '');
+  cleaned = cleaned.replace(/<skill_call[\s\S]*?(?:\/>|><\/skill_call>|>|$)/g, '');
 
   // Strip mcp calls (including partial)
-  cleaned = cleaned.replace(/<mcp_call\s+name="([^"]+)"(?:\s+description="([^"]+)")?>([\s\S]*?)(?:<\/mcp_call>|$)/g, '');
+  cleaned = cleaned.replace(/<mcp_call[\s\S]*?(?:<\/mcp_call>|$)/g, '');
   
   // Strip standalone request/response tags (sometimes model hallucinations)
   cleaned = cleaned.replace(/<request>([\s\S]*?)(?:<\/request>|$)/g, '');
@@ -425,5 +425,6 @@ export function stripArtifactsAndPatches(text: string): string {
   // Strip any leftover unclosed tags at the end of the text
   cleaned = cleaned.replace(/<(artifact|patch|thought|skill_call|mcp_call|request|response)[^>]*$/g, '');
 
-  return cleaned.trim();
+  // Final cleanup of multiple newlines
+  return cleaned.replace(/\n{3,}/g, '\n\n').trim();
 }

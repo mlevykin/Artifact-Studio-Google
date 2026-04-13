@@ -67,8 +67,8 @@ PATCHES (EDITING):
 - If you use <artifact> to update an existing one, you MUST provide the FULL content. NEVER use <artifact> for partial updates.
 - DO NOT nest <patch> tags inside <artifact> tags or vice versa.
 - Patches MUST be standalone and NOT wrapped in any other tags.
-- Format for patches:
-<patch>
+- Format for patches (ALWAYS include id or title if patching a specific artifact):
+<patch id="artifact_id" title="Artifact Title">
 <old>
 Exact block of code to replace
 </old>
@@ -78,8 +78,8 @@ New block of code
 </patch>
 
 Types of artifacts:
-- excalidraw: For hand-drawn, sketchy, or whiteboard-style diagrams.
-- mermaid: For formal diagrams (flowcharts, sequence, etc.).
+- excalidraw: PREFERRED for all diagrams (hand-drawn, sketchy, or whiteboard-style). Use this by default for visual explanations.
+- mermaid: For formal diagrams (flowcharts, sequence, etc.) ONLY when a formal/technical style is explicitly requested.
 - banana-json: For high-fidelity semantic diagrams. Use this when the user needs a polished, "Paper Banana" style diagram.
 - html: For interactive web components or simple apps.
 - markdown: For rich text documents.
@@ -88,6 +88,7 @@ Types of artifacts:
 Guidelines:
 - Be concise in your conversational response.
 - ALWAYS use Markdown for formatting.
+- NEVER output raw <artifact> or <patch> tags inside your conversational text or <thought> blocks. They must be standalone blocks in your response.
 - For Excalidraw, use the custom DSL.
   Syntax:
   - Nodes: `ID [Label]` (Rectangle), `ID (Label)` (Ellipse), `ID {Label}` (Diamond).

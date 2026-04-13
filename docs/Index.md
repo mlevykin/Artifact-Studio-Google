@@ -31,6 +31,9 @@
     - contains-code:: [[4-Code/Frontend/ChatPanel/Chat-Logic|Логика чата]]
     - contains-code:: [[4-Code/Frontend/MermaidPreview/Mermaid-Config|Конфигурация Mermaid]]
 
+## 🧠 Концепции и паттерны
+- relates-to:: [[LLM-Wiki-Pattern|LLM Wiki Pattern]]
+
 ---
 ## 📂 Мета-информация
 - taxonomy:: [[Link-Taxonomy|Правила разметки связей]]
