@@ -257,8 +257,6 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
               
               // Find all nodes this edge is connected to (Mermaid uses L-nodeId classes)
               const connectedNodeClasses = classList.filter(cls => cls.startsWith('L-'));
-              
-              // An edge is visible if ALL its connected nodes are visible
               const connectedNodeIds = connectedNodeClasses.map(cls => cls.substring(2));
               
               // If we found connected nodes, check their visibility
@@ -268,9 +266,29 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
                 edgeEl.style.pointerEvents = allConnectedNodesVisible ? 'auto' : 'none';
               } else {
                 // If no connected node classes found, it might be a sequence diagram message or something else
-                // We default to visible or check index if it's a sequence diagram (handled above)
-                edgeEl.style.opacity = '1';
-                edgeEl.style.pointerEvents = 'auto';
+                // For non-sequence diagrams, we should be conservative
+                if (!isSequence) {
+                  // Try to find node IDs in the element's ID or classes as a fallback
+                  const id = edgeEl.id || '';
+                  const foundNodes = orderedNodeIds.filter(nodeId => 
+                    id.includes(`-${nodeId}-`) || id.startsWith(`${nodeId}-`) || id.endsWith(`-${nodeId}`) ||
+                    classList.some(cls => cls === nodeId || cls.includes(`-${nodeId}-`))
+                  );
+                  
+                  if (foundNodes.length > 0) {
+                    const allVisible = foundNodes.every(nodeId => visibleNodeIds.has(nodeId));
+                    edgeEl.style.opacity = allVisible ? '1' : '0';
+                    edgeEl.style.pointerEvents = allVisible ? 'auto' : 'none';
+                  } else {
+                    // Default to hidden for flowchart edges if we can't prove they should be visible
+                    edgeEl.style.opacity = '0';
+                    edgeEl.style.pointerEvents = 'none';
+                  }
+                } else {
+                  // Sequence diagram: default to visible (handled by index check above)
+                  edgeEl.style.opacity = '1';
+                  edgeEl.style.pointerEvents = 'auto';
+                }
               }
               edgeEl.style.transition = 'opacity 0.3s ease-in-out';
             });

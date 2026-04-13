@@ -58,12 +58,6 @@ export const getMermaidNodes = (content: string): string[] => {
         }
       });
     }
-
-    // 3. Match subgraphs
-    const subgraphMatch = line.match(/^\s*subgraph\s+([a-zA-Z0-9_-]+)/i);
-    if (subgraphMatch && !isKeyword(subgraphMatch[1])) {
-      nodes.add(subgraphMatch[1]);
-    }
   });
   
   return Array.from(nodes);
