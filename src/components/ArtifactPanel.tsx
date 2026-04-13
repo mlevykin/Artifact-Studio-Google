@@ -858,13 +858,8 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                   <HtmlPreview content={pContent} />
                 </div>
               ) : pType === 'markdown' ? (
-                <ZoomableContainer 
-                  className="w-full h-full" 
-                  fitMode="width"
-                  contentId={artifact?.id}
-                  isStreaming={isStreaming}
-                >
-                  <div className="w-[940px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-8 overflow-hidden">
+                <div className="w-full h-full overflow-y-auto bg-zinc-50 flex flex-col items-center p-4 md:p-8 scroll-smooth">
+                  <div className="w-full max-w-[940px] bg-white p-12 md:p-16 shadow-lg rounded-xl my-4 min-h-fit">
                     <div className="prose prose-zinc prose-sm md:prose-base max-w-none">
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
@@ -874,7 +869,7 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
                       </ReactMarkdown>
                     </div>
                   </div>
-                </ZoomableContainer>
+                </div>
               ) : (
                 <ZoomableContainer 
                   className="w-full h-full"
