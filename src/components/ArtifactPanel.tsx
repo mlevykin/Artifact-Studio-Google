@@ -358,25 +358,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     }
   };
 
-  // Handle selection in preview mode
-  useEffect(() => {
-    if (!isSelectionMode || view !== 'preview') return;
-
-    const handleMouseUp = () => {
-      const sel = window.getSelection();
-      if (sel && sel.toString().trim().length > 0 && artifact) {
-        onSelectionChange?.({
-          artifactId: artifact.id,
-          fragment: sel.toString().trim(),
-          mode: 'preview'
-        });
-      }
-    };
-
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => document.removeEventListener('mouseup', handleMouseUp);
-  }, [isSelectionMode, view, artifact, onSelectionChange]);
-
   // Handle selection in code mode
   const handleCodeSelection = () => {
     if (!isSelectionMode || view !== 'code' || !textareaRef.current || !artifact) return;
@@ -423,6 +404,13 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  useEffect(() => {
+    if (view !== 'code' && isSelectionMode) {
+      setIsSelectionMode(false);
+      onSelectionChange?.(null);
+    }
+  }, [view, isSelectionMode, onSelectionChange]);
 
   // Switch to code view when streaming starts and an artifact/patch is detected
   const lastStreamingIdRef = useRef<string | null>(null);
@@ -761,17 +749,19 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button 
-            onClick={toggleSelectionMode}
-            className={cn(
-              "p-2 rounded-xl transition-all mr-1 flex items-center gap-2",
-              isSelectionMode ? "bg-amber-100 text-amber-600 border border-amber-200" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-            )}
-            title="Selection Mode (Edit fragment)"
-          >
-            <Target size={18} />
-            {isSelectionMode && <span className="text-[10px] font-bold uppercase">Selection Mode</span>}
-          </button>
+          {view === 'code' && (
+            <button 
+              onClick={toggleSelectionMode}
+              className={cn(
+                "p-2 rounded-xl transition-all mr-1 flex items-center gap-2",
+                isSelectionMode ? "bg-amber-100 text-amber-600 border border-amber-200" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+              )}
+              title="Selection Mode (Edit fragment)"
+            >
+              <Target size={18} />
+              {isSelectionMode && <span className="text-[10px] font-bold uppercase">Selection Mode</span>}
+            </button>
+          )}
 
           {!isStreaming && artifact && artifact.type === 'markdown' && (
             <TTSControls 
