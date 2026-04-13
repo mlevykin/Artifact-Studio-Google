@@ -18,12 +18,13 @@ export const getMermaidNodes = (content: string): string[] => {
   if (isSequence) {
     // For sequence diagrams, "nodes" are actors
     lines.forEach(line => {
-      const actorMatch = line.match(/^\s*(?:participant|actor)\s+([a-zA-Z0-9_-]+)/i);
+      const trimmed = line.trim();
+      const actorMatch = trimmed.match(/^\s*(?:participant|actor)\s+([a-zA-Z0-9_-]+)/i);
       if (actorMatch) {
         nodes.add(actorMatch[1]);
       } else {
         // Also check messages for implicit actors
-        const msgMatch = line.match(/^\s*([a-zA-Z0-9_-]+)\s*(?:->|-->)\s*([a-zA-Z0-9_-]+)/);
+        const msgMatch = trimmed.match(/^\s*([a-zA-Z0-9_-]+)\s*(?:->|-->)\s*([a-zA-Z0-9_-]+)/);
         if (msgMatch) {
           nodes.add(msgMatch[1]);
           nodes.add(msgMatch[2]);
@@ -35,8 +36,16 @@ export const getMermaidNodes = (content: string): string[] => {
 
   // For flowcharts and other graph types
   lines.forEach(line => {
-    // 1. Match node definitions: ID[...], ID(...), ID{...}, etc.
-    const defMatches = line.matchAll(/([a-zA-Z0-9_-]+)(?=\s*(?:\[|\[\[|\(|\(\(|\(\[|\{|\{\{|\{\{\{|\>))/g);
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    
+    const lower = trimmed.toLowerCase();
+    // Skip subgraph definitions and structural keywords
+    if (lower.startsWith('subgraph') || lower === 'end' || lower.startsWith('direction')) return;
+
+    // 1. Match node definitions: ID[...] or ID(...) or ID{...} or ID>...] or ID((...)) etc.
+    // We look for ID at the start of the line or after a space, followed by a shape start
+    const defMatches = trimmed.matchAll(/(?:^|\s)([a-zA-Z0-9_-]+)(?=\s*(?:\[|\(|\{|\>))/g);
     for (const match of defMatches) {
       const id = match[1];
       if (!isKeyword(id)) {
@@ -45,7 +54,8 @@ export const getMermaidNodes = (content: string): string[] => {
     }
     
     // 2. Match connections: ID1 --> ID2
-    const parts = line.split(/\s*(?:---|--|==|-->|--\>|==>|==\>|->|-\>|>-|--x|--o)\s*/);
+    const arrowRegex = /\s*(?:---|--|==|-->|--\>|==>|==\>|->|-\>|>-|--x|--o)\s*/g;
+    const parts = trimmed.split(arrowRegex);
     if (parts.length > 1) {
       parts.forEach(part => {
         // Extract the ID from the part, ignoring labels like ID[Label]

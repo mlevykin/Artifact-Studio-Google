@@ -210,8 +210,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
             }
 
             // Flowchart/Graph logic: steps are nodes
-            const orderedNodeIds = getMermaidNodes(cleanedContent);
-            const visibleNodeIds = new Set(orderedNodeIds.slice(0, step));
+            const rawOrderedNodeIds = getMermaidNodes(cleanedContent);
             
             // Helper to get ID from mermaid SVG element
             const getElementId = (el: Element) => {
@@ -221,23 +220,36 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
               const idClass = classList.find(c => c.startsWith('id-'));
               if (idClass) return idClass.substring(3);
               
-              // 2. Check for L-NODEID class
-              const lClass = classList.find(c => c.startsWith('L-'));
-              if (lClass) return lClass.substring(2);
+              // 2. Check for L-NODEID class (only if it's a node/actor)
+              if (el.classList.contains('node') || el.classList.contains('actor')) {
+                const lClass = classList.find(c => c.startsWith('L-'));
+                if (lClass) return lClass.substring(2);
+              }
 
               // 3. Check element ID
               const id = el.id;
               if (id) {
                 // flowchart-A-123 -> A
                 // We try to find which orderedNodeId is contained in this ID
-                const matchingNodeId = orderedNodeIds.find(nodeId => 
-                  id === nodeId || id.includes(`-${nodeId}-`) || id.endsWith(`-${nodeId}`)
+                const matchingNodeId = rawOrderedNodeIds.find(nodeId => 
+                  id === nodeId || id.includes(`-${nodeId}-`) || id.startsWith(`${nodeId}-`) || id.endsWith(`-${nodeId}`)
                 );
                 if (matchingNodeId) return matchingNodeId;
               }
               
               return null;
             };
+
+            // Find which of these actually exist as nodes in the SVG
+            const existingNodeIdsInSvg = new Set<string>();
+            nodes.forEach(node => {
+              const id = getElementId(node);
+              if (id) existingNodeIdsInSvg.add(id);
+            });
+            
+            // Filter ordered nodes to only those that exist in the SVG to avoid "empty" steps
+            const orderedNodeIds = rawOrderedNodeIds.filter(id => existingNodeIdsInSvg.has(id));
+            const visibleNodeIds = new Set(orderedNodeIds.slice(0, step));
 
             // Hide/show nodes
             nodes.forEach((node) => {
@@ -253,11 +265,20 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
             // Hide/show edges
             edges.forEach((edge) => {
               const edgeEl = edge as HTMLElement;
-              const classList = Array.from(edgeEl.classList);
               
-              // Find all nodes this edge is connected to (Mermaid uses L-nodeId classes)
-              const connectedNodeClasses = classList.filter(cls => cls.startsWith('L-'));
-              const connectedNodeIds = connectedNodeClasses.map(cls => cls.substring(2));
+              // Helper to find connected nodes by searching up the tree for L-nodeId classes
+              const getConnectedNodes = (el: HTMLElement): string[] => {
+                let current: Element | null = el;
+                while (current && current !== svg) {
+                  const classes = Array.from(current.classList);
+                  const nodes = classes.filter(c => c.startsWith('L-')).map(c => c.substring(2));
+                  if (nodes.length > 0) return nodes;
+                  current = current.parentElement;
+                }
+                return [];
+              };
+
+              const connectedNodeIds = getConnectedNodes(edgeEl);
               
               // If we found connected nodes, check their visibility
               if (connectedNodeIds.length > 0) {
@@ -265,11 +286,11 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
                 edgeEl.style.opacity = allConnectedNodesVisible ? '1' : '0';
                 edgeEl.style.pointerEvents = allConnectedNodesVisible ? 'auto' : 'none';
               } else {
-                // If no connected node classes found, it might be a sequence diagram message or something else
-                // For non-sequence diagrams, we should be conservative
+                // For non-sequence diagrams, we should be conservative but not too strict
                 if (!isSequence) {
                   // Try to find node IDs in the element's ID or classes as a fallback
                   const id = edgeEl.id || '';
+                  const classList = Array.from(edgeEl.classList);
                   const foundNodes = orderedNodeIds.filter(nodeId => 
                     id.includes(`-${nodeId}-`) || id.startsWith(`${nodeId}-`) || id.endsWith(`-${nodeId}`) ||
                     classList.some(cls => cls === nodeId || cls.includes(`-${nodeId}-`))
@@ -280,9 +301,10 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
                     edgeEl.style.opacity = allVisible ? '1' : '0';
                     edgeEl.style.pointerEvents = allVisible ? 'auto' : 'none';
                   } else {
-                    // Default to hidden for flowchart edges if we can't prove they should be visible
-                    edgeEl.style.opacity = '0';
-                    edgeEl.style.pointerEvents = 'none';
+                    // If we still can't find connections, show it if step > 0 
+                    // to avoid "no arrows at all" while still keeping step 0 empty
+                    edgeEl.style.opacity = step > 0 ? '1' : '0';
+                    edgeEl.style.pointerEvents = step > 0 ? 'auto' : 'none';
                   }
                 } else {
                   // Sequence diagram: default to visible (handled by index check above)
