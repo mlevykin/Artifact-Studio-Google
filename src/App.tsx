@@ -41,7 +41,8 @@ import {
   Diff,
   FolderOpen,
   AlertCircle,
-  Loader2
+  Loader2,
+  Globe
 } from 'lucide-react';
 import { FileExplorer } from './components/FileExplorer';
 import { 
@@ -1570,33 +1571,88 @@ ${activeMCPs.map(c => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gemini Settings</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] text-slate-400 mb-1 block">API Key</label>
-                    <input 
-                      type="password"
-                      value={geminiApiKey}
-                      onChange={(e) => setGeminiApiKey(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-sky-500 outline-none"
-                      placeholder="Enter API Key..."
-                    />
+              {provider === 'gemini' ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gemini Settings</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] text-slate-400 mb-1 block">API Key</label>
+                        <input 
+                          type="password"
+                          value={geminiApiKey}
+                          onChange={(e) => setGeminiApiKey(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-sky-500 outline-none"
+                          placeholder="Enter API Key..."
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 mb-1 block">Model</label>
+                        <select 
+                          value={geminiModel}
+                          onChange={(e) => setGeminiModel(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-sky-500 outline-none"
+                        >
+                          <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                          <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] text-slate-400 mb-1 block">Model</label>
-                    <select 
-                      value={geminiModel}
-                      onChange={(e) => setGeminiModel(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-sky-500 outline-none"
-                    >
-                      <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
-                      <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
-                      <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                    </select>
+
+                  <div className="pt-4 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Globe size={14} className="text-slate-400" />
+                        <span className="text-xs text-slate-300">Web Search</span>
+                      </div>
+                      <button 
+                        onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                        className={cn(
+                          "w-8 h-4 rounded-full transition-all relative",
+                          webSearchEnabled ? "bg-sky-500" : "bg-slate-700"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                          webSearchEnabled ? "right-0.5" : "left-0.5"
+                        )} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ollama Settings</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] text-slate-400 mb-1 block">Base URL</label>
+                        <input 
+                          type="text"
+                          value={ollamaConfig.baseUrl}
+                          onChange={(e) => setOllamaConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-sky-500 outline-none"
+                          placeholder="http://localhost:11434"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 mb-1 block">Model</label>
+                        <select 
+                          value={ollamaConfig.selectedModel}
+                          onChange={(e) => setOllamaConfig(prev => ({ ...prev, selectedModel: e.target.value }))}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-sky-500 outline-none"
+                        >
+                          {availableModels.map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 border-t border-slate-800">
                 <button 

@@ -133,8 +133,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     contextSettings.includeMcp
   ];
   const deselectedContextCount = contextOptions.filter(v => !v).length;
-  const [showOllamaSettings, setShowOllamaSettings] = useState(false);
-  const [showGeminiSettings, setShowGeminiSettings] = useState(false);
   const [showSkills, setShowSkills] = useState(false);
   const [showMcp, setShowMcp] = useState(false);
   const [showContext, setShowContext] = useState(false);
@@ -291,107 +289,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             )}>
               {provider.toUpperCase()}
             </span>
-            {provider === 'ollama' && (
-              <button 
-                onClick={() => setShowOllamaSettings(!showOllamaSettings)}
-                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <Loader2 size={14} className={cn(showOllamaSettings && "rotate-45")} />
-              </button>
-            )}
-            {provider === 'gemini' && (
-              <button 
-                onClick={() => setShowGeminiSettings(!showGeminiSettings)}
-                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <Loader2 size={14} className={cn(showGeminiSettings && "rotate-45")} />
-              </button>
-            )}
           </div>
         </div>
 
-        {provider === 'ollama' && (
-          <div className="flex items-center gap-2">
-            <select 
-              value={ollamaConfig.selectedModel}
-              onChange={(e) => onOllamaConfigChange({ selectedModel: e.target.value })}
-              className="flex-1 text-[10px] bg-zinc-100 border-none rounded-lg px-2 py-1 focus:ring-1 focus:ring-zinc-200 outline-none"
-            >
-              {availableModels.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {showOllamaSettings && provider === 'ollama' && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            className="overflow-hidden space-y-2 pt-2 border-t border-zinc-100"
-          >
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-bold text-zinc-400 uppercase">Ollama URL</label>
-              <input 
-                type="text"
-                value={ollamaConfig.baseUrl}
-                onChange={(e) => onOllamaConfigChange({ baseUrl: e.target.value })}
-                className="text-[10px] bg-zinc-100 border-none rounded-lg px-2 py-1 focus:ring-1 focus:ring-zinc-200 outline-none"
-                placeholder="http://localhost:11434"
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {showGeminiSettings && provider === 'gemini' && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            className="overflow-hidden space-y-2 pt-2 border-t border-zinc-100"
-          >
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[9px] font-bold text-zinc-400 uppercase">Gemini API Key</label>
-                <span className="text-[8px] text-zinc-400 italic">Leave empty for system key</span>
-              </div>
-              <input 
-                type="password"
-                value={geminiApiKey}
-                onChange={(e) => onGeminiApiKeyChange(e.target.value)}
-                className="text-[10px] bg-zinc-100 border-none rounded-lg px-2 py-1 focus:ring-1 focus:ring-zinc-200 outline-none"
-                placeholder="Enter API Key..."
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-bold text-zinc-400 uppercase">Gemini Model</label>
-              <select 
-                value={geminiModel}
-                onChange={(e) => onGeminiModelChange(e.target.value)}
-                className="text-[10px] bg-zinc-100 border-none rounded-lg px-2 py-1 focus:ring-1 focus:ring-zinc-200 outline-none"
-              >
-                <option value="gemini-3-flash-preview">Gemini 3 Flash (Default)</option>
-                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Powerful)</option>
-                <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
-                <option value="gemini-flash-latest">Gemini Flash Latest (Stable)</option>
-              </select>
-            </div>
-            <div className="flex items-center justify-between pt-1">
-              <label className="text-[9px] font-bold text-zinc-400 uppercase">Web Search</label>
-              <button 
-                onClick={onToggleWebSearch}
-                className={cn(
-                  "w-8 h-4 rounded-full transition-colors relative",
-                  webSearchEnabled ? "bg-indigo-500" : "bg-zinc-300"
-                )}
-              >
-                <div className={cn(
-                  "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
-                  webSearchEnabled ? "left-4.5" : "left-0.5"
-                )} />
-              </button>
-            </div>
-          </motion.div>
-        )}
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
