@@ -854,6 +854,25 @@ IMPORTANT: When you use an MCP server, you MUST report it at the beginning of yo
 Wait for the system to provide the <response> tag before continuing your task if the tool output is required.
 `;
 
+    const partialEditReportingInstruction = `
+CRITICAL RULES FOR PARTIAL EDIT:
+1. You MUST use <patch> blocks for all modifications.
+2. Focus ONLY on the selected fragment provided in the context.
+3. The chat text should ONLY contain brief explanations.
+`;
+
+    const partialEditSystemPrompt = `You are a world-class engineer and product designer.
+The user has selected a specific fragment of an artifact to edit.
+Your task is to modify ONLY this fragment or use it as the primary context for your changes.
+
+CRITICAL RULES:
+1. Use <patch> blocks to provide changes. Format: <patch id="artifact_id"><old>...</old><new>...</new></patch>
+2. Ensure your patch targets the correct lines within the full artifact.
+3. All reasoning MUST be in <thought> tags.
+4. Respond in the same language as the user.
+5. DO NOT output code directly in the chat.
+`;
+
     if (isAutoSelect && contextSettings.includeSkills) {
       skillsContext = `AUTO-SELECT SKILLS ENABLED: You have access to all skills. Choose the most relevant one if needed. Available skills: ${skills.map(s => s.name).join(', ')}\n${skillReportingInstruction}`;
     } else if (contextSettings.includeSkills) {
@@ -908,11 +927,14 @@ ${activeMCPs.map(c => {
     }
 
     let selectionInstruction = '';
+    let isPartialEdit = false;
     if (currentSession?.selection) {
+      isPartialEdit = true;
       selectionInstruction = `\n\n[CRITICAL: The user has selected a specific fragment of the artifact (ID: ${currentSession.selection.artifactId}). Your task is to modify ONLY this fragment or use it as the primary context for your changes. When providing a <patch>, ensure it targets the correct lines within the full artifact, but focus your logic on the selected fragment: "${currentSession.selection.fragment}"]`;
     }
 
-    const fullPrompt = `${skillsContext}\n\n${mcpContext}\n\n${commonReportingInstruction}\n\n${content}${multiChapterInstruction}${selectionInstruction}`;
+    const reportingInstruction = isPartialEdit ? partialEditReportingInstruction : commonReportingInstruction;
+    const fullPrompt = `${skillsContext}\n\n${mcpContext}\n\n${reportingInstruction}\n\n${content}${multiChapterInstruction}${selectionInstruction}`;
 
     const userMessage: Message = {
       id: generateId(),
@@ -996,7 +1018,8 @@ ${activeMCPs.map(c => {
               geminiModel,
               turnContextSettings,
               activeSkillsData,
-              activeMcpData
+              activeMcpData,
+              isPartialEdit ? partialEditSystemPrompt : undefined
             );
 
             for await (const chunk of stream) {

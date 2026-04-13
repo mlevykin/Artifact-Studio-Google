@@ -80,7 +80,8 @@ export async function* streamGeminiResponse(
   modelName?: string,
   contextSettings?: ContextSettings,
   activeSkills?: Skill[],
-  activeMcpConfigs?: MCPConfig[]
+  activeMcpConfigs?: MCPConfig[],
+  customSystemPrompt?: string
 ) {
   const currentArtifactContent = initialArtifact?.content;
   const ai = new GoogleGenAI({ apiKey: geminiApiKey || process.env.GEMINI_API_KEY || "" });
@@ -178,7 +179,7 @@ export async function* streamGeminiResponse(
     const config: any = {};
 
     if (settings.includeSystemPrompt) {
-      let systemInstruction = SYSTEM_PROMPT;
+      let systemInstruction = customSystemPrompt || SYSTEM_PROMPT;
       if (settings.includeMultiChapter) {
         systemInstruction += `\n\n[MODE: Multi-Chapter Mode ENABLED]\nTarget Depth: ${settings.targetDepth || 3}\n${MULTI_CHAPTER_PROMPT}`;
       }
@@ -262,7 +263,8 @@ export async function* streamOllamaResponse(
   overrideLastMessageContent?: string,
   contextSettings?: ContextSettings,
   activeSkills?: Skill[],
-  activeMcpConfigs?: MCPConfig[]
+  activeMcpConfigs?: MCPConfig[],
+  customSystemPrompt?: string
 ) {
   const currentArtifactContent = initialArtifact?.content;
   const controller = new AbortController();
@@ -338,8 +340,8 @@ export async function* streamOllamaResponse(
           { 
             role: 'system', 
             content: settings.includeMultiChapter 
-              ? `${SYSTEM_PROMPT}\n\n[MODE: Multi-Chapter Mode ENABLED]\nTarget Depth: ${settings.targetDepth || 3}\n${MULTI_CHAPTER_PROMPT}` 
-              : SYSTEM_PROMPT 
+              ? `${customSystemPrompt || SYSTEM_PROMPT}\n\n[MODE: Multi-Chapter Mode ENABLED]\nTarget Depth: ${settings.targetDepth || 3}\n${MULTI_CHAPTER_PROMPT}` 
+              : (customSystemPrompt || SYSTEM_PROMPT) 
           }, 
           ...ollamaMessages
         ] : ollamaMessages,
@@ -437,7 +439,8 @@ export async function* streamResponse(
   geminiModel?: string,
   contextSettings?: ContextSettings,
   activeSkills?: Skill[],
-  activeMcpConfigs?: MCPConfig[]
+  activeMcpConfigs?: MCPConfig[],
+  customSystemPrompt?: string
 ) {
   if (provider === 'gemini') {
     yield* streamGeminiResponse(
@@ -451,7 +454,8 @@ export async function* streamResponse(
       geminiModel, 
       contextSettings,
       activeSkills,
-      activeMcpConfigs
+      activeMcpConfigs,
+      customSystemPrompt
     );
   } else {
     yield* streamOllamaResponse(
@@ -464,7 +468,8 @@ export async function* streamResponse(
       overrideLastMessageContent, 
       contextSettings,
       activeSkills,
-      activeMcpConfigs
+      activeMcpConfigs,
+      customSystemPrompt
     );
   }
 }
