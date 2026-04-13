@@ -81,7 +81,8 @@ export function parseExcalidraw(text: string): Graph {
                 fontSize: el.fontSize,
                 fontFamily: el.fontFamily,
                 textAlign: el.textAlign,
-                verticalAlign: el.verticalAlign
+                verticalAlign: el.verticalAlign,
+                angle: el.angle
               }
             };
             nodes.push(node);

@@ -169,8 +169,16 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
           opacity: style.opacity ?? 1
         };
 
-        let shape;
+        // Create a group for the node to handle rotation
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        if (style.angle) {
+          const angleDeg = (style.angle * 180) / Math.PI;
+          group.setAttribute('transform', `rotate(${angleDeg} ${x} ${y})`);
+        }
+        svg.appendChild(group);
+
         if (style.stroke !== 'transparent') {
+          let shape;
           if (type === 'diamond') {
             shape = rc.polygon([
               [x, top],
@@ -183,7 +191,7 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
           } else {
             shape = rc.rectangle(left, top, width, height, options);
           }
-          svg.appendChild(shape);
+          group.appendChild(shape);
         }
 
         // Add icon and text
@@ -218,32 +226,44 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
           img.setAttribute('width', iconSize.toString());
           img.setAttribute('height', iconSize.toString());
           img.setAttribute('href', `https://unpkg.com/lucide-static@latest/icons/${style.icon}.svg`);
-          svg.appendChild(img);
+          group.appendChild(img);
         }
 
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', textX.toString());
-        text.setAttribute('text-anchor', style.textAlign === 'left' ? 'start' : style.textAlign === 'right' ? 'end' : 'middle');
-        text.setAttribute('dominant-baseline', style.verticalAlign === 'top' ? 'hanging' : style.verticalAlign === 'bottom' ? 'baseline' : 'middle');
-        text.setAttribute('font-family', '"Inter", sans-serif');
-        text.setAttribute('font-size', `${style.fontSize || 14}px`);
-        text.setAttribute('font-weight', '500');
-        text.setAttribute('fill', style.stroke === 'transparent' ? '#18181b' : (style.stroke ?? '#18181b'));
-        
-        const fontSize = style.fontSize || 14;
-        const lineHeight = fontSize * 1.2;
-        const startY = style.verticalAlign === 'top' ? top + 5 : (y - ((lines.length - 1) * lineHeight) / 2);
-        
-        lines.forEach((line, i) => {
-          const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-          tspan.setAttribute('x', textX.toString());
-          tspan.setAttribute('dy', i === 0 ? '0' : lineHeight.toString());
-          tspan.textContent = line;
-          text.appendChild(tspan);
-        });
-        
-        text.setAttribute('y', (startY + (style.verticalAlign === 'top' ? 0 : 2)).toString());
-        svg.appendChild(text);
+        if (label) {
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', textX.toString());
+          text.setAttribute('text-anchor', style.textAlign === 'left' ? 'start' : style.textAlign === 'right' ? 'end' : 'middle');
+          text.setAttribute('dominant-baseline', 'central');
+          text.setAttribute('font-family', '"Inter", sans-serif');
+          text.setAttribute('font-size', `${style.fontSize || 14}px`);
+          text.setAttribute('font-weight', '500');
+          text.setAttribute('fill', style.stroke === 'transparent' ? '#18181b' : (style.stroke ?? '#18181b'));
+          
+          const fontSize = style.fontSize || 14;
+          const lineHeight = fontSize * 1.2;
+          
+          // Calculate startY based on vertical alignment
+          let startY = y;
+          if (style.verticalAlign === 'top') {
+            startY = top + (fontSize / 2) + 5;
+          } else if (style.verticalAlign === 'bottom') {
+            startY = top + height - (lines.length * lineHeight) + (fontSize / 2);
+          } else {
+            // Middle
+            startY = y - ((lines.length - 1) * lineHeight) / 2;
+          }
+          
+          lines.forEach((line, i) => {
+            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            tspan.setAttribute('x', textX.toString());
+            tspan.setAttribute('dy', i === 0 ? '0' : lineHeight.toString());
+            tspan.textContent = line;
+            text.appendChild(tspan);
+          });
+          
+          text.setAttribute('y', startY.toString());
+          group.appendChild(text);
+        }
       }
     }
   }, [graph, step, viewBox]);
@@ -259,8 +279,8 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
           width: '100%',
           height: 'auto',
           aspectRatio: vbW && vbH ? `${vbW} / ${vbH}` : '16 / 9',
-          maxHeight: '70vh',
-          minHeight: '200px'
+          maxHeight: '80vh',
+          minHeight: '300px'
         }}
       >
         <svg 

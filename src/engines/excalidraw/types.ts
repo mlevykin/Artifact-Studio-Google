@@ -12,6 +12,7 @@ export interface NodeStyle {
   fontFamily?: number;
   textAlign?: string;
   verticalAlign?: string;
+  angle?: number;
 }
 
 export interface Node {
