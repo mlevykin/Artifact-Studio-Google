@@ -24,6 +24,7 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isScrollDragging, setIsScrollDragging] = useState(false);
   const [panMode, setPanMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -191,6 +192,35 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
     };
   }, [isDragging, isDocMode]);
 
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isScrollDragging && containerHeight > 0 && contentHeight > 0) {
+        const scrollableHeight = contentHeight * zoom;
+        const ratio = scrollableHeight / containerHeight;
+        const deltaY = e.movementY * ratio;
+        
+        setPosition(prev => ({
+          ...prev,
+          y: prev.y - deltaY
+        }));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsScrollDragging(false);
+    };
+
+    if (isScrollDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isScrollDragging, containerHeight, contentHeight, zoom]);
+
   const resetZoom = () => {
     setHasInteracted(false);
     fitToScreen();
@@ -345,6 +375,30 @@ export const ZoomableContainer: React.FC<ZoomableContainerProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Vertical Scrollbar for Doc Mode */}
+      {isDocMode && contentHeight * zoom > containerHeight && (
+        <div 
+          className="absolute right-0 top-0 bottom-0 w-3 z-30 bg-zinc-100/50 border-l border-zinc-200"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div 
+            className={cn(
+              "absolute right-0.5 w-2 rounded-full transition-colors cursor-pointer",
+              isScrollDragging ? "bg-zinc-500" : "bg-zinc-300 hover:bg-zinc-400"
+            )}
+            style={{
+              height: `${Math.max((containerHeight / (contentHeight * zoom)) * 100, 5)}%`,
+              top: `${Math.min(Math.max((-position.y / (contentHeight * zoom)) * 100, 0), 95)}%`,
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsScrollDragging(true);
+            }}
+          />
+        </div>
+      )}
 
       {/* Controls - Now outside the scrolling container but inside the relative wrapper */}
       <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-white/80 backdrop-blur border border-zinc-200 p-1 rounded-xl shadow-lg z-20">
