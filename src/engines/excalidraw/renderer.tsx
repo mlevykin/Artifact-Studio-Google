@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import rough from 'roughjs';
 import { Graph, Node, Edge } from './types';
 
@@ -9,7 +9,36 @@ interface ExcalidrawRendererProps {
 
 export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, step }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [viewBox, setViewBox] = useState('0 0 800 600');
+
+  const viewBox = useMemo(() => {
+    let fullMinX = Infinity, fullMinY = Infinity, fullMaxX = -Infinity, fullMaxY = -Infinity;
+    
+    for (const node of graph.nodes) {
+      const { x = 0, y = 0, width = 100, height = 50 } = node;
+      fullMinX = Math.min(fullMinX, x - width / 2);
+      fullMinY = Math.min(fullMinY, y - height / 2);
+      fullMaxX = Math.max(fullMaxX, x + width / 2);
+      fullMaxY = Math.max(fullMaxY, y + height / 2);
+    }
+
+    for (const edge of graph.edges) {
+      if (edge.points) {
+        for (const p of edge.points) {
+          fullMinX = Math.min(fullMinX, p.x);
+          fullMinY = Math.min(fullMinY, p.y);
+          fullMaxX = Math.max(fullMaxX, p.x);
+          fullMaxY = Math.max(fullMaxY, p.y);
+        }
+      }
+    }
+
+    if (fullMinX === Infinity) return '0 0 800 600';
+    
+    const padding = 50; 
+    const width = Math.max(100, fullMaxX - fullMinX + padding * 2);
+    const height = Math.max(100, fullMaxY - fullMinY + padding * 2);
+    return `${fullMinX - padding} ${fullMinY - padding} ${width} ${height}`;
+  }, [graph]);
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -160,7 +189,7 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
         // Add icon and text
         const iconSize = 18;
         const iconPadding = 8;
-        const lines = label.split('\n');
+        const lines = (label || '').split('\n');
         const maxLineLength = Math.max(...lines.map(l => l.length));
         const estimatedTextWidth = maxLineLength * 8;
         
@@ -169,12 +198,19 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
           totalContentWidth += iconSize + iconPadding;
         }
 
-        const startX = x - totalContentWidth / 2;
         let textX = x;
+        if (style.textAlign === 'left') {
+          textX = left + (style.icon ? iconSize + iconPadding : 10);
+        } else if (style.textAlign === 'right') {
+          textX = left + width - 10;
+        }
 
         if (style.icon) {
+          const startX = x - totalContentWidth / 2;
           const iconX = startX;
-          textX = startX + iconSize + iconPadding + estimatedTextWidth / 2;
+          if (!style.textAlign || style.textAlign === 'center') {
+            textX = startX + iconSize + iconPadding + estimatedTextWidth / 2;
+          }
 
           const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
           img.setAttribute('x', iconX.toString());
@@ -194,8 +230,9 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
         text.setAttribute('font-weight', '500');
         text.setAttribute('fill', style.stroke === 'transparent' ? '#18181b' : (style.stroke ?? '#18181b'));
         
-        const lineHeight = (style.fontSize || 14) * 1.2;
-        const startY = style.verticalAlign === 'top' ? top + 10 : (y - ((lines.length - 1) * lineHeight) / 2);
+        const fontSize = style.fontSize || 14;
+        const lineHeight = fontSize * 1.2;
+        const startY = style.verticalAlign === 'top' ? top + 5 : (y - ((lines.length - 1) * lineHeight) / 2);
         
         lines.forEach((line, i) => {
           const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
@@ -205,55 +242,25 @@ export const ExcalidrawRenderer: React.FC<ExcalidrawRendererProps> = ({ graph, s
           text.appendChild(tspan);
         });
         
-        text.setAttribute('y', (startY + (style.verticalAlign === 'top' ? 0 : 4)).toString());
+        text.setAttribute('y', (startY + (style.verticalAlign === 'top' ? 0 : 2)).toString());
         svg.appendChild(text);
       }
     }
-
-    // Update viewBox based on ALL nodes and edges to keep layout stable during presentation
-    let fullMinX = Infinity, fullMinY = Infinity, fullMaxX = -Infinity, fullMaxY = -Infinity;
-    
-    for (const node of graph.nodes) {
-      const { x = 0, y = 0, width = 100, height = 50 } = node;
-      fullMinX = Math.min(fullMinX, x - width / 2);
-      fullMinY = Math.min(fullMinY, y - height / 2);
-      fullMaxX = Math.max(fullMaxX, x + width / 2);
-      fullMaxY = Math.max(fullMaxY, y + height / 2);
-    }
-
-    for (const edge of graph.edges) {
-      if (edge.points) {
-        for (const p of edge.points) {
-          fullMinX = Math.min(fullMinX, p.x);
-          fullMinY = Math.min(fullMinY, p.y);
-          fullMaxX = Math.max(fullMaxX, p.x);
-          fullMaxY = Math.max(fullMaxY, p.y);
-        }
-      }
-    }
-
-    if (fullMinX !== Infinity) {
-      const padding = 60; // Increased padding for rough edges and labels
-      const width = fullMaxX - fullMinX + padding * 2;
-      const height = fullMaxY - fullMinY + padding * 2;
-      setViewBox(`${fullMinX - padding} ${fullMinY - padding} ${width} ${height}`);
-    }
-
-  }, [graph, step]);
+  }, [graph, step, viewBox]);
 
   // Calculate natural dimensions from viewBox
   const [vbX, vbY, vbW, vbH] = viewBox.split(' ').map(Number);
 
   return (
-    <div className="w-full h-full overflow-visible flex items-center justify-center p-4">
+    <div className="w-full h-full overflow-visible flex items-center justify-center p-2">
       <div 
-        className="excalidraw-container shadow-sm rounded-lg flex items-center justify-center bg-white"
+        className="excalidraw-container shadow-sm rounded-lg flex items-center justify-center bg-white overflow-hidden"
         style={{ 
-          width: vbW ? `${vbW}px` : 'auto',
-          maxWidth: '100%',
-          maxHeight: '100%',
-          minHeight: '100px',
-          aspectRatio: vbW && vbH ? `${vbW} / ${vbH}` : 'auto'
+          width: '100%',
+          height: 'auto',
+          aspectRatio: vbW && vbH ? `${vbW} / ${vbH}` : '16 / 9',
+          maxHeight: '70vh',
+          minHeight: '200px'
         }}
       >
         <svg 

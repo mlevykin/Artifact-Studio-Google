@@ -32,5 +32,9 @@ export const ExcalidrawDiagram: React.FC<ExcalidrawDiagramProps> = ({ code, step
     );
   }
 
-  return <ExcalidrawRenderer graph={graph} step={step} />;
+  return (
+    <div className="w-full min-h-[400px] flex flex-col">
+      <ExcalidrawRenderer graph={graph} step={step} />
+    </div>
+  );
 };
