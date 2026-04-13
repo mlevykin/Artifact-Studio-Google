@@ -4,9 +4,17 @@
 
 export const getMermaidNodes = (content: string): string[] => {
   const nodes = new Set<string>();
-  const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('%%'));
+  // Clean content: remove code blocks and comments
+  const cleanContent = content
+    .replace(/^```mermaid\n?/, '')
+    .replace(/\n?```$/, '')
+    .split('\n')
+    .filter(l => l.trim() && !l.trim().startsWith('%%'))
+    .join('\n');
+
+  const lines = cleanContent.split('\n');
   
-  const isSequence = content.toLowerCase().includes('sequencediagram');
+  const isSequence = cleanContent.toLowerCase().includes('sequencediagram');
   if (isSequence) {
     // For sequence diagrams, "nodes" are actors
     lines.forEach(line => {
@@ -50,20 +58,30 @@ export const getMermaidNodes = (content: string): string[] => {
         }
       });
     }
+
+    // 3. Match subgraphs
+    const subgraphMatch = line.match(/^\s*subgraph\s+([a-zA-Z0-9_-]+)/i);
+    if (subgraphMatch && !isKeyword(subgraphMatch[1])) {
+      nodes.add(subgraphMatch[1]);
+    }
   });
   
   return Array.from(nodes);
 };
 
 export const getMermaidStepCount = (content: string): number => {
-  const isSequence = content.toLowerCase().includes('sequencediagram');
+  const cleanContent = content
+    .replace(/^```mermaid\n?/, '')
+    .replace(/\n?```$/, '');
+    
+  const isSequence = cleanContent.toLowerCase().includes('sequencediagram');
   if (isSequence) {
-    const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('%%'));
+    const lines = cleanContent.split('\n').filter(l => l.trim() && !l.trim().startsWith('%%'));
     const messages = lines.filter(l => l.includes('->') || l.includes('-->'));
     return messages.length;
   }
   
-  const nodes = getMermaidNodes(content);
+  const nodes = getMermaidNodes(cleanContent);
   return nodes.length;
 };
 
@@ -71,7 +89,8 @@ const isKeyword = (id: string): boolean => {
   const keywords = [
     'graph', 'flowchart', 'subgraph', 'end', 'click', 'style', 
     'classdef', 'class', 'direction', 'td', 'lr', 'bt', 'rl',
-    'participant', 'actor', 'note', 'over', 'loop', 'alt', 'opt', 'par', 'and'
+    'participant', 'actor', 'note', 'over', 'loop', 'alt', 'opt', 'par', 'and',
+    'mermaid', 'stateDiagram', 'erDiagram', 'classDiagram', 'pie', 'gantt'
   ];
   return keywords.includes(id.toLowerCase());
 };

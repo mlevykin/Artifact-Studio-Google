@@ -109,7 +109,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
         // unless it's the very first render of this component instance
         if (mermaidRenderCache.has(cacheKey) && renderCount.current > 1) {
           // Even if we skip re-render, we might need to apply step visibility
-          applyStepVisibility();
+          applyStepVisibility(processedContent);
           return;
         }
 
@@ -157,7 +157,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
               svgElement.style.display = 'block';
             }
             
-            applyStepVisibility();
+            applyStepVisibility(processedContent);
           }
         } catch (error: any) {
           const isStreamingError = error?.message?.includes('Parse error') || error?.message?.includes('Syntax error');
@@ -176,7 +176,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
       }
     };
 
-    function applyStepVisibility() {
+    function applyStepVisibility(cleanedContent: string) {
       if (containerRef.current) {
         const svg = containerRef.current.querySelector('svg');
         if (svg) {
@@ -195,7 +195,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
               return;
             }
 
-            const isSequence = content.toLowerCase().includes('sequencediagram');
+            const isSequence = cleanedContent.toLowerCase().includes('sequencediagram');
             
             if (isSequence) {
               // Sequence diagram logic: steps are messages
@@ -210,27 +210,39 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
             }
 
             // Flowchart/Graph logic: steps are nodes
-            const orderedNodeIds = getMermaidNodes(content);
+            const orderedNodeIds = getMermaidNodes(cleanedContent);
             const visibleNodeIds = new Set(orderedNodeIds.slice(0, step));
             
             // Helper to get ID from mermaid SVG element
             const getElementId = (el: Element) => {
+              const classList = Array.from(el.classList);
+              
+              // 1. Check for id-NODEID class (most reliable in modern Mermaid)
+              const idClass = classList.find(c => c.startsWith('id-'));
+              if (idClass) return idClass.substring(3);
+              
+              // 2. Check for L-NODEID class
+              const lClass = classList.find(c => c.startsWith('L-'));
+              if (lClass) return lClass.substring(2);
+
+              // 3. Check element ID
               const id = el.id;
-              if (!id) {
-                const classList = Array.from(el.classList);
-                const idClass = classList.find(c => c.startsWith('id-'));
-                if (idClass) return idClass.substring(3);
-                return null;
+              if (id) {
+                // flowchart-A-123 -> A
+                // We try to find which orderedNodeId is contained in this ID
+                const matchingNodeId = orderedNodeIds.find(nodeId => 
+                  id === nodeId || id.includes(`-${nodeId}-`) || id.endsWith(`-${nodeId}`)
+                );
+                if (matchingNodeId) return matchingNodeId;
               }
-              // flowchart-A-123 -> A
-              const parts = id.split('-');
-              if (parts.length >= 2) return parts[1];
-              return id;
+              
+              return null;
             };
 
             // Hide/show nodes
             nodes.forEach((node) => {
               const nodeId = getElementId(node);
+              // If we can't find an ID, we default to visible to avoid "empty" diagrams
               const isVisible = nodeId ? visibleNodeIds.has(nodeId) : true;
               
               (node as HTMLElement).style.opacity = isVisible ? '1' : '0';
@@ -248,18 +260,19 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
               
               // An edge is visible if ALL its connected nodes are visible
               const connectedNodeIds = connectedNodeClasses.map(cls => cls.substring(2));
-              const allConnectedNodesVisible = connectedNodeIds.length > 0 && 
-                connectedNodeIds.every(id => visibleNodeIds.has(id));
-
-              if (allConnectedNodesVisible) {
+              
+              // If we found connected nodes, check their visibility
+              if (connectedNodeIds.length > 0) {
+                const allConnectedNodesVisible = connectedNodeIds.every(id => visibleNodeIds.has(id));
+                edgeEl.style.opacity = allConnectedNodesVisible ? '1' : '0';
+                edgeEl.style.pointerEvents = allConnectedNodesVisible ? 'auto' : 'none';
+              } else {
+                // If no connected node classes found, it might be a sequence diagram message or something else
+                // We default to visible or check index if it's a sequence diagram (handled above)
                 edgeEl.style.opacity = '1';
                 edgeEl.style.pointerEvents = 'auto';
-                edgeEl.style.transition = 'opacity 0.3s ease-in-out';
-              } else {
-                edgeEl.style.opacity = '0';
-                edgeEl.style.pointerEvents = 'none';
-                edgeEl.style.transition = 'opacity 0.3s ease-in-out';
               }
+              edgeEl.style.transition = 'opacity 0.3s ease-in-out';
             });
           } else {
             [...nodes, ...edges].forEach((el) => {
