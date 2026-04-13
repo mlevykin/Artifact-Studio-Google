@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import mermaid from 'mermaid';
 import { cn } from '../utils';
 import { MERMAID_STYLES } from '../constants/mermaidStyles';
+import { getMermaidNodes } from '../engines/mermaid/parser';
 
 interface MermaidPreviewProps {
   content: string;
@@ -181,7 +182,7 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
         if (svg) {
           // Select nodes and edges more comprehensively
           const nodes = Array.from(svg.querySelectorAll('.node, .actor, .cluster, .state, .er.entityBox'));
-          const edges = Array.from(svg.querySelectorAll('.edgePath, .edge-paths, .messageLine, .messageText, .loop, .note, .relation, .transition'));
+          const edges = Array.from(svg.querySelectorAll('.edgePath, .edge-paths, .messageLine, .messageText, .loop, .note, .relation, .transition, .edgeLabels, .edge-thickness-normal, .edge-thickness-thick, .edge-thickness-thin, [class^="L-"], [class*=" L-"]'));
           
           if (step !== undefined) {
             // At step 0, hide EVERYTHING
@@ -194,20 +195,47 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
               return;
             }
 
-            const visibleNodes = nodes.slice(0, step);
-            const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+            const isSequence = content.toLowerCase().includes('sequencediagram');
             
-            // Hide/show nodes
-            nodes.forEach((node, index) => {
-              if (index >= step) {
-                (node as HTMLElement).style.opacity = '0';
-                (node as HTMLElement).style.pointerEvents = 'none';
-                (node as HTMLElement).style.transition = 'opacity 0.3s ease-in-out';
-              } else {
-                (node as HTMLElement).style.opacity = '1';
-                (node as HTMLElement).style.pointerEvents = 'auto';
-                (node as HTMLElement).style.transition = 'opacity 0.3s ease-in-out';
+            if (isSequence) {
+              // Sequence diagram logic: steps are messages
+              // Actors are usually always visible or we can show them as they appear
+              edges.forEach((edge, index) => {
+                const isVisible = index < step;
+                (edge as HTMLElement).style.opacity = isVisible ? '1' : '0';
+                (edge as HTMLElement).style.pointerEvents = isVisible ? 'auto' : 'none';
+                (edge as HTMLElement).style.transition = 'opacity 0.3s ease-in-out';
+              });
+              return;
+            }
+
+            // Flowchart/Graph logic: steps are nodes
+            const orderedNodeIds = getMermaidNodes(content);
+            const visibleNodeIds = new Set(orderedNodeIds.slice(0, step));
+            
+            // Helper to get ID from mermaid SVG element
+            const getElementId = (el: Element) => {
+              const id = el.id;
+              if (!id) {
+                const classList = Array.from(el.classList);
+                const idClass = classList.find(c => c.startsWith('id-'));
+                if (idClass) return idClass.substring(3);
+                return null;
               }
+              // flowchart-A-123 -> A
+              const parts = id.split('-');
+              if (parts.length >= 2) return parts[1];
+              return id;
+            };
+
+            // Hide/show nodes
+            nodes.forEach((node) => {
+              const nodeId = getElementId(node);
+              const isVisible = nodeId ? visibleNodeIds.has(nodeId) : true;
+              
+              (node as HTMLElement).style.opacity = isVisible ? '1' : '0';
+              (node as HTMLElement).style.pointerEvents = isVisible ? 'auto' : 'none';
+              (node as HTMLElement).style.transition = 'opacity 0.3s ease-in-out';
             });
 
             // Hide/show edges
@@ -218,14 +246,12 @@ export const MermaidPreview: React.FC<MermaidPreviewProps> = React.memo(({ conte
               // Find all nodes this edge is connected to (Mermaid uses L-nodeId classes)
               const connectedNodeClasses = classList.filter(cls => cls.startsWith('L-'));
               
-              // An edge is visible if all its connected nodes are visible
-              const allConnectedNodesVisible = connectedNodeClasses.length > 0 && 
-                connectedNodeClasses.every(cls => visibleNodeIds.has(cls.substring(2)));
+              // An edge is visible if ALL its connected nodes are visible
+              const connectedNodeIds = connectedNodeClasses.map(cls => cls.substring(2));
+              const allConnectedNodesVisible = connectedNodeIds.length > 0 && 
+                connectedNodeIds.every(id => visibleNodeIds.has(id));
 
-              // Also check if the edge itself is within the step count if nodes are not the primary unit (e.g. sequence diagrams)
-              const isWithinStep = edges.indexOf(edge) < step;
-              
-              if (allConnectedNodesVisible || (nodes.length === 0 && isWithinStep)) {
+              if (allConnectedNodesVisible) {
                 edgeEl.style.opacity = '1';
                 edgeEl.style.pointerEvents = 'auto';
                 edgeEl.style.transition = 'opacity 0.3s ease-in-out';

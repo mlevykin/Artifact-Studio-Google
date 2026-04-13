@@ -30,6 +30,7 @@ import { cn } from '../utils';
 import { DiagramPresenter } from './DiagramPresenter';
 import { parseExcalidraw } from '../engines/excalidraw/parser';
 import { MermaidPreview } from './MermaidPreview';
+import { getMermaidStepCount } from '../engines/mermaid/parser';
 import { ExcalidrawDiagram } from './ExcalidrawDiagram';
 import { MERMAID_STYLES } from '../constants/mermaidStyles';
 import { HtmlPreview } from './HtmlPreview';
@@ -116,28 +117,6 @@ export const ArtifactPanel: React.FC<ArtifactPanelProps> = ({
     title: string;
     markdownText?: string;
   } | null>(null);
-
-  const getMermaidStepCount = (content: string) => {
-    const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('%%'));
-    
-    // Count nodes
-    const nodeDefs = lines.filter(l => 
-      /^[a-zA-Z0-9_-]+(\[|\(|\{|\>|\[\[|\(\(|\(\[|\{\{|\(\{\{)/.test(l.trim()) || 
-      /^[a-zA-Z0-9_-]+\s*$/.test(l.trim())
-    );
-    
-    // Count subgraphs
-    const subgraphs = lines.filter(l => l.trim().toLowerCase().startsWith('subgraph'));
-    
-    // Count sequence diagram messages
-    const messages = lines.filter(l => l.includes('->') || l.includes('-->'));
-    
-    if (content.toLowerCase().includes('sequencediagram')) {
-      return Math.max(messages.length, 1);
-    }
-    
-    return Math.max(nodeDefs.length + subgraphs.length, 1);
-  };
 
   const getExcalidrawStepCount = (content: string) => {
     try {
